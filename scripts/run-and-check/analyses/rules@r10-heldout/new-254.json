@@ -1,0 +1,66 @@
+{
+  "id": "new-254",
+  "commit": "8958aa827275cf81c01f3d5afe7180354a200cc6",
+  "analyser": "rules@r10-heldout",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/app/glance\", \"--config\", \"/app/config/glance.yml\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/api/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported storage: the image starts with the configuration file /app/config/glance.yml (ENTRYPOINT or CMD in Dockerfile), and no Dockerfile instruction creates that file. Deployz does not mount configuration files."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported storage: the image starts with the configuration file /app/config/glance.yml (ENTRYPOINT or CMD in Dockerfile), and no Dockerfile instruction creates that file. Deployz does not mount configuration files."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

@@ -1,0 +1,927 @@
+{
+  "id": "new-258",
+  "commit": "2acf3dae87f9c3d536e0a870787941bbd06d0b46",
+  "analyser": "ai@r10-heldout",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"./docker/entrypoint.sh\"]",
+      "port": 6157
+    },
+    "health": {
+      "path": "/healthcheck",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "OG_DB_URI",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "GIT_PUSH_OPTION_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/hooks/hook.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_API_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_CUSTOM_FAVICON",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_CUSTOM_LOGO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_CUSTOM_STATIC_LINK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_DB_FILENAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_DB_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "OG_DEV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/cli/main.go",
+            "read in internal/web/handlers/gist/gist.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_DISABLE_FILE_UPLOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_EXTERNAL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_GITEA_CLIENT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_GITEA_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_GITEA_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "OG_GITEA_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_GITHUB_CLIENT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_GITHUB_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_GITLAB_CLIENT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_GITLAB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_GITLAB_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_GITLAB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_GIT_DEFAULT_BRANCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_HTTP_GIT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_HTTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_HTTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_INDEX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_INDEX_DIRNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_INDEX_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_LDAP_BIND_CREDENTIALS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_LDAP_BIND_DN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_LDAP_SEARCH_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_LDAP_SEARCH_FILTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_LDAP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_LOG_OUTPUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_LOG_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_MEILI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_MEILI_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_METRICS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_METRICS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_METRICS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_OIDC_ADMIN_GROUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_OIDC_CLIENT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_OIDC_DISCOVERY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_OIDC_GROUP_CLAIM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_OIDC_PROVIDER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_OIDC_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_OPENGIST_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_SEARCH_DEFAULT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_SQLITE_JOURNAL_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_SSH_AUTHORIZED_KEYS_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_SSH_EXTERNAL_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_SSH_GIT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_SSH_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_SSH_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_SSH_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OG_UNIX_SOCKET_PERMISSIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENGIST_REPOSITORY_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/hooks/post_receive.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENGIST_REPOSITORY_URL_INTERNAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/hooks/post_receive.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENGIST_SKIP_GIT_HOOKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/git/commands.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSH_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/cli/shell.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSH_ORIGINAL_COMMAND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/cli/shell.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "helm/opengist/Chart.yaml"
+    ],
+    "externalServices": [],
+    "unsupported": [
+      "Unconfirmed service: the repository declares meilisearch (a Helm dependency) in helm/opengist/Chart.yaml. Deployz did not find how the application uses it.",
+      "Persistent local filesystem storage is not supported",
+      "Final review: Opengist stores every snippet as a Git repository on local disk under /opengist, and Deployz offers only stateless containers with no persistent volumes."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares meilisearch (a Helm dependency) in helm/opengist/Chart.yaml. Deployz did not find how the application uses it."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Final review: Opengist stores every snippet as a Git repository on local disk under /opengist, and Deployz offers only stateless containers with no persistent volumes."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (helm/opengist/Chart.yaml). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0870804,
+        "promptTokens": 15400,
+        "completionTokens": 1318
+      },
+      "latencyMs": 19132
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [
+          "config.yml:29 names the service or its engine"
+        ],
+        "subject": "unexplained-declared-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      },
+      {
+        "id": "q4",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 19138,
+    "questions": 4,
+    "generatedAt": "2026-10-30T11:36:04.490Z",
+    "failedChecks": 1,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.0258984,
+      "promptTokens": 5425,
+      "completionTokens": 223
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "Opengist stores every snippet as a Git repository on local disk under /opengist, and Deployz offers only stateless containers with no persistent volumes.",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "decision": "block",
+      "evidence": [
+        {
+          "line": 5,
+          "path": "README.md",
+          "quote": "Opengist is a **self-hosted** Pastebin **powered by Git**. All snippets are stored in a Git repository and can be"
+        },
+        {
+          "line": 69,
+          "path": "Dockerfile",
+          "quote": "VOLUME /opengist"
+        },
+        {
+          "line": 66,
+          "path": "Dockerfile",
+          "quote": "ENV OG_OPENGIST_HOME=/opengist"
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 11714,
+    "promptVersion": 3
+  }
+}

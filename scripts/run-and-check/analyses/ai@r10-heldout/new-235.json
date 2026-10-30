@@ -1,0 +1,939 @@
+{
+  "id": "new-235",
+  "commit": "abc9b686823cbfb4973c79bc36fea37a3244be6c",
+  "analyser": "ai@r10-heldout",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": "prisma generate && prisma db push && next build",
+      "context": "."
+    },
+    "web": {
+      "command": "start: next start --port 4002",
+      "port": 3000
+    },
+    "health": {
+      "path": "/api/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "pre_deploy",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "APP_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_URL",
+            "read in delete-team.js",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AUTH_PROVIDERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AUTH_PROVIDERS",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONFIRM_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CONFIRM_EMAIL",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_URL",
+            "read in delete-team.js",
+            "read in lib/env.ts",
+            "read in prisma/schema.prisma"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DISABLE_NON_BUSINESS_EMAIL_SIGNUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DISABLE_NON_BUSINESS_EMAIL_SIGNUP",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FEATURE_TEAM_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares FEATURE_TEAM_API_KEY",
+            "read in lib/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "FEATURE_TEAM_AUDIT_LOG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FEATURE_TEAM_AUDIT_LOG",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FEATURE_TEAM_DELETION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FEATURE_TEAM_DELETION",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FEATURE_TEAM_DSYNC",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FEATURE_TEAM_DSYNC",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FEATURE_TEAM_PAYMENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FEATURE_TEAM_PAYMENTS",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FEATURE_TEAM_SSO",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FEATURE_TEAM_SSO",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FEATURE_TEAM_WEBHOOK",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FEATURE_TEAM_WEBHOOK",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GITHUB_CLIENT_ID",
+            "read in lib/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GITHUB_CLIENT_SECRET",
+            "read in lib/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_CLIENT_ID",
+            "read in lib/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GOOGLE_CLIENT_SECRET",
+            "read in lib/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GROUP_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GROUP_PREFIX",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HIDE_LANDING_PAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HIDE_LANDING_PAGE",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JACKSON_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in delete-team.js",
+            "read in lib/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "JACKSON_EXTERNAL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JACKSON_PRODUCT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in delete-team.js",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JACKSON_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in delete-team.js",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JACKSON_WEBHOOK_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in lib/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "MAX_LOGIN_ATTEMPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAX_LOGIN_ATTEMPTS",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXTAUTH_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXTAUTH_SECRET",
+            "read in lib/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "NEXTAUTH_SESSION_STRATEGY",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXTAUTH_SESSION_STRATEGY",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NEXTAUTH_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXTAUTH_URL",
+            "read in lib/nextAuth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_DARK_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DARK_MODE",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_MIXPANEL_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_MIXPANEL_TOKEN",
+            "read in lib/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_PRIVACY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_PRIVACY_URL",
+            "read in components/auth/AgreeMessage.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SENTRY_DSN",
+            "read in instrumentation.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENTRY_TRACE_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SENTRY_TRACE_SAMPLE_RATE",
+            "read in instrumentation.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPPORT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SUPPORT_URL",
+            "read in components/billing/Help.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_TERMS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_TERMS_URL",
+            "read in components/auth/AgreeMessage.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_RUNTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in instrumentation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/prisma.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+            "read in lib/metrics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_EXPORTER_OTLP_METRICS_HEADERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OTEL_EXPORTER_OTLP_METRICS_HEADERS",
+            "read in lib/metrics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/metrics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OTEL_PREFIX",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RECAPTCHA_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares RECAPTCHA_SECRET_KEY",
+            "read in lib/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "RECAPTCHA_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares RECAPTCHA_SITE_KEY",
+            "read in lib/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RETRACED_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares RETRACED_API_KEY",
+            "read in lib/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "RETRACED_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RETRACED_PROJECT_ID",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RETRACED_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RETRACED_URL",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECURITY_HEADERS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SENTRY_AUTH_TOKEN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_ENVIRONMENT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_ORG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_ORG"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_PROJECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_PROJECT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_RELEASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_RELEASE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SLACK_WEBHOOK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SLACK_WEBHOOK_URL",
+            "read in lib/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_FROM",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_HOST",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_HOST",
+            "read in lib/env.ts",
+            "smtp requires SMTP_HOST"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_PASSWORD",
+            "read in lib/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_PORT",
+            "read in lib/env.ts",
+            "smtp requires SMTP_PORT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SMTP_USER",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_USER",
+            "read in lib/env.ts",
+            "smtp requires SMTP_USER"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares STRIPE_SECRET_KEY",
+            "read in sync-stripe.js",
+            "read in lib/env.ts",
+            "stripe requires STRIPE_SECRET_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares STRIPE_WEBHOOK_SECRET",
+            "read in lib/env.ts",
+            "stripe requires STRIPE_WEBHOOK_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SVIX_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares SVIX_API_KEY",
+            "read in delete-team.js",
+            "read in lib/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SVIX_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares SVIX_URL",
+            "read in lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "smtp",
+      "sentry"
+    ],
+    "unsupported": [
+      "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: JACKSON_API_KEY, JACKSON_WEBHOOK_SECRET, NEXTAUTH_SESSION_STRATEGY, RETRACED_API_KEY, SMTP_PORT, and 3 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 9,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0368676,
+        "promptTokens": 6880,
+        "completionTokens": 486
+      },
+      "latencyMs": 7553
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": {
+          "mode": "pre_deploy",
+          "command": "npx prisma db push"
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 7555,
+    "questions": 2,
+    "generatedAt": "2026-10-30T11:33:20.841Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.01873476,
+      "promptTokens": 4386,
+      "completionTokens": 69
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "A Next.js app on PostgreSQL that needs only an added Dockerfile is correctly classed as deployable with changes.",
+      "verdict": "keep",
+      "category": null,
+      "decision": "none",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "latencyMs": 3131,
+    "promptVersion": 3
+  }
+}

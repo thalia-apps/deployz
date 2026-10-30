@@ -1,0 +1,89 @@
+{
+  "id": "new-241",
+  "commit": "74edd257819b2f09778012dff8d8bd745b5e3de2",
+  "analyser": "ai@r10-heldout",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "astro check && astro build && pagefind --site dist && cp -r dist/pagefind public/",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"nginx\", \"-g\", \"daemon off;\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": []
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": null,
+    "answers": [],
+    "settings": [],
+    "latencyMs": 2,
+    "questions": 0,
+    "generatedAt": "2026-10-30T11:33:06.598Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.01831896,
+      "promptTokens": 4341,
+      "completionTokens": 57
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "reason": "The static Astro blog builds from source and nginx serves it over HTTP on port 80.",
+      "verdict": "keep",
+      "category": null,
+      "decision": "none",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "latencyMs": 3876,
+    "promptVersion": 3
+  }
+}

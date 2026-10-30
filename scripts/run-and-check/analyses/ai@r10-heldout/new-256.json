@@ -1,0 +1,2728 @@
+{
+  "id": "new-256",
+  "commit": "330a36360cf9f6910d6a99fa920e1eba76b65a4a",
+  "analyser": "ai@r10-heldout",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "frontend",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "frontend/Dockerfile"
+    },
+    "build": {
+      "command": "tsc",
+      "context": ".",
+      "missingSources": [
+        "frontend/public"
+      ]
+    },
+    "web": {
+      "command": null,
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "REDSHIFT_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "API_EDP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_ALLOWED_GLOBAL_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_ALLOW_PRIVATE_NETWORKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_COMPRESSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_FAILURE_SUPPRESS_MIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_HTTP_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_KEY_SCHEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_ORIGIN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go",
+            "read in backend/internal/config/sink/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ASSETS_PER_HOST_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_QUEUE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_REQUEST_HEADERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_RETRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_RETRY_AFTER_CAP_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_RETRY_BASE_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_RETRY_HEAP_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_RETRY_MAX_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_SIZE_LIMIT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ASSETS_WORKER_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSIST_JWT_EXPIRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSIST_JWT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "ASSIST_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in assist/server.js",
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "ASSIST_LIST_SUFFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSIST_LIVE_SUFFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSIST_REQUEST_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSIST_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "ASSIST_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSIST_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/internal/config/objectstorage/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/objectstorage/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_IAM_ROLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/objectstorage/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/objectstorage/config.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/internal/config/objectstorage/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SKIP_SSL_VALIDATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/objectstorage/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_ACCOUNT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/internal/config/objectstorage/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_ACCOUNT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/objectstorage/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BEACON_SIZE_LIMIT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/http/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BUCKET_NAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/objectstorage/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CACHE_ASSETS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CACHE_BLACK_LIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_EXPIRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CANVAS_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/canvases/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CANVAS_FPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/http/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CANVAS_QUALITY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/http/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CAPTCHA_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CAPTCHA_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CA_CERT_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_BATCH_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_COMPRESSION_ALGO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_CONN_MAX_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_MAX_EXECUTION_TIME_S",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_MAX_IDLE_CONNS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_MAX_OPEN_CONNS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_READ_BATCH_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_READ_USERS_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_SEND_BATCH_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_SEND_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CH_WORKER_QUEUE_DEPTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLEANUP_READ_GAP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/ender/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLEANUP_REAPER_TICK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/ender/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_HTTP_STRING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_STRING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_TLS_CA_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_TLS_CERT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_TLS_KEY_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_TLS_SKIP_VERIFY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_USE_S3_BATCHES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/connector/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_USE_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_CERT_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_KEY_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/objectstorage/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMMIT_BATCH_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/connector/config.go",
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMMIT_HASH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMPRESSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ee/assist/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMPRESSION_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/http/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONFIG_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONNECTOR_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/connector/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRISP_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_NAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ee/connectors/main.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_BATCH_QUEUE_LIMIT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DB_BATCH_SIZE_LIMIT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DELETE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/storage/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEPLOY_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in assist/server.js",
+            "read in ee/assist/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ECS_CONTAINER_METADATA_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/pkg/env/fargate.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ELASTICSEARCH_IN_AWS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ELASTICSEARCH_URLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EVENTS_TABLE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/connector/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EVENT_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/connector/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FILE_BUFFER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/sink/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FILE_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FILE_SPLIT_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/sink/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FS_DIR",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go",
+            "read in backend/internal/config/canvases/config.go",
+            "read in backend/internal/config/images/config.go",
+            "read in backend/internal/config/spot/config.go",
+            "read in backend/internal/config/sink/config.go",
+            "read in backend/internal/config/storage/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FS_ULIMIT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/sink/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GIT_SHA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in assist/server.js",
+            "read in ee/assist/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GROUP_ANALYTICS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GROUP_CACHE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GROUP_CANVAS_IMAGE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/canvases/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GROUP_CLEANUP",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/ender/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GROUP_CONNECTOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/connector/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GROUP_DB",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GROUP_ENDER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/ender/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GROUP_IMAGE_STORAGE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/images/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GROUP_SINK",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/sink/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GROUP_STORAGE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/storage/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GROUP_STORAGE_FAILOVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/storage/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HEALTH_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in assist/utils/health.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_PORT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HTTP_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSECURE_SKIP_VERIFY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ISSUES_FLUSH_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JSON_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JSON_WITH_DATA_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_ALGORITHM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_EXPIRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go",
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_MCP_ALGORITHM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_MCP_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "JWT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "JWT_SPOT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "KAFKA_SERVER_1",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ee/connectors/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "KAFKA_SERVER_2",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ee/connectors/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LISTEN_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in assist/utils/health.js",
+            "read in assist/server.js",
+            "read in ee/assist/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LISTEN_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in assist/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_QUEUE_STATS_INTERVAL_SEC",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go",
+            "read in backend/internal/config/ender/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MAXMINDDB_FILE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/http/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MAX_BACKPRESSURE_KB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ee/assist/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_FILE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/sink/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MINIMUM_STREAM_DURATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go",
+            "read in backend/internal/config/spot/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MOBILE_FPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/http/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MOBILE_QUALITY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/http/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NUMBER_OF_STORAGE_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/storage/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ORIGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PARTITIONS_NUMBER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/ender/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PA_UPDATER_END_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PA_UPDATER_START_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PA_UPDATER_TICK_DURATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PA_USER_STATE_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PING_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ee/assist/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ee/assist/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_STRING",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in assist/server.js",
+            "read in sourcemapreader/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PRODUCER_CLOSE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go",
+            "read in backend/internal/config/sink/config.go",
+            "read in backend/internal/config/storage/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PRODUCER_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/ender/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PRODUCTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROFILER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go",
+            "read in backend/internal/config/canvases/config.go",
+            "read in backend/internal/config/connector/config.go",
+            "read in backend/internal/config/db/config.go",
+            "read in backend/internal/config/http/config.go",
+            "read in backend/internal/config/ender/config.go",
+            "read in backend/internal/config/images/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROJECT_EXPIRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go",
+            "read in backend/internal/config/db/config.go",
+            "read in backend/internal/config/http/config.go",
+            "read in backend/internal/config/ender/config.go",
+            "read in backend/internal/config/spot/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROJECT_IDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/connector/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROTOCOL_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/http/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_MESSAGE_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RECORD_CANVAS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/http/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CACHE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/redis/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CACHE_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SCAN_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_STREAMS_CLOSE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/redis/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_STREAMS_MAX_LEN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/redis/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_STREAMS_READ_BLOCK_DURATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/redis/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_STREAMS_READ_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/redis/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_STRING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/redis/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDSHIFT_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDSHIFT_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDSHIFT_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDSHIFT_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDSHIFT_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDSHIFT_STRING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDSHIFT_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REPLAY_EXPORT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RETRY_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/storage/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RT_BURST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RT_CLEANUP_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RT_MAX_IDLE_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RT_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCREENSHOTS_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/images/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVICE_NAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go",
+            "read in backend/internal/config/objectstorage/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SESSIONS_TABLE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/connector/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/sink/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMR_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in sourcemapreader/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMR_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in sourcemapreader/server.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMR_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in sourcemapreader/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SOURCEMAP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SPOTS_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/api/config.go",
+            "read in backend/internal/config/spot/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SYNC_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/sink/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SYNC_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/sink/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_FOSS_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_FOSS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TOKEN_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in backend/internal/config/canvases/config.go",
+            "read in backend/internal/config/http/config.go",
+            "read in backend/internal/config/images/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "TOPIC_ANALYTICS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/connector/config.go",
+            "read in backend/internal/config/db/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TOPIC_CACHE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TOPIC_CANVAS_IMAGES",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/canvases/config.go",
+            "read in backend/internal/config/ender/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TOPIC_CANVAS_TRIGGER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/canvases/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TOPIC_MOBILE_TRIGGER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/sink/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TOPIC_RAW_ANALYTICS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go",
+            "read in backend/internal/config/http/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TOPIC_RAW_ASSETS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go",
+            "read in backend/internal/config/http/config.go",
+            "read in backend/internal/config/ender/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TOPIC_RAW_IMAGES",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/http/config.go",
+            "read in backend/internal/config/ender/config.go",
+            "read in backend/internal/config/images/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TOPIC_RAW_IOS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/db/config.go",
+            "read in backend/internal/config/http/config.go",
+            "read in backend/internal/config/ender/config.go",
+            "read in backend/internal/config/sink/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TOPIC_RAW_WEB",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/assets/config.go",
+            "read in backend/internal/config/connector/config.go",
+            "read in backend/internal/config/db/config.go",
+            "read in backend/internal/config/http/config.go",
+            "read in backend/internal/config/ender/config.go",
+            "read in backend/internal/config/sink/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TOPIC_STORAGE_FAILOVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/storage/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TOPIC_TRIGGER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/ender/config.go",
+            "read in backend/internal/config/sink/config.go",
+            "read in backend/internal/config/storage/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TRACKER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRACKER_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRACKER_MAJOR_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRACKER_PROJECT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRACKER_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UAPARSER_FILE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/http/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "USE_CORS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/common/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_ENCRYPTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/ender/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_S3_TAGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/internal/config/objectstorage/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "sentry"
+    ],
+    "unsupported": [
+      "Unsupported database driver: clickhouse-connect, and a clickhouse service is defined in scripts/docker-compose/docker-compose.yaml. Deployz does not support ClickHouse.",
+      "Unsupported architecture: scripts/docker-compose/docker-compose.yaml defines 15 application services (alerts-openreplay, api-openreplay, images-openreplay, sink-openreplay, sourcemapreader-openreplay, spot-openreplay, storage-openreplay, assets-openreplay, assist-openreplay, canvases-openreplay, chalice-openreplay, db-openreplay, ender-openreplay, frontend-openreplay, http-openreplay). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Unconfirmed service: the repository declares redis (ghcr.io/openreplay/valkey:${REDIS_VERSION}) in scripts/docker-compose/docker-compose.yaml. Deployz did not find how the application uses it."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database driver: clickhouse-connect, and a clickhouse service is defined in scripts/docker-compose/docker-compose.yaml. Deployz does not support ClickHouse."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: scripts/docker-compose/docker-compose.yaml defines 15 application services (alerts-openreplay, api-openreplay, images-openreplay, sink-openreplay, sourcemapreader-openreplay, spot-openreplay, storage-openreplay, assets-openreplay, assist-openreplay, canvases-openreplay, chalice-openreplay, db-openreplay, ender-openreplay, frontend-openreplay, http-openreplay). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares redis (ghcr.io/openreplay/valkey:${REDIS_VERSION}) in scripts/docker-compose/docker-compose.yaml. Deployz did not find how the application uses it."
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies frontend/public, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ASSETS_ORIGIN, ASSETS_SIZE_LIMIT, ASSIST_KEY, BEACON_SIZE_LIMIT, BUCKET_NAME, and 34 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 42,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.12932172,
+        "promptTokens": 24042,
+        "completionTokens": 1723
+      },
+      "latencyMs": 21715
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [
+          "ee/backend/cmd/connector/main.go:7 imports or connects to it"
+        ],
+        "subject": "clickhouse",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "docker-compose-multi-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [
+          "backend/cmd/api/main.go:11 names the service or its engine"
+        ],
+        "subject": "unexplained-declared-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q4",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      },
+      {
+        "id": "q5",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "healthPath",
+        "decision": "rules"
+      },
+      {
+        "id": "q6",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      },
+      {
+        "id": "q7",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 21725,
+    "questions": 7,
+    "generatedAt": "2026-10-30T11:35:57.303Z",
+    "failedChecks": 2,
+    "promptVersion": 20
+  },
+  "judge": {
+    "reason": "not_deployable",
+    "status": "skipped",
+    "promptVersion": 3
+  }
+}

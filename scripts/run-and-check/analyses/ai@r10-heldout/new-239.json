@@ -1,0 +1,244 @@
+{
+  "id": "new-239",
+  "commit": "c031008a8d28c85b36708824f23b28957e7ed262",
+  "analyser": "ai@r10-heldout",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"serve\", \"-automigrate\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "CI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in gen.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GOATCOUNTER_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in cmd/goatcounter/dashboard.go",
+            "read in cmd/goatcounter/import.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOATCOUNTER_TMPDIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/goatcounter/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOSTNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/goatcounter/serve.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "KEEPDB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in gctest/gctest.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.08439156,
+        "promptTokens": 16681,
+        "completionTokens": 926
+      },
+      "latencyMs": 12193
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": 8080,
+        "answer": "value",
+        "reasons": [],
+        "subject": "port",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      },
+      {
+        "id": "q3",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      },
+      {
+        "id": "q4",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 12196,
+    "questions": 4,
+    "generatedAt": "2026-10-30T11:33:21.037Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.01945152,
+      "promptTokens": 4577,
+      "completionTokens": 67
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "reason": "GoatCounter builds from source and supports PostgreSQL via a connection setting, so it is deployable with environment values.",
+      "verdict": "keep",
+      "category": null,
+      "decision": "none",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "latencyMs": 2438,
+    "promptVersion": 3
+  }
+}
