@@ -1,0 +1,143 @@
+id: new-279
+repository: koel/koel
+commit: 8d4c0a058f05f806120d1cb2fc4c6882dd9084d6
+summary: >
+  Koel is a self-hosted personal audio streaming server: a Laravel 13 backend (PHP 8.3 or later) and a Vue front end
+  built with pnpm and Vite. The repository has no Dockerfile (the Docker installation is a separate project, which the
+  docs only mention). The front end build output is git-ignored. The database is MySQL by default; PostgreSQL, SQL
+  Server and a local SQLite file are other values of DB_CONNECTION. The music library is a local directory (MEDIA_PATH,
+  STORAGE_DRIVER=local) that Koel scans and that receives uploads. S3, Dropbox, SFTP and WebDAV storage drivers exist in
+  the code, but the code allows them only with a Koel Plus license. Search uses TNTSearch indexes in storage/search-indexes.
+  Cache, session and queue default to file, file and sync. The Laravel scheduler runs daily maintenance and library scan jobs.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The product is a music library on local disk. In the open source edition the only storage driver that works is
+    `local`: the S3 driver is accepted only when License::isPlus() is true (paid license). The library directory and the
+    uploads would be lost at every Fargate task restart, and Deployz has no persistent volume. So NOT_DEPLOYABLE is correct
+    for the open source edition (durable local disk state with no S3 option). DEPLOYABLE_WITH_CHANGES is also defensible for
+    a vendor with a Koel Plus license: then S3 storage is a setting, and a Dockerfile (PHP, composer install, pnpm build of the
+    front end) is the repository change. DEPLOYABLE alone is wrong because no Dockerfile exists and the free edition has
+    no durable media store.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: package.json, line: 24, quote: "\"build\": \"vp build && pnpm run build:sw\","}
+    - {path: .gitignore, line: 95, quote: "build/"}
+    - {path: composer.json, line: 12, quote: "\"php\": \">=8.3\","}
+runtime: {accept: [php]}
+port:
+  accept: [80, 8000, 8080]
+  # No image exists. A php:apache image listens on 80, FrankenPHP on 8080; APP_URL in .env.example uses 8000.
+  evidence:
+    - {path: .env.example, line: 4, quote: "APP_URL=http://localhost:8000"}
+bindAllInterfaces:
+  value: true
+  evidence: []
+startCommand:
+  source: explicit
+  accept: ["apache2-foreground", "php artisan serve --host=0.0.0.0 --port=8000", "frankenphp run"]
+  evidence:
+    - {path: .env.example, line: 4, quote: "APP_URL=http://localhost:8000"}
+healthPath:
+  accept: ["/up"]
+  evidence:
+    - {path: bootstrap/app.php, line: 39, quote: "health: '/up',"}
+database:
+  status: required
+  engines: [mysql, mariadb, postgres, sqlserver, sqlite]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {DB_CONNECTION: "mysql"}
+  connectionVars: [DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD, DATABASE_URL]
+  evidence:
+    - {path: .env.example, line: 28, quote: "DB_CONNECTION=mysql"}
+    - {path: .env.example, line: 24, quote: "#   pgsql (PostgreSQL)"}
+    - {path: .env.example, line: 38, quote: "DATABASE_URL="}
+migrations:
+  mode: command
+  accept: ["php artisan migrate --force", "php artisan koel:init --no-assets"]
+  # koel:init (InitCommand.php) runs migrate --force and the seeders and builds the assets; `php artisan migrate --force` is the direct command.
+  evidence:
+    - {path: composer.json, line: 122, quote: "\"koel:init\": \"@php scripts/koel-init.php\","}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: .env.example, line: 386, quote: "CACHE_DRIVER=file"}
+    - {path: .env.example, line: 388, quote: "QUEUE_CONNECTION=sync"}
+    - {path: .env.example, line: 389, quote: "SESSION_DRIVER=file"}
+workers:
+  status: none
+  commands: []
+  # QUEUE_CONNECTION=sync runs jobs inside the request or the scheduler; no queue worker is needed by default.
+  evidence:
+    - {path: .env.example, line: 388, quote: "QUEUE_CONNECTION=sync"}
+scheduledJobs:
+  status: optional
+  items: ["koel:scan daily", "koel:prune daily", "koel:podcasts:sync daily", "koel:clean-up-temp-files daily"]
+  # Declared with the Laravel scheduler; it runs only if `php artisan schedule:run` is called every minute. Deployz provisions no schedule from this.
+  evidence:
+    - {path: routes/console.php, line: 6, quote: "Schedule::job(new RunCommandJob('koel:scan'))->daily()->skip("}
+    - {path: routes/console.php, line: 9, quote: "Schedule::job(new RunCommandJob('koel:prune'))->daily();"}
+storage:
+  local: required
+  paths: [MEDIA_PATH, storage/search-indexes, ARTIFACTS_PATH]
+  s3: none
+  s3SelectBy: {}
+  # The S3 driver exists in the code but needs a Koel Plus license (the free edition rejects it).
+  evidence:
+    - {path: .env.example, line: 47, quote: "# s3: Store files on Amazon S3 or a S3-compatible service (e.g. Cloudflare R2 or DigitalOcean Spaces). Koel Plus only."}
+    - {path: .env.example, line: 51, quote: "STORAGE_DRIVER=local"}
+    - {path: app/Enums/SongStorageType.php, line: 18, quote: "return $this === self::LOCAL || $this === self::S3_LAMBDA || License::isPlus();"}
+    - {path: config/koel.php, line: 8, quote: "'media_path' => env('MEDIA_PATH'),"}
+    - {path: config/scout.php, line: 109, quote: "'storage' => storage_path('search-indexes'),"}
+env:
+  required:
+    - {name: APP_KEY, secret: true, buildTime: false, note: "32-character Laravel key; empty in .env.example"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "public URL of Koel"}
+    - {name: DB_CONNECTION, secret: false, buildTime: false, note: "mysql (default) or pgsql"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "database host"}
+    - {name: DB_DATABASE, secret: false, buildTime: false, note: "database name"}
+    - {name: DB_USERNAME, secret: false, buildTime: false, note: "database user"}
+    - {name: DB_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: MEDIA_PATH, secret: false, buildTime: false, note: "absolute path of the music library; required for the local storage driver"}
+  optional: [APP_DEBUG, STORAGE_DRIVER, TRUSTED_HOSTS, TRUSTED_PROXIES, ARTIFACTS_PATH, DATABASE_URL, SCOUT_DRIVER, MAIL_MAILER, LASTFM_API_KEY, LASTFM_API_SECRET, SPOTIFY_CLIENT_ID, STREAMING_METHOD]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 18, quote: "APP_KEY="}
+    - {path: .env.example, line: 56, quote: "MEDIA_PATH="}
+    - {path: .env.example, line: 15, quote: "TRUSTED_PROXIES=PRIVATE_SUBNETS"}
+blockers:
+  expected:
+    - "The music library (MEDIA_PATH) and uploads are on local disk and the S3 driver needs a paid Koel Plus license; Deployz has no persistent volume"
+    - "No Dockerfile in the repository, and the front end build output is git-ignored, so a build needs PHP, composer and pnpm stages"
+  mustNot:
+    - "MySQL as the default database must not block: it is a Deployz database"
+    - "Redis must not be required: cache, session and queue default to file, file and sync"
+    - "TNTSearch must not be read as Elasticsearch: it is a local SQLite-based index that is rebuilt with `php artisan koel:search:import`"
+    - "Pusher, Reverb, Algolia and Meilisearch settings must not block: they are optional"
+vendorQuestions:
+  legitimate:
+    - "Does the vendor hold a Koel Plus license, so that S3 storage can be used for the music library?"
+  unnecessary:
+    - "Which database? (MySQL or PostgreSQL through DB_CONNECTION)"
+    - "Is Redis needed? (no)"
+    - "Health path? (/up)"
+traps:
+  - "S3, Dropbox, SFTP and WebDAV appear in .env.example as normal choices, but the code allows them only with a Plus license (app/Enums/SongStorageType.php:18, .env.example:47)"
+  - "STORAGE_DRIVER=local with an empty MEDIA_PATH starts but has no music; uploads and scans write to local disk (.env.example:56)"
+  - "The front end is built by `pnpm build`; public/ has no built assets in the repository (package.json:24, .gitignore:95)"
+  - "The default SESSION_DRIVER=file and CACHE_DRIVER=file keep state on the task disk; set them to database or redis for more than one task (.env.example:386-389)"
+  - "APP_DEBUG=true in .env.example; production needs APP_DEBUG=false (.env.example:3)"
+  - "The docs mention a Docker installation, but its Dockerfile is not in this repository (docs/cli-commands.md:42)"
+openQuestions:
+  - "Whether a license check at runtime accepts a Plus license key set by environment variable; the License class is not read here"
+crossReview:
+  - {field: outcome.accept, change: "NOT_DEPLOYABLE and DEPLOYABLE_WITH_CHANGES: the free edition has durable local disk state with no S3 option (non-goal), a Plus license makes S3 a setting; DEPLOYABLE rejected because no Dockerfile exists", evidence: "app/Enums/SongStorageType.php:18; .env.example:47,51"}
+  - {field: redis / workers, change: "none: file, file and sync defaults; no Redis and no queue worker needed", evidence: ".env.example:386-389"}
+  - {field: scheduledJobs, change: "none: optional; Laravel scheduler entries are not a render cron service or a Kubernetes CronJob, so Deployz provisions no schedule", evidence: "routes/console.php:6-14"}
+  - {field: all, change: verified, evidence: "24 citations checked against the pinned commit by script (path, line, quote)"}

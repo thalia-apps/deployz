@@ -1,0 +1,120 @@
+id: new-263
+repository: ChatGPTNextWeb/NextChat
+commit: 1d3dc331512929a4b1d3e82354e72acce33b5c7a
+summary: >
+  NextChat (ChatGPT Next Web) is a Next.js 14 web client for many LLM providers (OpenAI, Gemini, Anthropic, DeepSeek and
+  others). Chat history stays in the browser; the Next.js server only proxies model API calls with keys from environment
+  variables, checks an optional access code (CODE) and offers WebDAV and Upstash sync proxies. The root Dockerfile is a
+  multi-stage build (yarn install, yarn build with output standalone) that runs `node server.js` on port 3000. No
+  database, no Redis, no queue, no worker. An optional MCP feature writes app/mcp/mcp_config.json.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    The root Dockerfile builds the application from source and runs one standalone Next.js process on port 3000. The
+    app needs no database, Redis, S3 or worker: the provider API keys, CODE and BASE_URL are environment variables, and
+    the chat state is in the browser. Only Deployz settings are needed.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 12, quote: "RUN yarn install"}
+    - {path: Dockerfile, line: 26, quote: "RUN yarn build"}
+    - {path: Dockerfile, line: 40, quote: "COPY --from=builder /app/.next/standalone ./"}
+    - {path: Dockerfile, line: 47, quote: "EXPOSE 3000"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 47, quote: "EXPOSE 3000"}
+    - {path: docker-compose.yml, line: 8, quote: "- 3000:3000"}
+bindAllInterfaces:
+  value: true
+  # The Next.js standalone server.js binds all interfaces unless HOSTNAME names one; the Dockerfile sets HOSTNAME only with PROXY_URL, to 0.0.0.0.
+  evidence:
+    - {path: Dockerfile, line: 50, quote: "export HOSTNAME=\"0.0.0.0\"; \\"}
+startCommand:
+  source: image
+  accept: ["node server.js"]
+  evidence:
+    - {path: Dockerfile, line: 49, quote: "CMD if [ -n \"$PROXY_URL\" ]; then \\"}
+    - {path: Dockerfile, line: 67, quote: "node server.js; \\"}
+healthPath:
+  accept: ["/", "/api/config"]
+  # No health route. /api/config returns the public config as JSON.
+  evidence:
+    - {path: app/api/config/route.ts, line: 28, quote: "export const GET = handle;"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: Dockerfile, line: 67, quote: "node server.js; \\"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # Only the optional MCP feature writes a config file under app/mcp; the sync features call WebDAV and Upstash over HTTP.
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: app/mcp/actions.ts, line: 22, quote: "const CONFIG_PATH = path.join(process.cwd(), \"app/mcp/mcp_config.json\");"}
+    - {path: app/config/server.ts, line: 276, quote: "enableMcp: process.env.ENABLE_MCP === \"true\","}
+env:
+  required:
+    - {name: OPENAI_API_KEY, secret: true, buildTime: false, note: "model provider key; .env.template marks it required, but a user can type a key in the app settings unless HIDE_USER_API_KEY is set; other providers have their own *_API_KEY"}
+  optional: [CODE, BASE_URL, PROXY_URL, GOOGLE_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, AZURE_URL, AZURE_API_KEY, HIDE_USER_API_KEY, DISABLE_GPT4, CUSTOM_MODELS, DEFAULT_MODEL, ENABLE_MCP]
+  buildTime: []
+  evidence:
+    - {path: .env.template, line: 1, quote: "# Your openai api key. (required)"}
+    - {path: .env.template, line: 2, quote: "OPENAI_API_KEY=sk-xxxx"}
+    - {path: .env.template, line: 11, quote: "CODE=your-password"}
+    - {path: app/config/server.ts, line: 104, quote: "const code = process.env.CODE;"}
+    - {path: Dockerfile, line: 18, quote: "ENV OPENAI_API_KEY=\"\""}
+blockers:
+  expected: []
+  mustNot:
+    - "Vercel and Tauri (src-tauri) files must not block: the Docker image is a plain Next.js server"
+    - "The Upstash and WebDAV sync options must not be read as required datastores: they are optional external HTTP services"
+    - "docker-compose.yml (the published image, two profiles of the same service) must not be read as several services"
+    - "No database, Redis or S3 may be reported as required"
+vendorQuestions:
+  legitimate:
+    - "Which model provider keys to set, and a CODE access password? (a public instance without CODE lets anyone spend the provider keys)"
+  unnecessary:
+    - "Which database? (none)"
+    - "Is a worker or Redis needed? (no)"
+    - "Which port? (3000)"
+traps:
+  - "The Dockerfile sets the yarn registry to registry.npmmirror.com (Dockerfile:11); it works from AWS but is an unusual mirror"
+  - "HOSTNAME is set to 0.0.0.0 only in the PROXY_URL branch of the CMD (Dockerfile:50); the plain branch relies on the Next.js default"
+  - "The Dockerfile declares empty ENV values for OPENAI_API_KEY, GOOGLE_API_KEY and CODE at build time (Dockerfile:18-20); they are runtime settings, not build inputs"
+  - "An empty CODE means no access password: the server then spends the provider keys for any visitor (app/config/server.ts:104)"
+  - "The MCP feature writes app/mcp/mcp_config.json at runtime and is off unless ENABLE_MCP=true (app/mcp/actions.ts:22)"
+  - "package.json start is `next start`, but the image starts the standalone server with node server.js (package.json:10, Dockerfile:67)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the root Dockerfile is the only one; it builds from source (yarn install, yarn build) and copies the standalone output', evidence: 'Dockerfile:12,26,40'}
+  - {field: bindAllInterfaces, change: 'none: the standalone server binds all interfaces by default; the Dockerfile sets HOSTNAME only for the proxy branch', evidence: 'Dockerfile:50'}
+  - {field: database / redis / storage, change: 'none: no database, Redis or S3 code; sync features use WebDAV and Upstash over HTTP; the MCP file write is off by default', evidence: 'app/mcp/actions.ts:22; app/config/server.ts:276'}
+  - {field: outcome, change: 'none: one stateless Next.js process on 3000, settings only; analog new-244 minus the database', evidence: 'Dockerfile:47,67'}
+  - {field: all, change: verified, evidence: 18 citations checked}

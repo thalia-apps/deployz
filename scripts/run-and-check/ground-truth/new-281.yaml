@@ -1,0 +1,143 @@
+id: new-281
+repository: basecamp/once-campfire
+commit: ca9b963961abcffed8256029afd75f32ecfdea81
+summary: >
+  Campfire is the 37signals self-hosted team chat (Rails, Ruby 4.0). The root Dockerfile builds a production image that
+  holds the whole product in one container: the CMD is bin/boot, a small process monitor that starts every line of the
+  Procfile (Thruster with Puma, a local redis-server and a resque-pool worker). The only database is SQLite
+  (storage/db/production.sqlite3), uploaded files use Active Storage on local disk, and the self-hosting guide says
+  everything lives in /rails/storage and needs a mounted volume. Redis backs Action Cable, the cache and Resque.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The only database is SQLite and the uploaded files are on local disk, both under /rails/storage that the guide says
+    must be a persistent volume. Deployz supports PostgreSQL and MySQL only and has no persistent volume, so data would be
+    lost at every task restart and there is no setting or small repository change that fixes it (the code has no
+    PostgreSQL or MySQL adapter and no S3 storage service). The image also runs several supervised processes (web, a local
+    Redis server and the Resque workers) from the Procfile, a second unsupported pattern. As new-129 (SQLite and
+    a local data directory).
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: Dockerfile-export, reason: "image for ONCE export, not the application image"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 12, quote: "ffmpeg redis && \\"}
+    - {path: Dockerfile, line: 54, quote: "RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile"}
+    - {path: Dockerfile, line: 94, quote: "CMD [\"bin/boot\"]"}
+runtime: {accept: [ruby]}
+port:
+  accept: [80]
+  # Thruster listens on 80 (and 443 with SSL_DOMAIN); DISABLE_SSL=true leaves plain HTTP on port 80 behind a proxy.
+  evidence:
+    - {path: Dockerfile, line: 91, quote: "EXPOSE 80 443"}
+    - {path: docs/self-hosting.md, line: 104, quote: "docker run --publish 80:80 --env DISABLE_SSL=true ..."}
+    - {path: Procfile, line: 1, quote: "web: bundle exec thrust bin/start-app"}
+bindAllInterfaces:
+  value: true
+  # Thruster binds all interfaces by default and Puma binds 0.0.0.0:3000 behind it.
+  evidence:
+    - {path: config/puma.rb, line: 20, quote: "bind \"tcp://0.0.0.0:#{PORT}\""}
+startCommand:
+  source: image
+  accept: ["bin/boot"]
+  evidence:
+    - {path: Dockerfile, line: 94, quote: "CMD [\"bin/boot\"]"}
+    - {path: bin/boot, line: 54, quote: "ProcessMonitor.new(\"Procfile\")"}
+    - {path: Procfile, line: 1, quote: "web: bundle exec thrust bin/start-app"}
+healthPath:
+  accept: ["/up"]
+  # With force_ssl on (the default), a plain-HTTP probe gets a 301 unless DISABLE_SSL=true is set.
+  evidence:
+    - {path: config/routes.rb, line: 103, quote: "get \"up\" => \"rails/health#show\", as: :rails_health_check"}
+    - {path: config/environments/production.rb, line: 85, quote: "config.force_ssl  = ENV[\"DISABLE_SSL\"].blank?"}
+database:
+  status: required
+  engines: [sqlite]
+  default: sqlite
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: config/database.yml, line: 8, quote: "adapter: sqlite3"}
+    - {path: config/database.yml, line: 39, quote: "database: storage/db/production.sqlite3"}
+    - {path: Dockerfile, line: 12, quote: "libsqlite3-0"}
+migrations:
+  mode: startup
+  accept: []
+  # bin/start-app runs db:prepare before the server starts.
+  evidence:
+    - {path: bin/start-app, line: 4, quote: "./bin/rails db:prepare"}
+redis:
+  status: required
+  selectBy: {REDIS_URL: "redis://<host>:6379"}
+  # Resque, Action Cable and the cache all use Redis. The image starts its own redis-server from the Procfile; REDIS_URL
+  # points the app at another server, but the Procfile still starts the local one.
+  evidence:
+    - {path: config/initializers/resque.rb, line: 1, quote: "Resque.redis = ENV.fetch(\"REDIS_URL\") { \"redis://localhost:6379\" }"}
+    - {path: config/cable.yml, line: 3, quote: "url: <%= ENV.fetch(\"REDIS_URL\") { \"redis://localhost:6379\" } %>"}
+    - {path: config/environments/production.rb, line: 72, quote: "config.cache_store = :redis_cache_store"}
+    - {path: Procfile, line: 2, quote: "redis: redis-server config/redis.conf"}
+workers:
+  status: embedded
+  commands: []
+  # The Resque worker pool is a line of the Procfile that bin/boot starts inside the same container as the web process.
+  evidence:
+    - {path: Procfile, line: 3, quote: "workers: FORK_PER_JOB=false INTERVAL=0.1 bundle exec resque-pool"}
+    - {path: config/environments/production.rb, line: 96, quote: "config.active_job.queue_adapter = :resque"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/rails/storage, /rails/storage/db, /rails/storage/files]
+  s3: none
+  s3SelectBy: {}
+  # Active Storage uses the Disk service; the S3 service in storage.yml is a commented example.
+  evidence:
+    - {path: docs/self-hosting.md, line: 44, quote: "Campfire keeps all of its storage - the database and uploaded file attachments - inside the path `/rails/storage`."}
+    - {path: config/environments/production.rb, line: 41, quote: "config.active_storage.service = :local"}
+    - {path: config/storage.yml, line: 7, quote: "root: <%= Rails.root.join(\"storage\", \"files\") %>"}
+    - {path: config/storage.yml, line: 10, quote: "# amazon:"}
+env:
+  required:
+    - {name: SECRET_KEY_BASE, secret: true, buildTime: false, note: "signed cookies; the production image has no master key"}
+    - {name: VAPID_PUBLIC_KEY, secret: false, buildTime: false, note: "Web Push key pair; falls back to credentials"}
+    - {name: VAPID_PRIVATE_KEY, secret: true, buildTime: false, note: "Web Push key pair"}
+  optional: [DISABLE_SSL, REDIS_URL, SSL_DOMAIN, SENTRY_DSN, SKIP_TELEMETRY, RAILS_LOG_LEVEL, WEB_CONCURRENCY, CAMPFIRE_RESPONSE_CACHE_MB, DISABLE_CONTENT_SECURITY_POLICY]
+  buildTime: []
+  evidence:
+    - {path: docs/self-hosting.md, line: 68, quote: "- `SECRET_KEY_BASE` - the basis for cryptographic features like signed cookies."}
+    - {path: docs/self-hosting.md, line: 69, quote: "- `VAPID_PRIVATE_KEY`/`VAPID_PUBLIC_KEY` - a key pair used for sending Web Push notifications."}
+    - {path: config/initializers/vapid.rb, line: 3, quote: "config.x.vapid.public_key = ENV.fetch(\"VAPID_PUBLIC_KEY\""}
+    - {path: config/environments/production.rb, line: 84, quote: "config.assume_ssl = ENV[\"DISABLE_SSL\"].blank?"}
+blockers:
+  expected:
+    - "SQLite is the only database (adapter sqlite3, storage/db/production.sqlite3); Deployz supports PostgreSQL and MySQL only"
+    - "The database and uploaded files live in /rails/storage, which the guide says needs a persistent volume; Fargate disk is ephemeral and there is no volume"
+    - "bin/boot runs web, a local redis-server and the Resque workers as supervised processes in one image"
+  mustNot:
+    - "Redis must not be the main blocker: the app only needs a Redis URL and Deployz can provide Valkey; SQLite is the hard blocker"
+    - "Missing PostgreSQL must not be reported as a settings gap: no PostgreSQL adapter or gem exists in the app"
+    - "Missing health path must not be raised: /up exists"
+    - "Dockerfile-export must not be read as the application Dockerfile"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (80, Thruster)"
+    - "Which database? (SQLite only)"
+    - "Health path? (/up)"
+    - "Who runs migrations? (bin/start-app runs db:prepare)"
+traps:
+  - "The Procfile looks like a Heroku-style set of separate web, redis and workers processes, but the image CMD bin/boot runs all three inside one container (bin/boot:54, Dockerfile:94)"
+  - "The Rails health check /up redirects to HTTPS while force_ssl is on; DISABLE_SSL=true is needed behind a load balancer (config/environments/production.rb:85)"
+  - "Dockerfile-export is a second Dockerfile for the ONCE export flow, not the application image"
+  - "The Redis server is installed in the application image (Dockerfile:12); this is not an external Redis dependency"
+openQuestions: []
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md (SQLite and local disk state are non-goals; supervised multi-process image is a non-goal)", evidence: "config/database.yml:8,39; docs/self-hosting.md:44; bin/boot:54; Procfile:1-3"}
+  - {field: port / startCommand, change: "none: Thruster serves port 80 behind CMD bin/boot; EXPOSE 80 443", evidence: "Dockerfile:91,94; docs/self-hosting.md:104"}
+  - {field: workers, change: "none: embedded, because the resque-pool line is started by bin/boot in the same container, not run as a separate service", evidence: "Procfile:3; bin/boot:54"}
+  - {field: all, change: verified, evidence: "30 citations checked against the pinned commit by script (path, line, quote)"}

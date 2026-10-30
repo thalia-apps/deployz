@@ -1,0 +1,134 @@
+id: new-282
+repository: dotnet/eShop
+commit: 913acea66708a59595351174cee9b29f37179d29
+summary: >
+  eShop is the Microsoft .NET 10 reference store ("AdventureWorks"), a services-based application orchestrated by an
+  Aspire AppHost. src/eShop.AppHost/AppHost.cs starts Identity.API, Basket.API, Catalog.API, Ordering.API,
+  OrderProcessor, PaymentProcessor, Webhooks.API, WebhookClient, a YARP mobile BFF and the Blazor WebApp, backed by
+  Redis, RabbitMQ and one PostgreSQL server (pgvector image) with four databases. The repository has no Dockerfile: the
+  AppHost is the only definition of how the services run together, and its deployment target is Azure Container Apps.
+  The services talk to each other through RabbitMQ events and service-discovery URLs, and the README calls the sample
+  evaluation and demonstration only.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The application is about ten services that must run together (identity, basket, catalog, ordering, order and payment
+    processors, webhooks, the web app), with RabbitMQ as the event bus. Deployz runs one web container plus workers from the
+    same image and supports SQS Standard only, not RabbitMQ. The services are separate projects with separate builds and no
+    Dockerfile, so no single image can hold them. Several unsupported capabilities apply together: extra application
+    services, a message broker other than SQS, and an Azure-oriented AppHost. No repository change within a small catalogue
+    of fixes makes it fit.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: src/eShop.AppHost/AppHost.cs, line: 7, quote: "builder.AddAzureContainerAppEnvironment(\"aca\");"}
+    - {path: README.md, line: 118, quote: "This sample deploys PostgreSQL, Redis, and RabbitMQ as containers in Azure Container Apps."}
+runtime: {accept: [dotnet]}
+port:
+  accept: [5045, 8080]
+  # WebApp launch profile (development) is 5045; a .NET container image listens on 8080 by default. No production port is set.
+  evidence:
+    - {path: src/WebApp/Properties/launchSettings.json, line: 8, quote: "\"applicationUrl\": \"http://localhost:5045\","}
+bindAllInterfaces:
+  value: false
+  evidence:
+    - {path: src/WebApp/Properties/launchSettings.json, line: 8, quote: "\"applicationUrl\": \"http://localhost:5045\","}
+startCommand:
+  source: explicit
+  accept: ["dotnet run --project src/eShop.AppHost", "aspire run", "dotnet run"]
+  evidence:
+    - {path: src/eShop.AppHost/AppHost.cs, line: 71, quote: "var webApp = builder.AddDotnetProject(\"webapp\", \"../WebApp\", o => o.LaunchProfileName = launchProfileName)"}
+    - {path: README.md, line: 3, quote: "A reference .NET application implementing an e-commerce website using a services-based architecture with [Aspire](https://aspire.dev/)."}
+healthPath:
+  accept: ["/health", "/alive"]
+  # The default health endpoints are mapped only in the Development environment.
+  evidence:
+    - {path: src/eShop.ServiceDefaults/Extensions.cs, line: 115, quote: "if (app.Environment.IsDevelopment())"}
+    - {path: src/eShop.ServiceDefaults/Extensions.cs, line: 118, quote: "app.MapHealthChecks(\"/health\");"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [ConnectionStrings__catalogdb, ConnectionStrings__identitydb, ConnectionStrings__orderingdb, ConnectionStrings__webhooksdb]
+  # One PostgreSQL server holds four databases; the catalog needs the pgvector extension, which the AppHost gets from the ankane/pgvector image.
+  evidence:
+    - {path: src/eShop.AppHost/AppHost.cs, line: 12, quote: "var postgres = builder.AddPostgres(\"postgres\")"}
+    - {path: src/eShop.AppHost/AppHost.cs, line: 13, quote: ".WithImage(\"ankane/pgvector\")"}
+    - {path: src/eShop.AppHost/AppHost.cs, line: 17, quote: "var catalogDb = postgres.AddDatabase(\"catalogdb\");"}
+    - {path: src/Catalog.API/Infrastructure/CatalogContext.cs, line: 20, quote: "builder.HasPostgresExtension(\"vector\");"}
+migrations:
+  mode: startup
+  accept: []
+  # Catalog.API and Ordering.API register a migration hosted service that runs at start; OrderProcessor waits for Ordering.API because it holds the EF migrations.
+  evidence:
+    - {path: src/Catalog.API/Extensions/Extensions.cs, line: 24, quote: "builder.Services.AddMigration<CatalogContext, CatalogContextSeed>();"}
+    - {path: src/Ordering.API/Extensions/Extensions.cs, line: 21, quote: "services.AddMigration<OrderingContext, OrderingContextSeed>();"}
+    - {path: src/eShop.AppHost/AppHost.cs, line: 51, quote: ".WaitFor(orderingApi); // wait for the orderingApi to be ready because that contains the EF migrations"}
+redis:
+  status: required
+  selectBy: {ConnectionStrings__redis: "<host>:6379"}
+  evidence:
+    - {path: src/eShop.AppHost/AppHost.cs, line: 9, quote: "var redis = builder.AddRedis(\"redis\");"}
+    - {path: src/Basket.API/Extensions/Extensions.cs, line: 14, quote: "builder.AddRedisClient(\"redis\");"}
+workers:
+  status: independent
+  commands: ["dotnet OrderProcessor.dll", "dotnet PaymentProcessor.dll"]
+  # OrderProcessor and PaymentProcessor are separate projects (separate builds); the AppHost starts each next to the API services.
+  evidence:
+    - {path: src/eShop.AppHost/AppHost.cs, line: 48, quote: "builder.AddDotnetProject(\"order-processor\", \"../OrderProcessor\")"}
+    - {path: src/eShop.AppHost/AppHost.cs, line: 53, quote: "builder.AddDotnetProject(\"payment-processor\", \"../PaymentProcessor\")"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  # Product pictures ship with Catalog.API as static files; no upload path or object store is used.
+  evidence:
+    - {path: src/Catalog.API/Program.cs, line: 9, quote: "services.GetRequiredService<IWebHostEnvironment>().ContentRootPath, \"Pics\")));"}
+env:
+  required:
+    - {name: ConnectionStrings__eventbus, secret: true, buildTime: false, note: "RabbitMQ connection string; every service except Identity uses it"}
+    - {name: ConnectionStrings__catalogdb, secret: true, buildTime: false, note: "PostgreSQL with pgvector"}
+    - {name: ConnectionStrings__redis, secret: true, buildTime: false, note: "Basket.API"}
+    - {name: Identity__Url, secret: false, buildTime: false, note: "URL of Identity.API, set by the AppHost for Basket, Ordering and Webhooks"}
+  optional: [ESHOP_USE_HTTP_ENDPOINTS, UseFoundry]
+  buildTime: []
+  evidence:
+    - {path: src/eShop.AppHost/AppHost.cs, line: 10, quote: "var rabbitMq = builder.AddRabbitMQ(\"eventbus\")"}
+    - {path: src/eShop.AppHost/AppHost.cs, line: 35, quote: ".WithEnvironment(\"Identity__Url\", identityEndpoint);"}
+    - {path: src/Basket.API/Extensions/Extensions.cs, line: 18, quote: "builder.AddRabbitMqEventBus(\"eventbus\")"}
+blockers:
+  expected:
+    - "About ten application services (identity, basket, catalog, ordering, order processor, payment processor, webhooks, web app, BFF) must run together; Deployz runs one web container plus workers from one image"
+    - "RabbitMQ is the event bus for basket, catalog, ordering, the processors, webhooks and the web app; Deployz supports SQS Standard only"
+    - "No Dockerfile exists, and each service is its own project, so no single image holds the application"
+  mustNot:
+    - "A missing Dockerfile alone must not produce DEPLOYABLE_WITH_CHANGES: the real blocker is the multi-service architecture and RabbitMQ"
+    - "Redis and PostgreSQL must not be the main blockers: both are supported"
+    - "The Azure Container Apps environment in the AppHost must not be read as a requirement to run on Azure for the application code itself"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (set by the AppHost per service)"
+    - "Which database? (PostgreSQL)"
+traps:
+  - "The AppHost is a local orchestrator and deployment model (Aspire), not an application: running it needs a container runtime for Redis, RabbitMQ and PostgreSQL (README.md:26)"
+  - "The WebApp is the visible storefront, but it calls Basket, Catalog and Ordering APIs and Identity.API for sign-in, so it cannot run alone (src/eShop.AppHost/AppHost.cs:71-79)"
+  - "Health endpoints are mapped only in the Development environment (src/eShop.ServiceDefaults/Extensions.cs:115)"
+  - "Catalog.API needs the pgvector extension; the AppHost chooses the ankane/pgvector image for this (src/eShop.AppHost/AppHost.cs:13)"
+  - "README marks the Azure deployment as evaluation and demonstration, not production data (README.md:118)"
+openQuestions: []
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md (extra application services, brokers other than SQS Standard)", evidence: "src/eShop.AppHost/AppHost.cs:10,25-71"}
+  - {field: dockerfile / startCommand, change: "none: find over the file list shows no Dockerfile; the AppHost is the only run definition", evidence: "src/eShop.AppHost/AppHost.cs:7; README.md:3"}
+  - {field: workers, change: "none: independent, the two processors are separate projects started beside the APIs", evidence: "src/eShop.AppHost/AppHost.cs:48,53"}
+  - {field: all, change: verified, evidence: "23 citations checked against the pinned commit by script (path, line, quote)"}

@@ -1,0 +1,116 @@
+id: new-276
+repository: navidrome/navidrome
+commit: ec2e0a9ea9cd7c2f08f930fc0579b991e1fe0900
+summary: >
+  Navidrome is a self-hosted music streaming server (Subsonic-compatible API plus a React web UI) written in Go. The root
+  Dockerfile is a large multi-stage build (UI with node, Go with CGO and the SQLite driver, ffmpeg and mpv in the
+  Alpine runtime). The image declares two volumes: /data (the SQLite database, the config file, the cache) and /music (the
+  media library that the scanner reads). The only database is SQLite (mattn/go-sqlite3); no PostgreSQL or MySQL driver
+  exists. The application serves HTTP on 0.0.0.0:4533 and answers /ping.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The product is a streaming server for a media library on a local disk (/music), and its only database is a SQLite
+    file in /data. Deployz does not provide SQLite or persistent volumes, and no PostgreSQL, MySQL or S3 option exists
+    for the database or the library. Same case as other SQLite-only apps with a mounted data directory.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 182, quote: "FROM alpine:3.22 AS final"}
+    - {path: Dockerfile, line: 203, quote: "COPY --from=build-alpine /out/navidrome /app/"}
+    - {path: Dockerfile, line: 216, quote: "ENTRYPOINT [\"/app/navidrome\"]"}
+runtime: {accept: [go]}
+port:
+  accept: [4533]
+  evidence:
+    - {path: Dockerfile, line: 209, quote: "ENV ND_PORT=4533"}
+    - {path: Dockerfile, line: 212, quote: "EXPOSE ${ND_PORT}"}
+    - {path: conf/configuration.go, line: 981, quote: "viper.SetDefault(\"port\", 4533)"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: conf/configuration.go, line: 980, quote: "viper.SetDefault(\"address\", \"0.0.0.0\")"}
+startCommand:
+  source: image
+  accept: ["/app/navidrome"]
+  evidence:
+    - {path: Dockerfile, line: 216, quote: "ENTRYPOINT [\"/app/navidrome\"]"}
+healthPath:
+  accept: ["/ping"]
+  evidence:
+    - {path: server/server.go, line: 177, quote: "middleware.Heartbeat(\"/ping\"),"}
+database:
+  status: required
+  engines: [sqlite]
+  default: sqlite
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # SQLite is the only engine; the database file lives under the data folder.
+  evidence:
+    - {path: go.mod, line: 40, quote: "github.com/mattn/go-sqlite3 v1.14.52"}
+    - {path: db/db.go, line: 27, quote: "Dialect = \"sqlite3\""}
+    - {path: conf/configuration.go, line: 405, quote: "Server.DbPath = filepath.Join(Server.DataFolder.String(), consts.DefaultDbPath)"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: db/db.go, line: 96, quote: "goose.SetBaseFS(embedMigrations)"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # The library scanner and the scheduler run inside the server process.
+  evidence:
+    - {path: cmd/root.go, line: 89, quote: "g.Go(startScheduler(ctx))"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/data, /music]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: Dockerfile, line: 205, quote: "VOLUME [\"/data\", \"/music\"]"}
+    - {path: Dockerfile, line: 206, quote: "ENV ND_MUSICFOLDER=/music"}
+    - {path: Dockerfile, line: 207, quote: "ENV ND_DATAFOLDER=/data"}
+env:
+  required:
+    - {name: ND_MUSICFOLDER, secret: false, buildTime: false, note: "the music library directory; /music in the image, a mounted volume in every normal install"}
+    - {name: ND_DATAFOLDER, secret: false, buildTime: false, note: "SQLite database, cache and config; /data in the image, a mounted volume"}
+  optional: [ND_PORT, ND_LOGLEVEL, ND_BASEURL, ND_CONFIGFILE, ND_SESSIONTIMEOUT]
+  buildTime: []
+  evidence:
+    - {path: Dockerfile, line: 208, quote: "ENV ND_CONFIGFILE=/data/navidrome.toml"}
+blockers:
+  expected:
+    - "The only database is SQLite in the /data volume, and Deployz provides only PostgreSQL and RDS MySQL"
+    - "The media library is a local directory (/music) that a person fills; there is no S3 library option and no way to fill the directory in Deployz"
+  mustNot:
+    - "ffmpeg and mpv in the runtime image must not be read as extra services"
+    - "The Dockerfile must not be rejected for its size: it builds from the clone"
+    - "The scanner and the scheduler must not be read as a separate worker or an EventBridge schedule"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port or health path? (4533 and /ping; not useful: the product is not deployable)"
+    - "Is Redis needed? (no)"
+traps:
+  - "The Dockerfile is long (osxcross, xx cross-compilation, node UI build, mpv stubs) but it builds the app from the clone; the blocker is the data model, not the build (Dockerfile:182-216)"
+  - "/data and /music are declared as VOLUMEs; without a volume the library is empty and the database is lost at each task restart (Dockerfile:205)"
+  - "The sqlite driver needs CGO (Dockerfile:71)"
+  - "The /ping route comes from chi's Heartbeat middleware and is mounted under the server root (server/server.go:177)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the root Dockerfile builds the UI and the Go binary from the clone and its final stage is the runtime image', evidence: 'Dockerfile:182,203,216'}
+  - {field: database, change: 'none: only the go-sqlite3 driver is a dependency, and the database path is under the data folder', evidence: 'go.mod:40; conf/configuration.go:405'}
+  - {field: outcome, change: 'none: SQLite in a /data volume and a local /music library; no PostgreSQL, MySQL or S3 option', evidence: 'Dockerfile:205-207'}
+  - {field: all, change: verified, evidence: 18 citations checked}

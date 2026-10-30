@@ -1,0 +1,157 @@
+id: new-272
+repository: pretix/pretix
+commit: e6f8f178aff537bc32dc7359a5f561b8074a269b
+summary: >
+  pretix is an open-source ticket shop and event registration system (Django, Python 3.13, a Vite front end). The root
+  Dockerfile builds one image from source (pip install -e, then `make production` for assets) and starts
+  deployment/docker/pretix.bash with the mode `all`. That mode runs supervisord with three programs: nginx on port 80
+  (serves /static/ and /media/ and proxies to a unix socket), gunicorn on the unix socket /tmp/pretix.sock, and a Celery
+  task worker. Configuration comes from /etc/pretix/pretix.cfg or from PRETIX_<SECTION>_<OPTION> environment variables.
+  The database is PostgreSQL (SQLite by default; MySQL and MariaDB are refused). Redis and a Celery broker are optional:
+  without a broker, tasks run in the web process. Uploaded media, logs, the cache and the generated secret key live in
+  /data, and pretix has no S3 media option.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The default image runs several supervised processes (supervisord with nginx, gunicorn and a Celery worker), which is
+    a named MVP non-goal, and the web application listens only on a unix socket behind nginx. Static files and media are
+    served only by nginx from /data/media, and media (logos, uploaded files, generated PDFs) stays on local disk with no
+    S3 backend. The strict read is NOT_DEPLOYABLE (several supervised processes and local disk state). A vendor can
+    build a single-process image (gunicorn on a TCP port with static file serving, secret and database from the
+    environment) and accept loss of media, which is a repository change, so DEPLOYABLE_WITH_CHANGES is also defensible.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 52, quote: "COPY src /pretix/src"}
+    - {path: Dockerfile, line: 73, quote: "sudo -u pretixuser make production"}
+    - {path: Dockerfile, line: 78, quote: "ENTRYPOINT [\"pretix\"]"}
+    - {path: Dockerfile, line: 79, quote: "CMD [\"all\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [80]
+  evidence:
+    - {path: Dockerfile, line: 77, quote: "EXPOSE 80"}
+    - {path: deployment/docker/nginx.conf, line: 44, quote: "listen 80 backlog=4096 default_server;"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: deployment/docker/nginx.conf, line: 44, quote: "listen 80 backlog=4096 default_server;"}
+startCommand:
+  source: image
+  accept: ["pretix all"]
+  # Other modes: `web` (nginx and gunicorn under supervisord), `webworker` (gunicorn on a unix socket only),
+  # `taskworker` (Celery worker).
+  evidence:
+    - {path: Dockerfile, line: 78, quote: "ENTRYPOINT [\"pretix\"]"}
+    - {path: Dockerfile, line: 79, quote: "CMD [\"all\"]"}
+    - {path: deployment/docker/pretix.bash, line: 27, quote: "exec sudo -E /usr/bin/supervisord -n -c /etc/supervisord.all.conf"}
+healthPath:
+  accept: ["/healthcheck/"]
+  evidence:
+    - {path: src/pretix/urls.py, line: 52, quote: "re_path(r'^healthcheck/$', health.healthcheck,"}
+    - {path: src/pretix/base/views/health.py, line: 31, quote: "User.objects.exists()"}
+database:
+  status: required
+  engines: [postgres, sqlite]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {PRETIX_DATABASE_BACKEND: postgresql, PRETIX_DATABASE_HOST: "<host>", PRETIX_DATABASE_PORT: "5432", PRETIX_DATABASE_NAME: "<db>", PRETIX_DATABASE_USER: "<user>", PRETIX_DATABASE_PASSWORD: "<password>"}
+  connectionVars: [PRETIX_DATABASE_BACKEND, PRETIX_DATABASE_NAME, PRETIX_DATABASE_USER, PRETIX_DATABASE_PASSWORD, PRETIX_DATABASE_HOST, PRETIX_DATABASE_PORT]
+  evidence:
+    - {path: src/pretix/settings.py, line: 121, quote: "db_backend = config.get('database', 'backend', fallback='sqlite3')"}
+    - {path: src/pretix/settings.py, line: 125, quote: "print(\"pretix does no longer support running on MySQL/MariaDB\")"}
+    - {path: src/pretix/settings.py, line: 163, quote: "'HOST': config.get('database', 'host', fallback=''),"}
+    - {path: src/pretix/helpers/config.py, line: 34, quote: "return f\"PRETIX_{section}_{option}\""}
+migrations:
+  mode: startup
+  accept: []
+  # The entrypoint script runs `pretix migrate --noinput` before it starts supervisord unless AUTOMIGRATE is skip.
+  evidence:
+    - {path: deployment/docker/pretix.bash, line: 22, quote: "if [ \"$AUTOMIGRATE\" != \"skip\" ]; then"}
+    - {path: deployment/docker/pretix.bash, line: 23, quote: "python3 -m pretix migrate --noinput"}
+redis:
+  status: optional
+  selectBy: {PRETIX_REDIS_LOCATION: "redis://<host>:6379/0"}
+  # Redis is only for the cache and sessions; the Celery broker is separate (PRETIX_CELERY_BROKER).
+  evidence:
+    - {path: src/pretix/settings.py, line: 302, quote: "HAS_REDIS = config.has_option('redis', 'location')"}
+    - {path: src/pretix/base/views/health.py, line: 34, quote: "if settings.HAS_REDIS:"}
+workers:
+  status: embedded
+  commands: ["pretix taskworker"]
+  # In `all` mode supervisord starts the task worker beside the web process. Without PRETIX_CELERY_BROKER, tasks run
+  # in the web process (CELERY_TASK_ALWAYS_EAGER).
+  evidence:
+    - {path: deployment/docker/supervisord/pretixtask.conf, line: 2, quote: "command=/usr/local/bin/pretix taskworker"}
+    - {path: src/pretix/settings.py, line: 372, quote: "HAS_CELERY = config.has_option('celery', 'broker')"}
+    - {path: src/pretix/settings.py, line: 421, quote: "CELERY_TASK_ALWAYS_EAGER = True"}
+scheduledJobs:
+  status: conditional
+  items:
+    - {command: "pretix cron", schedule: "periodic (runperiodic), every few minutes", note: "needed for mail, order expiry and reminders; no render.yaml or CronJob, so Deployz provisions no schedule"}
+  evidence:
+    - {path: deployment/docker/pretix.bash, line: 18, quote: "if [ \"$1\" == \"cron\" ]; then"}
+    - {path: deployment/docker/pretix.bash, line: 19, quote: "exec python3 -m pretix runperiodic"}
+storage:
+  local: required
+  paths: [/data/media, /data/cache, /data/logs, /data/.secret]
+  s3: none
+  s3SelectBy: {}
+  # Media (organizer and event logos, uploaded files, invoices, generated tickets) is under MEDIA_ROOT in the data
+  # directory (VOLUME /data). The secret key is generated into /data/.secret unless PRETIX_DJANGO_SECRET is set.
+  evidence:
+    - {path: src/pretix/settings.py, line: 71, quote: "MEDIA_ROOT = os.path.join(DATA_DIR, 'media')"}
+    - {path: src/pretix/settings.py, line: 83, quote: "SECRET_FILE = os.path.join(DATA_DIR, '.secret')"}
+    - {path: Dockerfile, line: 76, quote: "VOLUME [\"/etc/pretix\", \"/data\"]"}
+    - {path: deployment/docker/nginx.conf, line: 51, quote: "alias /data/media/;"}
+env:
+  required:
+    - {name: PRETIX_PRETIX_URL, secret: false, buildTime: false, note: "public HTTPS URL; the default is http://localhost:8000"}
+    - {name: PRETIX_DATABASE_BACKEND, secret: false, buildTime: false, note: "postgresql; the default is SQLite in /data"}
+    - {name: PRETIX_DATABASE_NAME, secret: false, buildTime: false, note: "database name"}
+    - {name: PRETIX_DATABASE_USER, secret: false, buildTime: false, note: "database user"}
+    - {name: PRETIX_DATABASE_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: PRETIX_DATABASE_HOST, secret: false, buildTime: false, note: "RDS endpoint"}
+    - {name: PRETIX_DJANGO_SECRET, secret: true, buildTime: false, note: "otherwise generated into /data/.secret and lost with the task"}
+    - {name: PRETIX_PRETIX_TRUST_X_FORWARDED_PROTO, secret: false, buildTime: false, note: "true behind the load balancer; otherwise the HTTPS proxy header is ignored"}
+  optional: [PRETIX_PRETIX_TRUST_X_FORWARDED_HOST, PRETIX_REDIS_LOCATION, PRETIX_CELERY_BROKER, PRETIX_CELERY_BACKEND, PRETIX_MAIL_HOST, PRETIX_MAIL_USER, PRETIX_MAIL_PASSWORD, PRETIX_MAIL_FROM, PRETIX_DJANGO_DEBUG, AUTOMIGRATE, NUM_WORKERS]
+  buildTime: []
+  evidence:
+    - {path: src/pretix/settings.py, line: 224, quote: "SITE_URL = config.get('pretix', 'url', fallback='http://localhost:8000')"}
+    - {path: src/pretix/settings.py, line: 80, quote: "if config.has_option('django', 'secret'):"}
+    - {path: src/pretix/settings.py, line: 241, quote: "if config.getboolean('pretix', 'trust_x_forwarded_proto', fallback=False):"}
+    - {path: deployment/docker/pretix.bash, line: 7, quote: "AUTOMIGRATE=${AUTOMIGRATE:-yes}"}
+blockers:
+  expected:
+    - "The image runs several supervised processes: nginx, gunicorn and a Celery task worker under supervisord (deployment/docker/pretix.bash:27, deployment/docker/supervisord/pretixweb.conf)"
+    - "gunicorn listens only on the unix socket /tmp/pretix.sock; the only TCP listener is nginx on port 80, which also serves /static/ and /media/ (deployment/docker/pretix.bash:41, deployment/docker/nginx.conf:44)"
+    - "Media and the data directory are local disk (VOLUME /data) with no S3 option (src/pretix/settings.py:71, Dockerfile:76)"
+  mustNot:
+    - "SQLite must not block: PRETIX_DATABASE_BACKEND=postgresql selects PostgreSQL"
+    - "MySQL and MariaDB must not be offered: pretix exits when the backend contains mysql (src/pretix/settings.py:124-126)"
+    - "Redis and a Celery broker must not be required: without them the cache is local and tasks run eagerly"
+vendorQuestions:
+  legitimate:
+    - "Which process layout should the image use behind the load balancer? (the stock `all` mode runs supervisord)"
+    - "Where are media and ticket files kept? (only /data on local disk; no S3)"
+    - "How are the periodic tasks run? (`pretix cron` must run regularly; Deployz provisions a schedule only from render.yaml or a CronJob)"
+  unnecessary:
+    - "Which database? (PostgreSQL through PRETIX_DATABASE_*)"
+    - "Is Redis needed? (no, optional)"
+    - "Which health path? (/healthcheck/)"
+traps:
+  - "supervisord.web.conf starts only nginx and the web worker, supervisord.all.conf starts the task worker too; the base.conf sets AUTOMIGRATE=skip for the children so migration runs once in the entrypoint (deployment/docker/supervisord/base.conf:5)"
+  - "The default pretix URL is http://localhost:8000, and CSRF_TRUSTED_ORIGINS is built from it, so HTTPS form posts fail until PRETIX_PRETIX_URL is set (src/pretix/settings.py:224,228)"
+  - "The container user runs supervisord through sudo -E (deployment/docker/pretix.bash:27, Dockerfile:35)"
+  - "The Dockerfile ENTRYPOINT is pretix with CMD all, so a start command override replaces only the mode word (Dockerfile:78-79)"
+  - "Port 8000 in the SITE_URL default is not the container port; nginx listens on 80 (src/pretix/settings.py:224, deployment/docker/nginx.conf:44)"
+openQuestions:
+  - "Whether a vendor would split web and task worker into `pretix web` and `pretix taskworker` entries; `web` still runs nginx and gunicorn under supervisord"
+crossReview:
+  - {field: dockerfile, change: 'none: the root Dockerfile is the only image build; the deployment/docker folder holds the files it copies', evidence: 'Dockerfile:43-56,73'}
+  - {field: workers, change: 'none: the task worker is part of the supervised `all` image (embedded); without a Celery broker tasks run in the web process', evidence: 'deployment/docker/supervisord/pretixtask.conf:2; src/pretix/settings.py:372,421'}
+  - {field: outcome, change: 'none: supervisord with nginx, gunicorn and a task worker plus /data media is a non-goal pair; DEPLOYABLE_WITH_CHANGES is accepted for a single-process vendor image', evidence: 'deployment/docker/pretix.bash:26-47; src/pretix/settings.py:71'}
+  - {field: all, change: verified, evidence: 33 citations checked}

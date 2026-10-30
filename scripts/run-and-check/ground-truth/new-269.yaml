@@ -1,0 +1,162 @@
+id: new-269
+repository: HumanSignal/label-studio
+commit: 75bdd80a29bb0fb87bfd340efb5e6c4138ede8ec
+summary: >
+  Label Studio is a data labeling web application (Django 5, Python 3.14, a Vite front end). The root Dockerfile builds
+  the front end with Bun, installs the Python environment with uv, runs collectstatic, and ends in a production stage
+  that starts through deploy/docker-entrypoint.sh. The default command `label-studio` starts the Django server on port
+  8080 and applies the database migrations at start. The database is SQLite in the data directory by default; setting
+  DJANGO_DB=default and the POSTGRE_* variables selects PostgreSQL (MySQL has its own DJANGO_DB value). Uploaded files
+  go to the data directory unless STORAGE_TYPE=s3 is set; the S3 storage uses the default AWS credential chain when no
+  key is given. The open-source edition does not use Redis (REDIS_ENABLED is False), so jobs run in the web process. The
+  Dockerfile also builds an optional nginx in the image; the compose file runs it as a second container, which Deployz
+  does not need.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One web process from the root Dockerfile, PostgreSQL through environment variables, migrations at start, uploads to
+    S3 with STORAGE_TYPE=s3, no Redis, no worker. The SQLite default and the local data directory do not block because
+    DJANGO_DB and STORAGE_TYPE move the durable state to PostgreSQL and S3. Only Deployz settings are needed (database
+    variables, a SECRET_KEY, STORAGE_TYPE and the bucket variables, LABEL_STUDIO_HOST). Same shape as new-243 (Django,
+    one web process, PostgreSQL, optional S3).
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: Dockerfile.cloudrun, reason: "one-click variant that extends the published image heartexlabs/label-studio:latest"}
+    - {path: Dockerfile.heroku, reason: "Heroku variant"}
+    - {path: Dockerfile.hgface, reason: "Hugging Face Spaces variant"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 46, quote: "bun run build"}
+    - {path: Dockerfile, line: 103, quote: "RUN DJANGO_SETTINGS_MODULE=core.settings.label_studio python3 ./label_studio/manage.py collectstatic --no-input"}
+    - {path: Dockerfile, line: 106, quote: "FROM python:${PYTHON_VERSION}-alpine AS production"}
+    - {path: Dockerfile, line: 158, quote: "ENTRYPOINT [\"./deploy/docker-entrypoint.sh\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: Dockerfile, line: 156, quote: "EXPOSE 8080"}
+    - {path: label_studio/server.py, line: 425, quote: "internal_port = input_args.port or get_env('PORT') or config.get('port', 8080)"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: label_studio/server.py, line: 424, quote: "internal_host = input_args.internal_host or config.get('internal_host', '0.0.0.0')  # nosec"}
+startCommand:
+  source: image
+  accept: ["./deploy/docker-entrypoint.sh label-studio", "label-studio"]
+  # The compose file starts the same image as `label-studio-uwsgi` (uwsgi on 8000 behind the nginx container). That
+  # mode is optional; the image default is the single `label-studio` process on 8080.
+  evidence:
+    - {path: Dockerfile, line: 158, quote: "ENTRYPOINT [\"./deploy/docker-entrypoint.sh\"]"}
+    - {path: Dockerfile, line: 159, quote: "CMD [\"label-studio\"]"}
+    - {path: label_studio/server.py, line: 40, quote: "call_command('runserver', '--noreload', http_socket)"}
+    - {path: deploy/docker-entrypoint.sh, line: 73, quote: "elif [ \"$1\" = \"label-studio-uwsgi\" ]; then"}
+healthPath:
+  accept: ["/health/", "/health"]
+  # The URL pattern is the unanchored regex `health/`; a request to /health is redirected to /health/ by APPEND_SLASH.
+  evidence:
+    - {path: label_studio/core/urls.py, line: 73, quote: "re_path(r'health/', views.health, name='health'),"}
+    - {path: label_studio/core/views.py, line: 73, quote: "return HttpResponse(json.dumps({'status': 'UP'}))"}
+database:
+  status: optional
+  engines: [sqlite, postgres, mysql]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DJANGO_DB: default, POSTGRE_HOST: "<host>", POSTGRE_PORT: "5432", POSTGRE_NAME: "<db>", POSTGRE_USER: "<user>", POSTGRE_PASSWORD: "<password>"}
+  connectionVars: [DJANGO_DB, POSTGRE_HOST, POSTGRE_PORT, POSTGRE_NAME, POSTGRE_USER, POSTGRE_PASSWORD]
+  # settings/label_studio.py defaults DJANGO_DB to sqlite; the value `default` maps to the PostgreSQL entry.
+  evidence:
+    - {path: label_studio/core/settings/label_studio.py, line: 11, quote: "DJANGO_DB = get_env('DJANGO_DB', DJANGO_DB_SQLITE)"}
+    - {path: label_studio/core/settings/base.py, line: 188, quote: "'HOST': get_env('POSTGRE_HOST', 'localhost'),"}
+    - {path: label_studio/core/settings/base.py, line: 207, quote: "DATABASES_ALL['default'] = DATABASES_ALL[DJANGO_DB_POSTGRESQL]"}
+    - {path: label_studio/core/settings/base.py, line: 180, quote: "DATABASE_NAME_DEFAULT = os.path.join(BASE_DATA_DIR, 'label_studio.sqlite3')"}
+    - {path: docker-compose.yml, line: 38, quote: "- DJANGO_DB=default"}
+migrations:
+  mode: startup
+  accept: []
+  # main() applies pending migrations at every start; the image also has a `label-studio-migrate` mode.
+  evidence:
+    - {path: label_studio/server.py, line: 62, quote: "call_command('migrate', '--no-color', verbosity=0)"}
+    - {path: label_studio/server.py, line: 299, quote: "_apply_database_migrations()"}
+    - {path: deploy/docker-entrypoint.sh, line: 76, quote: "elif [ \"$1\" = \"label-studio-migrate\" ]; then"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: label_studio/core/settings/base.py, line: 389, quote: "# OSS version does not support Redis"}
+    - {path: label_studio/core/settings/base.py, line: 390, quote: "REDIS_ENABLED = False"}
+workers:
+  status: none
+  commands: []
+  # Without Redis, start_job_async_or_sync runs the job in the request process.
+  evidence:
+    - {path: label_studio/core/redis.py, line: 266, quote: "Start job async with redis or sync if redis is not connected."}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/label-studio/data]
+  s3: native
+  s3SelectBy: {STORAGE_TYPE: s3, STORAGE_AWS_BUCKET_NAME: "<bucket>", STORAGE_AWS_REGION_NAME: "<region>"}
+  # The data directory holds the SQLite file, uploads (media/), exports and a generated .env with the secret key. With
+  # PostgreSQL, STORAGE_TYPE=s3 and SECRET_KEY set, nothing durable stays on disk. The S3 storage uses the task role
+  # when STORAGE_AWS_ACCESS_KEY_ID is not set.
+  evidence:
+    - {path: Dockerfile, line: 110, quote: "LABEL_STUDIO_BASE_DATA_DIR=/label-studio/data \\"}
+    - {path: label_studio/core/settings/base.py, line: 646, quote: "MEDIA_ROOT = os.path.join(BASE_DATA_DIR, 'media')"}
+    - {path: label_studio/core/settings/base.py, line: 949, quote: "if get_env('STORAGE_TYPE') == 's3':"}
+    - {path: label_studio/core/settings/base.py, line: 952, quote: "if get_env('STORAGE_AWS_ACCESS_KEY_ID'):"}
+    - {path: label_studio/core/settings/base.py, line: 956, quote: "AWS_STORAGE_BUCKET_NAME = get_env('STORAGE_AWS_BUCKET_NAME')"}
+env:
+  required:
+    - {name: DJANGO_DB, secret: false, buildTime: false, note: "default selects PostgreSQL; without it the SQLite file in the data directory is lost with the task"}
+    - {name: POSTGRE_HOST, secret: false, buildTime: false, note: "RDS endpoint"}
+    - {name: POSTGRE_NAME, secret: false, buildTime: false, note: "database name"}
+    - {name: POSTGRE_USER, secret: false, buildTime: false, note: "database user"}
+    - {name: POSTGRE_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: SECRET_KEY, secret: true, buildTime: false, note: "Django secret; if missing it is generated into the data directory .env, so sessions (signed cookies) break at each restart"}
+    - {name: STORAGE_TYPE, secret: false, buildTime: false, note: "s3, so uploads are not kept on the local disk"}
+    - {name: STORAGE_AWS_BUCKET_NAME, secret: false, buildTime: false, note: "Deployz bucket"}
+  optional: [LABEL_STUDIO_HOST, POSTGRE_PORT, STORAGE_AWS_REGION_NAME, STORAGE_AWS_FOLDER, CSRF_TRUSTED_ORIGINS, SECURE_PROXY_SSL_HEADER, USE_X_FORWARDED_HOST, SESSION_COOKIE_SECURE, ALLOWED_HOSTS, LABEL_STUDIO_USERNAME, LABEL_STUDIO_PASSWORD, LOG_LEVEL, SENTRY_DSN, LOCAL_FILES_SERVING_ENABLED]
+  buildTime: []
+  evidence:
+    - {path: label_studio/core/settings/label_studio.py, line: 9, quote: "SECRET_KEY = generate_secret_key_if_missing(BASE_DATA_DIR)"}
+    - {path: label_studio/core/utils/secret_key.py, line: 36, quote: "if existing_secret := env.str(env_key, ''):"}
+    - {path: label_studio/core/settings/base.py, line: 987, quote: "CSRF_TRUSTED_ORIGINS = get_env('CSRF_TRUSTED_ORIGINS', [])"}
+    - {path: label_studio/core/settings/base.py, line: 126, quote: "value = get_env('SECURE_PROXY_SSL_HEADER')"}
+    - {path: label_studio/server.py, line: 411, quote: "if get_env('USERNAME') and get_env('PASSWORD') or input_args.username:"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite fallback must not block: DJANGO_DB=default selects PostgreSQL"
+    - "The local data directory must not block: uploads go to S3 with STORAGE_TYPE=s3"
+    - "Redis must not be required: the open-source edition has REDIS_ENABLED = False"
+    - "docker-compose.yml (nginx, app and db containers) must not be read as a multi-service app: the nginx container is optional and the image serves HTTP itself"
+    - "Dockerfile.cloudrun, Dockerfile.heroku and Dockerfile.hgface must not be selected as the application image"
+    - "STORAGE_TYPE azure or gcs and the MinIO settings must not be read as a GCP or Azure requirement: they are alternatives to S3"
+vendorQuestions:
+  legitimate:
+    - "Which public URL should LABEL_STUDIO_HOST use? (it sets absolute links and the CSRF origin)"
+    - "Should an admin user be created at start? (LABEL_STUDIO_USERNAME and LABEL_STUDIO_PASSWORD; otherwise the first person to open the site signs up)"
+  unnecessary:
+    - "Which database? (PostgreSQL through DJANGO_DB and POSTGRE_*)"
+    - "Is Redis or a worker needed? (no)"
+    - "Which port? (8080)"
+traps:
+  - "settings/label_studio.py defaults DJANGO_DB to sqlite, but base.py maps the value `default` to PostgreSQL; the compose file uses DJANGO_DB=default (label_studio/core/settings/label_studio.py:11, label_studio/core/settings/base.py:207)"
+  - "Sign-up is open by default (DISABLE_SIGNUP_WITHOUT_LINK is False), so the first person who opens a new instance can create an account unless the admin is created from LABEL_STUDIO_USERNAME and LABEL_STUDIO_PASSWORD (label_studio/core/settings/base.py:345, label_studio/server.py:411)"
+  - "SECRET_KEY is written to the data directory .env when it is not set, and sessions are signed cookies, so a restart without the variable logs everyone out (label_studio/core/utils/secret_key.py:29-40, label_studio/core/settings/label_studio.py:29)"
+  - "The image CMD uses Django runserver, not uwsgi; the uwsgi mode listens on 8000 and is meant to sit behind the nginx container (Dockerfile:159, deploy/uwsgi.ini:4)"
+  - "label-studio-sdk is a git-pinned dependency fetched from GitHub during the image build (Dockerfile:16)"
+  - "Behind the load balancer over HTTPS, CSRF checks need CSRF_TRUSTED_ORIGINS or SECURE_PROXY_SSL_HEADER (label_studio/core/settings/base.py:987)"
+openQuestions:
+  - "Whether runserver --noreload under the Deployz health check is stable under load; the compose file uses uwsgi, and a vendor can set the command to label-studio-uwsgi with the HTTP port 8000"
+crossReview:
+  - {field: dockerfile, change: 'none: the root Dockerfile is the only multi-stage production build; the other three extend or wrap the published image', evidence: 'Dockerfile:106,158; Dockerfile.cloudrun:1'}
+  - {field: database, change: 'none: label_studio.py defaults DJANGO_DB to sqlite while base.py maps the name `default` to PostgreSQL', evidence: 'label_studio/core/settings/label_studio.py:11; label_studio/core/settings/base.py:207'}
+  - {field: storage / env, change: 'none: STORAGE_TYPE=s3 selects CustomS3Boto3Storage and the access key is read only when set', evidence: 'label_studio/core/settings/base.py:949-956'}
+  - {field: outcome, change: 'none: one web process, PostgreSQL and S3 through settings; analog new-243', evidence: 'Dockerfile:156-159; label_studio/server.py:299'}
+  - {field: all, change: verified, evidence: 34 citations checked}

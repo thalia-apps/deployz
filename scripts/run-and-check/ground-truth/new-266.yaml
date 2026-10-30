@@ -1,0 +1,130 @@
+id: new-266
+repository: ixartz/SaaS-Boilerplate
+commit: e3952a7ed5b0ef172ac4363c4644b8c334d1094b
+summary: >
+  SaaS Boilerplate is a Next.js 16 SaaS starter (React 19, Tailwind, next-intl with English and French, Clerk hosted
+  authentication with organizations, Drizzle ORM on PostgreSQL through DATABASE_URL, optional Sentry). The repository
+  has no Dockerfile, compose file or Procfile. `npm run build` runs `drizzle-kit migrate` and then `next build`; `npm
+  start` is `next start`. In development the app uses a local PGlite server. Migrations are SQL files in migrations/.
+  No Redis, no worker, no file storage. The committed .env holds placeholder Clerk values and a local DATABASE_URL.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The architecture fits Deployz (one Next.js web process on port 3000, PostgreSQL, no Redis, no worker, no local
+    data, Clerk reached with keys). But the full file list has no Dockerfile, so the vendor must add one (npm ci, next
+    build, next start). That is the "no Dockerfile" repository change, as new-244. The build also needs the Clerk
+    publishable key and valid environment values, because next.config.ts imports the env validation.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: package.json, line: 11, quote: "\"build:next\": \"next build\","}
+    - {path: package.json, line: 14, quote: "\"start\": \"next start\","}
+    - {path: README.md, line: 409, quote: "### Deploy to production"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  # next start listens on 3000 by default; no other port is in the repository.
+  evidence:
+    - {path: package.json, line: 14, quote: "\"start\": \"next start\","}
+    - {path: README.md, line: 427, quote: "This command starts a local server using the production build. You can now open http://localhost:3000 in your preferred browser to see the result."}
+bindAllInterfaces:
+  value: true
+  # next start binds all interfaces by default.
+  evidence:
+    - {path: package.json, line: 14, quote: "\"start\": \"next start\","}
+startCommand:
+  source: explicit
+  accept: ["npm start", "npm run start", "next start", "npx next start"]
+  evidence:
+    - {path: package.json, line: 14, quote: "\"start\": \"next start\","}
+healthPath:
+  accept: ["/"]
+  # No health route. `/` is the public landing page (localePrefix as-needed, so no redirect to /en); the proxy runs Clerk only for sign-in and dashboard routes.
+  evidence:
+    - {path: src/utils/AppConfig.ts, line: 7, quote: "const localePrefix: LocalePrefixMode = 'as-needed';"}
+    - {path: src/proxy.ts, line: 9, quote: "const isProtectedRoute = createRouteMatcher(["}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: "postgresql://<user>:<password>@<host>:5432/<db>"}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: src/libs/Env.ts, line: 7, quote: "DATABASE_URL: z.string().min(1),"}
+    - {path: src/utils/DBConnection.ts, line: 11, quote: "connectionString: Env.DATABASE_URL,"}
+    - {path: drizzle.config.ts, line: 6, quote: "dialect: 'postgresql',"}
+migrations:
+  mode: command
+  accept: ["npm run db:migrate", "drizzle-kit migrate", "npx drizzle-kit migrate", "dotenv -c -- drizzle-kit migrate"]
+  # The build script runs the migration before next build, so a Dockerfile that runs next build needs a separate migration step; drizzle-kit is a devDependency.
+  evidence:
+    - {path: package.json, line: 28, quote: "\"db:migrate\": \"dotenv -c -- drizzle-kit migrate\","}
+    - {path: package.json, line: 13, quote: "\"build\": \"run-s db:migrate build:next\","}
+    - {path: drizzle.config.ts, line: 4, quote: "out: './migrations',"}
+    - {path: README.md, line: 411, quote: "During the build process, database migrations are automatically executed, so there's no need to run them manually. However, you must define `DATABASE_URL` in your environment variables."}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: package.json, line: 14, quote: "\"start\": \"next start\","}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL; Deployz supplies it. The committed .env sets a 127.0.0.1 value, which fails if it reaches a build or start"}
+    - {name: CLERK_SECRET_KEY, secret: true, buildTime: false, note: "Clerk server key from the vendor's Clerk application; the committed .env holds only a placeholder"}
+    - {name: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, secret: false, buildTime: true, note: "Clerk publishable key; NEXT_PUBLIC values are inlined into the client bundle by next build, and the committed .env holds a pk_test development key"}
+  optional: [NEXT_PUBLIC_APP_URL, NEXT_PUBLIC_LOGGING_LEVEL, NEXT_PUBLIC_SENTRY_DSN, NEXT_PUBLIC_SENTRY_DISABLED, SENTRY_AUTH_TOKEN, SENTRY_ORGANIZATION, SENTRY_PROJECT, NEXT_PUBLIC_BETTER_STACK_SOURCE_TOKEN, NEXT_PUBLIC_BETTER_STACK_INGESTING_HOST]
+  buildTime: [NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY]
+  evidence:
+    - {path: src/libs/Env.ts, line: 6, quote: "CLERK_SECRET_KEY: z.string().min(1),"}
+    - {path: src/libs/Env.ts, line: 11, quote: "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),"}
+    - {path: next.config.ts, line: 5, quote: "import './src/libs/Env';"}
+    - {path: .env, line: 15, quote: "DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres"}
+    - {path: .env, line: 27, quote: "CLERK_SECRET_KEY=your_clerk_secret_key"}
+    - {path: .env.production, line: 10, quote: "NEXT_PUBLIC_APP_URL=https://react-saas.com"}
+blockers:
+  expected:
+    - "No Dockerfile: the vendor must add a production Dockerfile (npm ci, next build, next start on port 3000) and a migration command"
+  mustNot:
+    - "Clerk must not block: it is a hosted authentication service reached with keys"
+    - "PGlite (pglite-server, local.db) must not be read as local database state: it is the development database only"
+    - "Sentry and Checkly must not block: both are optional"
+    - "Redis, workers or S3 must not be required"
+    - "Vercel or Neon recommendations must not block"
+vendorQuestions:
+  legitimate:
+    - "Where do the Clerk keys come from? (the vendor's Clerk application: publishable key at build, secret key at runtime)"
+  unnecessary:
+    - "Which database? (PostgreSQL only)"
+    - "Is a worker or Redis needed? (no)"
+traps:
+  - "`npm run build` runs `db:migrate` first; with the committed DATABASE_URL (127.0.0.1) the build waits and times out, as the comment in .env.production warns (package.json:13, .env.production:58)"
+  - "A committed .env and .env.production hold placeholder and development values (a Clerk pk_test key, a local DATABASE_URL, https://react-saas.com); Next.js loads them at build and start unless real environment variables replace them (.env:9, :15)"
+  - "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is inlined at build time; changing it at runtime does not change the client bundle"
+  - "drizzle-kit and dotenv-cli are devDependencies, so a runtime migration command needs the dev dependencies in the image (package.json:89, :90)"
+  - "package.json declares node >=24 in engines (package.json:5); an older base image can fail the build"
+  - "The proxy runs Clerk only for sign-in, sign-up, dashboard and onboarding routes, so `/` works without a Clerk session (src/proxy.ts:28-31)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the full tree has no Dockerfile or compose file of any kind', evidence: 'package.json:11,14'}
+  - {field: env.required buildTime, change: 'none: next.config.ts imports the env validation, so the three variables must be valid at build; only the NEXT_PUBLIC key is inlined into the bundle', evidence: 'next.config.ts:5; src/libs/Env.ts:6,7,11'}
+  - {field: migrations, change: 'none: the build script migrates through drizzle-kit, a devDependency; a Dockerfile needs a separate command', evidence: 'package.json:13,28'}
+  - {field: outcome, change: 'none: one Next.js process with PostgreSQL and Clerk keys; only the missing Dockerfile needs a change; analog new-244', evidence: 'src/utils/DBConnection.ts:11'}
+  - {field: all, change: verified, evidence: 23 citations checked}

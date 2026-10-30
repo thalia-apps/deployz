@@ -1,0 +1,129 @@
+id: new-277
+repository: macrozheng/mall
+commit: dcaa93b3150352e5044708d7211b5bed0af4509f
+summary: >
+  mall is an e-commerce system (Spring Boot, MyBatis, Spring Security) split into three runnable Maven modules:
+  mall-admin (admin API, port 8080), mall-search (product search on Elasticsearch, port 8081) and mall-portal (shop API,
+  port 8085), plus shared modules (mall-common, mall-mbg, mall-security) and a demo module. The admin web UI is a separate
+  repository (mall-admin-web). The environment needs MySQL 5.7, Redis, MongoDB, RabbitMQ, Elasticsearch, Logstash, Kibana,
+  Nginx and MinIO (document/docker/docker-compose-env.yml). The only Dockerfile (document/sh/Dockerfile) ADDs a prebuilt
+  mall-admin jar and builds nothing. The schema is a SQL file (document/sql/mall.sql) that a person imports.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The shop needs several application services that run together (mall-admin, mall-portal, mall-search), and the portal
+    requires MongoDB and RabbitMQ and the search service requires Elasticsearch; all of these are outside the MVP
+    (non-goals: MongoDB, Elasticsearch, RabbitMQ, extra long-running application services). A single mall-admin could
+    run with MySQL and Redis (the README says so), but then the product has no storefront or search.
+dockerfile:
+  accept: []
+  reject:
+    - {path: document/sh/Dockerfile, reason: "runtime image for mall-admin only; it ADDs a prebuilt mall-admin-1.0-SNAPSHOT.jar that the repository does not contain and builds no code"}
+  target: null
+  context: .
+  evidence:
+    - {path: document/sh/Dockerfile, line: 4, quote: "ADD mall-admin-1.0-SNAPSHOT.jar /mall-admin-1.0-SNAPSHOT.jar"}
+    - {path: document/sh/Dockerfile, line: 6, quote: "EXPOSE 8080"}
+runtime: {accept: [java]}
+port:
+  accept: []
+  # Each module has its own port: mall-admin 8080, mall-search 8081, mall-portal 8085.
+  evidence:
+    - {path: document/docker/docker-compose-app.yml, line: 7, quote: "- 8080:8080"}
+    - {path: document/docker/docker-compose-app.yml, line: 19, quote: "- 8081:8081"}
+    - {path: document/docker/docker-compose-app.yml, line: 32, quote: "- 8085:8085"}
+bindAllInterfaces:
+  value: null
+  evidence: []
+startCommand:
+  source: image
+  accept: []
+  evidence:
+    - {path: document/sh/Dockerfile, line: 8, quote: "ENTRYPOINT [\"java\", \"-jar\",\"/mall-admin-1.0-SNAPSHOT.jar\"]"}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: required
+  engines: [mysql, mongodb, elasticsearch]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {SPRING_DATASOURCE_URL: "jdbc:mysql://<host>:3306/mall"}
+  connectionVars: [SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD]
+  # MySQL alone fits, but MongoDB (portal) and Elasticsearch (search) are also required and are outside the MVP.
+  evidence:
+    - {path: mall-admin/src/main/resources/application-prod.yml, line: 3, quote: "url: jdbc:mysql://db:3306/mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false"}
+    - {path: mall-portal/src/main/resources/application-prod.yml, line: 19, quote: "mongodb:"}
+    - {path: mall-search/src/main/resources/application-prod.yml, line: 20, quote: "uris: es:9200"}
+    - {path: document/docker/docker-compose-env.yml, line: 4, quote: "image: mysql:5.7"}
+    - {path: document/docker/docker-compose-env.yml, line: 42, quote: "image: elasticsearch:7.17.3"}
+    - {path: document/docker/docker-compose-env.yml, line: 82, quote: "image: mongo:4"}
+migrations:
+  mode: none
+  accept: []
+  # document/sql/mall.sql is imported by hand into MySQL; no tool applies it.
+  evidence:
+    - {path: README.md, line: 185, quote: "- 注意：如果只启动`mall-admin`模块，仅需安装MySQL、Redis即可;"}
+redis:
+  status: required
+  selectBy: {SPRING_DATA_REDIS_HOST: "<host>"}
+  evidence:
+    - {path: mall-admin/src/main/resources/application-prod.yml, line: 17, quote: "host: redis # Redis服务器地址"}
+    - {path: document/docker/docker-compose-env.yml, line: 17, quote: "image: redis:7"}
+workers:
+  status: independent
+  commands: []
+  # mall-search and mall-portal are separate Spring Boot applications, not commands of one image.
+  evidence:
+    - {path: document/docker/docker-compose-app.yml, line: 16, quote: "image: mall/mall-search:1.0-SNAPSHOT"}
+    - {path: document/docker/docker-compose-app.yml, line: 29, quote: "image: mall/mall-portal:1.0-SNAPSHOT"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: native
+  s3SelectBy: {}
+  # Product images go to MinIO (S3 API) or Aliyun OSS with the vendor's endpoint and keys.
+  evidence:
+    - {path: mall-admin/src/main/resources/application-prod.yml, line: 23, quote: "minio:"}
+    - {path: mall-admin/src/main/resources/application-prod.yml, line: 24, quote: "endpoint: http://192.168.3.101:9090 #MinIO服务所在地址"}
+env:
+  required:
+    - {name: SPRING_DATASOURCE_URL, secret: false, buildTime: false, note: "JDBC URL of MySQL; the prod profile points to host db"}
+    - {name: SPRING_DATASOURCE_PASSWORD, secret: true, buildTime: false, note: "the prod profile has the literal password 123456"}
+    - {name: SPRING_DATA_MONGODB_HOST, secret: false, buildTime: false, note: "MongoDB host for mall-portal; Deployz cannot provide MongoDB"}
+    - {name: SPRING_RABBITMQ_HOST, secret: false, buildTime: false, note: "RabbitMQ host for mall-portal; Deployz cannot provide RabbitMQ"}
+    - {name: SPRING_ELASTICSEARCH_URIS, secret: false, buildTime: false, note: "Elasticsearch for mall-search; Deployz cannot provide Elasticsearch"}
+  optional: [SPRING_PROFILES_ACTIVE, MINIO_ENDPOINT, MINIO_ACCESSKEY, MINIO_SECRETKEY, JWT_SECRET]
+  buildTime: []
+  evidence:
+    - {path: mall-admin/src/main/resources/application-prod.yml, line: 5, quote: "password: 123456"}
+    - {path: mall-portal/src/main/resources/application-prod.yml, line: 30, quote: "host: rabbit"}
+blockers:
+  expected:
+    - "The product is three application services that run together (mall-admin, mall-portal, mall-search); Deployz runs one web service and workers from one image"
+    - "mall-portal needs MongoDB and RabbitMQ, and mall-search needs Elasticsearch; all three are outside the MVP"
+    - "The only Dockerfile adds a prebuilt mall-admin jar; no Dockerfile builds the code"
+  mustNot:
+    - "MySQL and Redis support must not hide the MongoDB, RabbitMQ and Elasticsearch requirements"
+    - "document/docker/docker-compose-env.yml must not be read as a deploy recipe for Deployz: it lists Logstash, Kibana and Nginx as part of the environment"
+    - "mall-admin must not be chosen as the whole product without noting that the storefront (mall-portal) and search are missing"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port or health path? (not useful: three services with three ports)"
+traps:
+  - "mall-admin alone needs only MySQL and Redis (README.md:185), which makes it look deployable; the storefront is mall-portal and needs MongoDB and RabbitMQ (mall-portal/src/main/resources/application-prod.yml:19, :30)"
+  - "The admin web UI is another repository (mall-admin-web) (README.md:37)"
+  - "document/sh/Dockerfile ADDs a prebuilt jar and is for mall-admin only (document/sh/Dockerfile:4)"
+  - "The prod profiles hold literal passwords (123456) and MinIO keys (mall-admin/src/main/resources/application-prod.yml:5, :26)"
+  - "The MySQL schema comes from document/sql/mall.sql that a person imports; no migration tool exists"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the only Dockerfile ADDs a prebuilt mall-admin jar and serves one of three services', evidence: 'document/sh/Dockerfile:4,6,8'}
+  - {field: database, change: 'none: MySQL fits, but MongoDB (portal) and Elasticsearch (search) are also required', evidence: 'mall-portal/src/main/resources/application-prod.yml:19; mall-search/src/main/resources/application-prod.yml:20'}
+  - {field: outcome, change: 'none: three services, RabbitMQ, MongoDB and Elasticsearch are outside the MVP; mall-admin alone is not the product', evidence: 'document/docker/docker-compose-app.yml:4,16,29; README.md:185'}
+  - {field: all, change: verified, evidence: 21 citations checked}

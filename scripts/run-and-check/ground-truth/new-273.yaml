@@ -1,0 +1,144 @@
+id: new-273
+repository: muety/wakapi
+commit: aba6a4475a797fd4325fc3126c1df33d2b00ff85
+summary: >
+  Wakapi is a self-hosted, WakaTime-compatible coding-statistics server written in Go (server-rendered HTML, static
+  assets committed in the repository). The root Dockerfile builds the binary from source in a golang stage and runs it in
+  a distroless image as ENTRYPOINT /app/wakapi on port 3000. The image defaults to SQLite in /data
+  (WAKAPI_DB_TYPE=sqlite3); the same binary supports MySQL, MariaDB and PostgreSQL, selected by WAKAPI_DB_TYPE=postgres
+  with WAKAPI_DB_HOST, _PORT, _USER, _PASSWORD, _NAME (or WAKAPI_DB_DSN). The schema is migrated at each start. Cron-like
+  jobs (aggregation, reports, housekeeping) run inside the one process. No Redis, no S3, no separate worker.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One Go web process built from the root Dockerfile, PostgreSQL chosen by env values that the vendor types in Deployz
+    (WAKAPI_DB_TYPE=postgres and the connection parts), migrations at start, no durable local state once PostgreSQL is
+    selected, no Redis, no worker. The settings to change are WAKAPI_DB_NAME (the image sets it to the SQLite file
+    /data/wakapi.db) and WAKAPI_DB_SSL for RDS. No repository change is needed.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 10, quote: "RUN GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 GOEXPERIMENT=jsonv2 go build -ldflags \"-s -w\" -v -o wakapi main.go"}
+    - {path: Dockerfile, line: 31, quote: "FROM gcr.io/distroless/static:nonroot"}
+    - {path: Dockerfile, line: 63, quote: "ENTRYPOINT [\"/app/wakapi\"]"}
+    - {path: compose.yml, line: 3, quote: "build: ."}
+runtime: {accept: [go]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 58, quote: "EXPOSE 3000"}
+    - {path: config.default.yml, line: 15, quote: "port: 3000"}
+    - {path: config/config.go, line: 177, quote: "Port             int      `default:\"3000\" env:\"WAKAPI_PORT\"`"}
+bindAllInterfaces:
+  value: true
+  # The code default is 127.0.0.1, but the Dockerfile sets WAKAPI_LISTEN_IPV4=0.0.0.0 and rewrites the IPv6 listener to '-'.
+  evidence:
+    - {path: Dockerfile, line: 42, quote: "WAKAPI_LISTEN_IPV4='0.0.0.0' \\"}
+    - {path: Dockerfile, line: 19, quote: "sed -i 's/listen_ipv6: ::1/listen_ipv6: \"-\"/g' app/config.yml"}
+startCommand:
+  source: image
+  accept: ["/app/wakapi"]
+  evidence:
+    - {path: Dockerfile, line: 63, quote: "ENTRYPOINT [\"/app/wakapi\"]"}
+healthPath:
+  accept: ["/api/health"]
+  evidence:
+    - {path: routes/api/health.go, line: 27, quote: "router.Get(\"/health\", h.Get)"}
+    - {path: main.go, line: 298, quote: "router.Mount(\"/api\", apiRouter)"}
+    - {path: scripts/healthcheck.go, line: 16, quote: "url := fmt.Sprintf(\"http://127.0.0.1:%s/api/health\", port)"}
+database:
+  status: required
+  engines: [sqlite, mysql, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {WAKAPI_DB_TYPE: postgres, WAKAPI_DB_HOST: "<host>", WAKAPI_DB_PORT: "5432", WAKAPI_DB_USER: "<user>", WAKAPI_DB_PASSWORD: "<password>", WAKAPI_DB_NAME: "<db>"}
+  connectionVars: [WAKAPI_DB_TYPE, WAKAPI_DB_HOST, WAKAPI_DB_PORT, WAKAPI_DB_USER, WAKAPI_DB_PASSWORD, WAKAPI_DB_NAME, WAKAPI_DB_SSL, WAKAPI_DB_DSN]
+  # The image defaults to SQLite in /data. WAKAPI_DB_NAME must be overridden: it holds the SQLite path in the image.
+  evidence:
+    - {path: Dockerfile, line: 36, quote: "WAKAPI_DB_TYPE=sqlite3 \\"}
+    - {path: Dockerfile, line: 40, quote: "WAKAPI_DB_NAME=/data/wakapi.db \\"}
+    - {path: config/config.go, line: 167, quote: "Type                    string `yaml:\"dialect\" default:\"sqlite3\" env:\"WAKAPI_DB_TYPE\"`"}
+    - {path: config/config.go, line: 168, quote: "DSN                     string `yaml:\"DSN\" default:\"\" env:\"WAKAPI_DB_DSN\"`"}
+    - {path: config/config.go, line: 170, quote: "Ssl                     bool   `default:\"false\" env:\"WAKAPI_DB_SSL\"`"}
+    - {path: config/db.go, line: 106, quote: "return fmt.Sprintf(\"host=%s port=%d user=%s dbname=%s password=%s sslmode=%s\","}
+    - {path: compose.yml, line: 10, quote: "WAKAPI_DB_TYPE: \"postgres\""}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: main.go, line: 167, quote: "if !config.SkipMigrations {"}
+    - {path: main.go, line: 168, quote: "migrations.Run(db, config)"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # Aggregation, report, housekeeping and misc jobs run as goroutines of the web process.
+  evidence:
+    - {path: main.go, line: 212, quote: "go aggregationService.Schedule()"}
+    - {path: main.go, line: 213, quote: "go reportService.Schedule()"}
+    - {path: main.go, line: 214, quote: "go housekeepingService.Schedule()"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/data]
+  s3: none
+  s3SelectBy: {}
+  # /data holds only the SQLite file. With WAKAPI_DB_TYPE=postgres the application writes no durable local files.
+  evidence:
+    - {path: Dockerfile, line: 47, quote: "COPY --from=build-env --chown=nonroot:nonroot /staging/data /data"}
+    - {path: Dockerfile, line: 40, quote: "WAKAPI_DB_NAME=/data/wakapi.db \\"}
+env:
+  required:
+    - {name: WAKAPI_DB_TYPE, secret: false, buildTime: false, note: "postgres; the image default is sqlite3 with a file in /data"}
+    - {name: WAKAPI_DB_HOST, secret: false, buildTime: false, note: "PostgreSQL host"}
+    - {name: WAKAPI_DB_PORT, secret: false, buildTime: false, note: "5432"}
+    - {name: WAKAPI_DB_USER, secret: false, buildTime: false, note: "database user"}
+    - {name: WAKAPI_DB_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: WAKAPI_DB_NAME, secret: false, buildTime: false, note: "database name; the image sets it to the SQLite path /data/wakapi.db"}
+    - {name: WAKAPI_PASSWORD_SALT, secret: true, buildTime: false, note: "pepper for password hashing; empty by default and cannot change after users exist"}
+  optional: [WAKAPI_DB_SSL, WAKAPI_DB_DSN, WAKAPI_PUBLIC_URL, WAKAPI_INSECURE_COOKIES, WAKAPI_ALLOW_SIGNUP, WAKAPI_COOKIE_KEY, WAKAPI_MAIL_ENABLED, WAKAPI_MAIL_SMTP_HOST, WAKAPI_MAIL_SMTP_PASS, WAKAPI_SENTRY_DSN, WAKAPI_QUICK_START]
+  buildTime: []
+  evidence:
+    - {path: config/config.go, line: 142, quote: "PasswordSalt                 string               `yaml:\"password_salt\" default:\"\" env:\"WAKAPI_PASSWORD_SALT\"`"}
+    - {path: config/config.go, line: 159, quote: "Host                    string `env:\"WAKAPI_DB_HOST\"`"}
+    - {path: config/config.go, line: 163, quote: "Password                string `env:\"WAKAPI_DB_PASSWORD\"`"}
+    - {path: Dockerfile, line: 43, quote: "WAKAPI_INSECURE_COOKIES='true' \\"}
+    - {path: config/config.go, line: 185, quote: "PublicUrl        string   `yaml:\"public_url\" default:\"http://localhost:3000\" env:\"WAKAPI_PUBLIC_URL\"`"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite default must not block: WAKAPI_DB_TYPE=postgres selects PostgreSQL"
+    - "The /data directory must not be read as durable local state: it holds only the SQLite file"
+    - "In-process schedules (aggregation, reports, housekeeping) must not be read as a worker or an EventBridge schedule"
+    - "compose.yml (wakapi plus postgres) must not be read as a multi-service app: it is the deployment example for the same image"
+vendorQuestions:
+  legitimate:
+    - "What is the password salt? (WAKAPI_PASSWORD_SALT, a generated secret that must stay fixed)"
+    - "Should sign-up stay open? (WAKAPI_ALLOW_SIGNUP defaults to true)"
+  unnecessary:
+    - "Which database? (WAKAPI_DB_TYPE=postgres with the connection parts)"
+    - "Is a worker or a migration command needed? (no, jobs and migrations run inside the web process)"
+    - "Is Redis or S3 needed? (no)"
+traps:
+  - "The Dockerfile sets WAKAPI_DB_NAME=/data/wakapi.db; with WAKAPI_DB_TYPE=postgres it must be replaced by the database name (Dockerfile:40)"
+  - "The database is configured by separate WAKAPI_DB_* parts, not by one DATABASE_URL; WAKAPI_DB_DSN is an optional full DSN (config/config.go:168)"
+  - "WAKAPI_DB_SSL defaults to false and the connection string then uses sslmode=disable; an RDS instance that needs TLS needs WAKAPI_DB_SSL=true (config/db.go:98-100)"
+  - "The code default listen address is 127.0.0.1; only the Dockerfile ENV makes it 0.0.0.0 (Dockerfile:42)"
+  - "WAKAPI_INSECURE_COOKIES=true in the image; behind HTTPS it should be false (Dockerfile:43)"
+  - "The distroless image has no shell, so entrypoint.sh (with wait-for-it) is not used by the Dockerfile"
+  - "WAKAPI_PASSWORD_SALT is empty by default; changing it later locks out existing users (config/config.go:142)"
+openQuestions: []
+crossReview:
+  - {field: bindAllInterfaces, change: 'none: the code default is 127.0.0.1, but the Dockerfile ENV sets WAKAPI_LISTEN_IPV4 to 0.0.0.0 and the config.yml copy disables the IPv6 listener', evidence: 'Dockerfile:19,42; config/config.go:178-179'}
+  - {field: database, change: 'none: no DATABASE_URL exists; the postgres dialect reads the WAKAPI_DB_* parts or WAKAPI_DB_DSN, and the image default WAKAPI_DB_NAME is a SQLite path', evidence: 'config/config.go:159-170; config/db.go:93-114; Dockerfile:36,40'}
+  - {field: outcome, change: 'none: one Go process from the root Dockerfile, settings only, no local state with PostgreSQL', evidence: 'Dockerfile:63; main.go:167-168,212-215; compose.yml:3,10'}
+  - {field: all, change: verified, evidence: 32 citations checked}

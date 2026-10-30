@@ -1,0 +1,138 @@
+id: new-274
+repository: svix/svix-webhooks
+commit: 39ff06a4cae838f2b3e67c0fbe79158f2146067d
+summary: >
+  Svix is an open-source webhook sending service. The repository is a monorepo of client libraries in many languages
+  (rust, python, go, java, kotlin, ruby, php, csharp, javascript), a CLI and the server in server/ (a Rust workspace). The
+  server is one binary (svix-server) that runs the API and the message worker in the same process (api_enabled and
+  worker_enabled both default to true). server/Dockerfile (cargo-chef build, debian slim runtime) starts
+  launch-svix-server, which passes --run-migrations unless RUN_MIGRATIONS=0. It listens on 0.0.0.0:8071. It needs
+  PostgreSQL (SVIX_DB_DSN) and a JWT secret (SVIX_JWT_SECRET); the queue defaults to Redis (SVIX_REDIS_DSN) with an
+  in-memory option. No S3, no local files.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One Rust service from server/Dockerfile (a Deployz Dockerfile path and build context setting, not a repository
+    change), PostgreSQL through SVIX_DB_DSN, Redis through SVIX_REDIS_DSN, schema migrations at every start by the
+    launch script, API and worker in one process, no durable local state. Only Deployz settings and vendor env values
+    are needed.
+dockerfile:
+  accept: [server/Dockerfile]
+  reject: []
+  target: null
+  context: server
+  evidence:
+    - {path: server/Dockerfile, line: 3, quote: "# NOTE: this should be built from the server/ subdirectory of `svix-webhooks`"}
+    - {path: server/Dockerfile, line: 51, quote: "RUN cargo build --release --package svix-server --bin svix-server --frozen"}
+    - {path: server/Dockerfile, line: 54, quote: "FROM docker.io/debian:trixie-20261005-slim AS prod"}
+    - {path: server/docker-compose.yml, line: 4, quote: "context: ."}
+runtime: {accept: [rust]}
+port:
+  accept: [8071]
+  evidence:
+    - {path: server/Dockerfile, line: 79, quote: "EXPOSE 8071"}
+    - {path: server/svix-server/config.default.toml, line: 6, quote: "listen_address = \"0.0.0.0:8071\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/svix-server/config.default.toml, line: 6, quote: "listen_address = \"0.0.0.0:8071\""}
+startCommand:
+  source: image
+  accept: ["/usr/local/bin/launch-svix-server"]
+  evidence:
+    - {path: server/Dockerfile, line: 93, quote: "CMD [\"/usr/local/bin/launch-svix-server\"]"}
+    - {path: server/scripts/launch-svix-server, line: 17, quote: "exec svix-server \"${args[@]}\""}
+healthPath:
+  accept: ["/api/v1/health/ping", "/api/v1/health"]
+  # /health/ping answers 204 without touching the database; /health checks the database, queue and cache.
+  evidence:
+    - {path: server/svix-server/src/v1/endpoints/health.rs, line: 136, quote: ".api_route(\"/health/ping\", get(ping).head(ping))"}
+    - {path: server/svix-server/src/v1/endpoints/health.rs, line: 138, quote: "\"/health\","}
+    - {path: server/svix-server/src/lib.rs, line: 213, quote: ".nest_api_service(\"/api/v1\", v1_router)"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {SVIX_DB_DSN: "postgresql://<user>:<password>@<host>:5432/<db>"}
+  connectionVars: [SVIX_DB_DSN]
+  evidence:
+    - {path: server/svix-server/config.default.toml, line: 65, quote: "# The DSN for the database. Only postgres is currently supported."}
+    - {path: server/svix-server/config.default.toml, line: 66, quote: "db_dsn = \"postgresql://postgres:postgres@pgbouncer/postgres\""}
+    - {path: server/docker-compose.yml, line: 15, quote: "SVIX_DB_DSN: \"postgresql://postgres:postgres@pgbouncer/postgres\""}
+migrations:
+  mode: startup
+  accept: []
+  # The launch script adds --run-migrations to the server command unless RUN_MIGRATIONS=0.
+  evidence:
+    - {path: server/scripts/launch-svix-server, line: 10, quote: "if [[ \"${RUN_MIGRATIONS:-1}\" != \"0\" ]]; then"}
+    - {path: server/scripts/launch-svix-server, line: 11, quote: "args+=(\"--run-migrations\")"}
+    - {path: server/svix-server/src/main.rs, line: 206, quote: "if args.run_migrations {"}
+redis:
+  status: required
+  selectBy: {SVIX_REDIS_DSN: "redis://<host>:6379"}
+  # queue_type defaults to redis. The memory queue is a supported option but loses queued messages on restart.
+  evidence:
+    - {path: server/svix-server/config.default.toml, line: 84, quote: "queue_type = \"redis\""}
+    - {path: server/svix-server/config.default.toml, line: 94, quote: "cache_type = \"memory\""}
+    - {path: server/docker-compose.yml, line: 14, quote: "SVIX_REDIS_DSN: \"redis://redis:6379\""}
+workers:
+  status: embedded
+  commands: []
+  # The message worker runs inside the API process.
+  evidence:
+    - {path: server/svix-server/config.default.toml, line: 113, quote: "api_enabled = true"}
+    - {path: server/svix-server/config.default.toml, line: 116, quote: "worker_enabled = true"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required:
+    - {name: SVIX_DB_DSN, secret: true, buildTime: false, note: "PostgreSQL DSN postgresql://user:pass@host:5432/db"}
+    - {name: SVIX_REDIS_DSN, secret: true, buildTime: false, note: "redis://host:6379 for the Redis queue (the default queue_type)"}
+    - {name: SVIX_JWT_SECRET, secret: true, buildTime: false, note: "the server stops at start without it; clients sign API tokens with it"}
+  optional: [SVIX_MAIN_SECRET, SVIX_QUEUE_TYPE, SVIX_CACHE_TYPE, SVIX_ENVIRONMENT, SVIX_LOG_LEVEL, SVIX_LOG_FORMAT, SVIX_OPERATIONAL_WEBHOOK_ADDRESS, SVIX_WHITELIST_SUBNETS, SVIX_ENDPOINT_HTTPS_ONLY, SVIX_DB_POOL_MAX_SIZE, RUN_MIGRATIONS, WAIT_FOR]
+  buildTime: []
+  evidence:
+    - {path: server/svix-server/src/cfg.rs, line: 619, quote: "if !figment.contains(\"jwt_secret\") {"}
+    - {path: server/svix-server/src/cfg.rs, line: 620, quote: "bail!(\"missing field `jwt_secret`\");"}
+    - {path: server/docker-compose.yml, line: 16, quote: "# SVIX_JWT_SECRET: \"x\"  # IMPORTANT: uncomment and set a real JWT secret here."}
+    - {path: README.md, line: 253, quote: "SVIX_DB_DSN = \"postgresql://postgres:postgres@pgbouncer/postgres\""}
+blockers:
+  expected: []
+  mustNot:
+    - "The client libraries (rust/, python/, go/, java/, kotlin/, ruby/, php/, csharp/, javascript/) must not be read as separate deployable apps or as extra services"
+    - "bridge/ and svix-cli/ must not be read as required services: the server runs without them"
+    - "server/rabbit and the rabbitmq queue type must not block: the default queue is Redis"
+    - "pgbouncer in docker-compose.yml must not be required: the DSN can point at PostgreSQL directly"
+    - "server/docker-compose.yml (backend, postgres, pgbouncer, redis) must not be read as several application services: only the backend is the application"
+vendorQuestions:
+  legitimate:
+    - "What is the JWT secret? (SVIX_JWT_SECRET, a generated secret; API clients sign tokens with it)"
+    - "Should private IP ranges be allowed for webhook endpoints? (SVIX_WHITELIST_SUBNETS, empty by default)"
+  unnecessary:
+    - "Which database? (PostgreSQL through SVIX_DB_DSN)"
+    - "Is a worker or a migration command needed? (no, the API process runs the worker and the launch script migrates)"
+    - "Is a repository change needed for the Dockerfile? (no, build with server/Dockerfile and context server)"
+traps:
+  - "The repository root has no Dockerfile; the Dockerfile is server/Dockerfile and must build with server/ as context (server/Dockerfile:3)"
+  - "SVIX_JWT_SECRET has no default and the server refuses to start without it (server/svix-server/src/cfg.rs:619-620)"
+  - "SVIX_MAIN_SECRET encrypts stored data and cannot change once set (server/svix-server/config.default.toml:15-16)"
+  - "The default db_dsn points to a pgbouncer host; a deployment must set SVIX_DB_DSN (server/svix-server/config.default.toml:66)"
+  - "The default queue type is redis, so SVIX_REDIS_DSN is required unless SVIX_QUEUE_TYPE=memory (server/svix-server/config.default.toml:84)"
+  - "The default environment is dev (server/svix-server/config.default.toml:56)"
+  - "The server blocks webhook targets in private IP space by default; a test endpoint on a private address is refused (server/svix-server/config.default.toml:126-129)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the repository root has no Dockerfile; server/Dockerfile says it builds from the server/ subdirectory, so the recipe sets the Dockerfile path and the context', evidence: 'server/Dockerfile:3; server/docker-compose.yml:4-5'}
+  - {field: migrations, change: 'none: launch-svix-server adds --run-migrations by default, so no separate migration command is needed', evidence: 'server/scripts/launch-svix-server:10-12; server/svix-server/src/main.rs:206'}
+  - {field: redis, change: 'none: queue_type defaults to redis, so SVIX_REDIS_DSN is required unless the vendor sets the memory queue', evidence: 'server/svix-server/config.default.toml:84'}
+  - {field: outcome, change: 'none: API and worker are one process; PostgreSQL and Redis are supported; settings only', evidence: 'server/svix-server/config.default.toml:113,116'}
+  - {field: all, change: verified, evidence: 27 citations checked}

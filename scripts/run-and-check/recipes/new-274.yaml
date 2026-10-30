@@ -1,0 +1,12 @@
+id: new-274
+set: holdout
+source:
+  kind: git
+  repository: svix/svix-webhooks
+  commit: 39ff06a4cae838f2b3e67c0fbe79158f2146067d
+build:
+  dockerfile: server/Dockerfile
+  context: server
+notes:
+  - 2026-10 Round 11 blind check set (ANALYSIS_VERSION 81) on repositories outside the corpus and the Round 10 held-out set (branch main, HEAD on 2026-10-30). No vendor inputs; the reviewed ground truth is ground-truth/new-274.yaml (pnpm runcheck:truth).
+  - "The repository root has no Dockerfile. The Svix server is in server/ and its Dockerfile says it must be built from the server/ directory, so build.dockerfile is server/Dockerfile and build.context is server (server/Dockerfile:3, server/docker-compose.yml:4-5)."

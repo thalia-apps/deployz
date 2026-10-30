@@ -1,0 +1,150 @@
+id: new-271
+repository: kiwitcms/Kiwi
+commit: a4f43aa6436e1c67036b2db5eadc7dc6c16a59a1
+summary: >
+  Kiwi TCMS is an open-source test case management system (Django, Python 3.12, a webpack bundle). The root Dockerfile
+  builds the package from source (webpack bundle, python sdist, pip install), then the `kiwitcms` stage generates a
+  self-signed certificate, runs collectstatic and starts /httpd-foreground. That script starts nginx in the background
+  (daemon on) and then uWSGI in the foreground. nginx listens on 8080 (a 301 redirect to https) and on 8443 with TLS, and
+  it alone serves /static/ and, through X-Accel, the uploaded files. uWSGI listens on a unix socket only. The database
+  is MariaDB/MySQL by default; KIWI_DB_ENGINE selects PostgreSQL. Uploads go to /Kiwi/uploads on local disk with no S3
+  option. The first setup is the command `manage.py initial_setup`. SECRET_KEY is a constant committed in the settings.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The application fits in shape (one web service, PostgreSQL, no Redis). But the image runs two long-running servers
+    from one start script (nginx in the background and uWSGI), the only HTTP listeners are an nginx redirect on 8080 and
+    TLS with a self-signed certificate on 8443, uWSGI has no HTTP port, and static files exist only behind nginx. A
+    Deployz load balancer needs plain HTTP on one container port. The vendor must change the image to serve HTTP from a
+    single process (uWSGI with an http port and static file serving) and move the hard-coded SECRET_KEY to an
+    environment variable; attachments stay on local disk because the storage backend is the file system only. This is
+    a repository change (DEPLOYABLE_WITH_CHANGES); a strict read of the several-servers and local-disk non-goals gives
+    NOT_DEPLOYABLE.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 25, quote: "COPY . /Kiwi/"}
+    - {path: Dockerfile, line: 44, quote: "FROM runtime-base AS kiwitcms"}
+    - {path: Dockerfile, line: 52, quote: "CMD /httpd-foreground"}
+    - {path: Dockerfile, line: 80, quote: "RUN /Kiwi/manage.py collectstatic --noinput --link && \\"}
+runtime: {accept: [python]}
+port:
+  accept: [8443, 8080]
+  # 8443 is the TLS listener that serves the application; 8080 only redirects to https.
+  evidence:
+    - {path: Dockerfile, line: 48, quote: "EXPOSE 8080"}
+    - {path: Dockerfile, line: 49, quote: "EXPOSE 8443"}
+    - {path: etc/nginx.conf, line: 74, quote: "return 301 https://$host$request_uri;"}
+    - {path: etc/nginx.conf, line: 79, quote: "listen       8443 ssl;"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: etc/nginx.conf, line: 69, quote: "listen       8080;"}
+    - {path: etc/nginx.conf, line: 79, quote: "listen       8443 ssl;"}
+startCommand:
+  source: image
+  accept: ["/bin/sh -c /httpd-foreground", "/httpd-foreground"]
+  evidence:
+    - {path: Dockerfile, line: 52, quote: "CMD /httpd-foreground"}
+    - {path: httpd-foreground, line: 12, quote: "/usr/sbin/nginx -e /dev/stderr -c /Kiwi/etc/nginx.conf"}
+    - {path: httpd-foreground, line: 14, quote: "/venv/bin/uwsgi --ini /Kiwi/etc/uwsgi.conf"}
+healthPath:
+  accept: ["/accounts/login/"]
+  evidence:
+    - {path: Dockerfile, line: 46, quote: "HEALTHCHECK CMD curl --fail -k -H \"Referer: healthcheck\" https://127.0.0.1:8443/accounts/login/"}
+database:
+  status: required
+  engines: [mysql, postgres]
+  default: mysql
+  deployzEngine: postgres
+  selectBy: {KIWI_DB_ENGINE: django.db.backends.postgresql, KIWI_DB_HOST: "<host>", KIWI_DB_PORT: "5432", KIWI_DB_NAME: "<db>", KIWI_DB_USER: "<user>", KIWI_DB_PASSWORD: "<password>"}
+  connectionVars: [KIWI_DB_ENGINE, KIWI_DB_HOST, KIWI_DB_PORT, KIWI_DB_NAME, KIWI_DB_USER, KIWI_DB_PASSWORD]
+  evidence:
+    - {path: tcms/settings/common.py, line: 30, quote: "\"ENGINE\": get_secret(\"KIWI_DB_ENGINE\", \"django.db.backends.mysql\"),"}
+    - {path: tcms/settings/common.py, line: 34, quote: "\"HOST\": get_secret(\"KIWI_DB_HOST\", \"\"),"}
+    - {path: docker-compose.postgres, line: 25, quote: "KIWI_DB_ENGINE: django.db.backends.postgresql"}
+    - {path: Dockerfile, line: 29, quote: "pip3 install --no-cache-dir -r requirements/mariadb.txt -r requirements/postgres.txt"}
+migrations:
+  mode: command
+  accept: ["/Kiwi/manage.py initial_setup", "python manage.py migrate --noinput"]
+  # The image runs no migration at start. The docs run `initial_setup` once (schema, super-user, site); later upgrades
+  # are `manage.py migrate` or the upgrade command.
+  evidence:
+    - {path: docs/source/installing_docker.rst, line: 118, quote: "docker exec -it kiwi_web /Kiwi/manage.py initial_setup"}
+    - {path: httpd-foreground, line: 14, quote: "/venv/bin/uwsgi --ini /Kiwi/etc/uwsgi.conf"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: tcms/settings/common.py, line: 164, quote: "\"BACKEND\": \"django.core.cache.backends.locmem.LocMemCache\","}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: httpd-foreground, line: 14, quote: "/venv/bin/uwsgi --ini /Kiwi/etc/uwsgi.conf"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: Dockerfile, line: 64, quote: "COPY ./etc/cron.jobs/* /Kiwi/etc/cron.jobs/"}
+storage:
+  local: required
+  paths: [/Kiwi/uploads]
+  s3: none
+  s3SelectBy: {}
+  # Attachments (test case files) go to MEDIA_ROOT through the file system storage; there is no S3 backend setting. The
+  # docker-compose file mounts a named volume for it.
+  evidence:
+    - {path: tcms/settings/common.py, line: 173, quote: "\"BACKEND\": \"django.core.files.storage.FileSystemStorage\","}
+    - {path: tcms/settings/common.py, line: 283, quote: "MEDIA_ROOT = \"/Kiwi/uploads\""}
+    - {path: docker-compose.yml, line: 27, quote: "- uploads:/Kiwi/uploads:Z"}
+    - {path: etc/nginx.conf, line: 98, quote: "alias /Kiwi/uploads/;"}
+env:
+  required:
+    - {name: KIWI_DB_ENGINE, secret: false, buildTime: false, note: "django.db.backends.postgresql; the default is MySQL/MariaDB"}
+    - {name: KIWI_DB_HOST, secret: false, buildTime: false, note: "RDS endpoint"}
+    - {name: KIWI_DB_NAME, secret: false, buildTime: false, note: "database name; default kiwi"}
+    - {name: KIWI_DB_USER, secret: false, buildTime: false, note: "database user; default kiwi"}
+    - {name: KIWI_DB_PASSWORD, secret: true, buildTime: false, note: "database password; default kiwi"}
+  optional: [KIWI_DB_PORT]
+  buildTime: []
+  evidence:
+    - {path: tcms/settings/common.py, line: 31, quote: "\"NAME\": get_secret(\"KIWI_DB_NAME\", \"kiwi\"),"}
+    - {path: tcms/settings/common.py, line: 32, quote: "\"USER\": get_secret(\"KIWI_DB_USER\", \"kiwi\"),"}
+    - {path: tcms/settings/common.py, line: 33, quote: "\"PASSWORD\": get_secret(\"KIWI_DB_PASSWORD\", \"kiwi\"),"}
+    - {path: tcms/settings/common.py, line: 35, quote: "\"PORT\": get_secret(\"KIWI_DB_PORT\", \"\"),"}
+blockers:
+  expected:
+    - "The start script runs nginx in the background and uWSGI in the foreground: two long-running servers in one image (httpd-foreground:12,14)"
+    - "No plain-HTTP application listener: port 8080 only redirects to https and port 8443 uses a self-signed certificate; uWSGI listens on a unix socket (etc/nginx.conf:74,79; etc/uwsgi.conf:6)"
+    - "Static files are served only by nginx (location /static/), so uWSGI alone returns no CSS or JavaScript (etc/nginx.conf:101-103)"
+    - "SECRET_KEY is a constant in tcms/settings/common.py; a different value needs a settings file in the image (tcms/settings/common.py:24)"
+    - "Attachments are stored on local disk with no S3 option (tcms/settings/common.py:283)"
+  mustNot:
+    - "MariaDB must not block: KIWI_DB_ENGINE selects PostgreSQL and requirements/postgres.txt is installed in the image"
+    - "Redis must not be required: the cache is local memory"
+    - "docker-compose.yml (mariadb, web, a test-only nginx proxy) must not be read as an application with several services"
+vendorQuestions:
+  legitimate:
+    - "How is the first setup run? (manage.py initial_setup creates the schema, the super-user and the site; it needs input)"
+    - "Which HTTP port and TLS mode should the image use behind the load balancer? (the stock image serves HTTPS with a self-signed certificate on 8443)"
+    - "Are attachments used? (they stay on local disk and are lost with the task)"
+  unnecessary:
+    - "Which database? (PostgreSQL through KIWI_DB_ENGINE)"
+    - "Is Redis needed? (no)"
+traps:
+  - "nginx is started with daemon on and not supervised; if it dies, the container keeps running on uWSGI alone (httpd-foreground:12, etc/nginx.conf:4)"
+  - "The image HEALTHCHECK calls https://127.0.0.1:8443 with -k; a plain-HTTP probe on 8080 gets a 301 to https (Dockerfile:46, etc/nginx.conf:74)"
+  - "manage.py is edited at build time with sed to use tcms.settings.product, so the repository file alone runs the devel settings (Dockerfile:31, :75)"
+  - "The default database engine is MySQL and the default password is kiwi (tcms/settings/common.py:30,33)"
+  - "The self-signed certificate is generated in the image, so every image has the same certificate (Dockerfile:67)"
+openQuestions:
+  - "Whether a Deployz target group with HTTPS to a self-signed certificate on 8443 would be accepted; the MVP scope names plain container ports, so the outcome treats it as a repository change"
+crossReview:
+  - {field: dockerfile, change: 'none: the root Dockerfile has a pkg-dist stage that exports sdist files and the final kiwitcms stage; the final stage is the last stage so no target is needed', evidence: 'Dockerfile:40-44'}
+  - {field: port, change: 'none: 8080 is only a redirect, 8443 is the TLS listener that serves the app', evidence: 'etc/nginx.conf:69-79'}
+  - {field: outcome, change: 'none: two accepted outcomes; two servers in one start script and a local upload directory are named MVP non-goals, while a vendor change to one HTTP uWSGI process is small', evidence: 'httpd-foreground:12-14; tcms/settings/common.py:173,283'}
+  - {field: all, change: verified, evidence: 31 citations checked}
