@@ -1,0 +1,42 @@
+{
+  "id": "new-120",
+  "analyser": "judge@r10-p3-b",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "The Temporal server is a gRPC workflow server that SDK clients and workers connect to, not an HTTP web application that Deployz can serve behind its load balancer.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 64,
+          "quote": "This repository contains the source code of the Temporal server. To implement Workflows, Activities and Workers, use one of the [supported languages](https://docs.temporal.io/dev-guide/)."
+        },
+        {
+          "path": "README.md",
+          "line": 24,
+          "quote": "The Temporal server executes units of application logic called Workflows in a resilient manner that automatically handles intermittent failures, and retries failed operations."
+        },
+        {
+          "path": "docker/targets/server.Dockerfile",
+          "line": 14,
+          "quote": "COPY --chmod=755 ./build/${TARGETARCH}/temporal-server /usr/local/bin/"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 4842,
+      "completionTokens": 301,
+      "costUsd": 0.02513412
+    },
+    "latencyMs": 4807
+  }
+}

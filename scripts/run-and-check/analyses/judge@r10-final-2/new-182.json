@@ -1,0 +1,43 @@
+{
+  "id": "new-182",
+  "analyser": "judge@r10-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Huly is a stack of many cooperating services (account, front, collaborator, transactor, stream, media, preview and others) plus Kafka-compatible Redpanda and Elasticsearch, which Deployz cannot run as a single web process.",
+      "evidence": [
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 20,
+          "quote": "  media:"
+        },
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 66,
+          "quote": "    image: docker.redpanda.com/redpandadata/redpanda:v24.3.6"
+        },
+        {
+          "path": "README.md",
+          "line": 69,
+          "quote": "For detailed information about the platform architecture, services, and their interactions, see our [Architecture Overview](./ARCHITECTURE_OVERVIEW.md)."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6692,
+      "completionTokens": 275,
+      "costUsd": 0.03194532
+    },
+    "latencyMs": 4653
+  }
+}

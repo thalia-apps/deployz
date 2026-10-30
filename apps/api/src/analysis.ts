@@ -8,6 +8,7 @@ import type {
   AnalysisEngine,
   AnalysisResult,
   FileTree,
+  JudgeRecord,
   MergeResult,
   ReadinessReport,
   RepositoryAiInput,
@@ -26,16 +27,21 @@ import {
   detectDeclaredWorkerCommands,
   evidenceFileRequests,
   dockerfileWorkdirs,
+  JUDGE_PROMPT_VERSION,
   isDevToolCommand,
   listDockerfileCandidates,
   mainCommandRunsWorker,
+  judgeFileRequests,
   mergeAiAnalysis,
   migrationRunnerVerdict,
+  normalizeDeploymentManifest,
   optionalQueueMode,
   redactSecrets,
   runAiAnalysis,
+  runFinalJudge,
   selectAiContextFiles,
   selectMigrationScript,
+  TREE_PATHS,
   vendorResourceOverrides,
   verdictFromReadiness,
 } from '@deployz/analysis';
@@ -523,7 +529,18 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // after the server image; Terraform of CI directories and module libraries
 // is ignored. Stored v78 rows can call these apps deployable, or reject Vault
 // for its CI Terraform.
-export const ANALYSIS_VERSION = 79;
+// Version 80 (2026-10 Round 10, judge prompt v3): with the AI engine, a final
+// judge (`ai-analysis/judge.ts`) reviews a DEPLOYABLE or
+// DEPLOYABLE_WITH_CHANGES outcome and can only make it stricter: a cited
+// "not deployable" is `final-review-unsupported` (NOT_DEPLOYABLE and a gate
+// block), a cited "needs changes" is `final-review-changes`, and "not sure"
+// is the recommended `final-review-question`. A subdirectory Compose file
+// whose application services all run published images is a self-hosting
+// sample, not evidence of a second service, a broker or a PostgreSQL
+// extension. Stored v79 rows can call a multi-service, Kafka, ClickHouse,
+// desktop or retired-source repository deployable, or reject Langflow and
+// LobeHub for their deploy samples.
+export const ANALYSIS_VERSION = 80;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
@@ -673,7 +690,7 @@ export async function runApplicationAnalysis(
     // run is fetching and analysing (PATCH /api/applications/:id), so the
     // outcome is derived from the row as it is when written, under its lock.
     const resolvedWorkerCommands = resolveWorkerCommands(tree);
-    const buildOutcome = (app: typeof application) => {
+    const buildOutcome = (app: typeof application, aiJudge: JudgeRecord | null) => {
       // The vendor-owned field list lives on detected_metadata, which this
       // write replaces wholesale — carry it across or every re-analysis would
       // forget which fields the vendor edited. A row with no list at all
@@ -700,7 +717,8 @@ export async function runApplicationAnalysis(
     // The semantic readiness report is built from the MERGED metadata, so a
     // start/migration command the AI resolved counts as resolved here too.
     // The persisted verdict is derived from the report — one source of truth.
-    const readiness: ReadinessReport = buildReadinessReport(mergedAnalysis, {
+    const judgedAnalysis: AnalysisResult = aiJudge ? { ...mergedAnalysis, metadata: { ...mergedAnalysis.metadata, aiJudge } } : mergedAnalysis;
+    const readiness: ReadinessReport = buildReadinessReport(judgedAnalysis, {
       workerCommandResolved: resolvedWorkerCommands.length > 0,
       migrationNeedsInput,
     });
@@ -730,6 +748,7 @@ export async function runApplicationAnalysis(
       analysisVersion: ANALYSIS_VERSION,
       ...(engine !== 'rules' ? { analysisEngine: engine } : {}),
       ...(aiRun ? { aiEngine: aiRun.record } : {}),
+      ...(aiJudge ? { aiJudge } : {}),
       ...(headSha !== undefined ? { analysisCommitSha: headSha } : {}),
     };
     // The stored report keeps every finding; the persisted verdict reads the
@@ -742,6 +761,21 @@ export async function runApplicationAnalysis(
     const outcomeVerdict = verdictFromReadiness(outcomeReadiness.state);
       return { contractFieldUpdates, detectedMetadata, outcomeReadiness, outcomeVerdict };
     };
+    // The final judge (engine `ai`) reads the merged result as the row is now;
+    // it only adds a finding, so a vendor edit during the call changes nothing it decided.
+    const aiJudge =
+      aiMerge && deps.aiAnalysis
+        ? vendor.applied
+          ? ({ status: 'skipped', reason: 'vendor_answers', promptVersion: JUDGE_PROMPT_VERSION } as const)
+          : await runJudgeEngine(
+              deps.aiAnalysis.analyst,
+              tree,
+              mergedAnalysis,
+              aiMerge,
+              buildOutcome(application, null).outcomeReadiness.outcome,
+              evidenceFileLoader(deps, application, realModeToken),
+            )
+        : null;
     const durationMs = Date.now() - runStartedMs;
 
     const persisted = await deps.db.transaction(async (tx) => {
@@ -752,7 +786,7 @@ export async function runApplicationAnalysis(
         .limit(1)
         .for('update');
       if (!fresh) return undefined;
-      const outcome = buildOutcome(fresh);
+      const outcome = buildOutcome(fresh, aiJudge);
       await tx
         .update(schema.applications)
         .set({
@@ -1091,6 +1125,29 @@ async function runAiEngine(
     console.warn(JSON.stringify({ event: 'ai_analysis_fallback', reason, ...detail, latencyMs: Date.now() - startedAt }));
     return { merge: null, record: { status: 'fallback', reason, ...detail, latencyMs: Date.now() - startedAt } };
   }
+}
+
+/**
+ * The final judge over the merged AI result: the manifest facts, the checked
+ * answers and the files it reads (loaded when the tree lacks them). Never
+ * throws; a failure is a fallback record that changes nothing.
+ */
+async function runJudgeEngine(
+  gateway: AiGateway,
+  tree: FileTree,
+  analysis: AnalysisResult,
+  merge: MergeResult,
+  outcome: ReadinessReport['outcome'],
+  loadFiles: ((paths: readonly string[]) => Promise<FileTree>) | null,
+): Promise<JudgeRecord> {
+  const manifest = normalizeDeploymentManifest({ metadata: analysis.metadata }, {});
+  const requested = outcome === 'NOT_DEPLOYABLE' || loadFiles === null ? [] : judgeFileRequests(manifest, tree);
+  const loaded = requested.length > 0 && loadFiles !== null ? await loadFiles(requested).catch(() => ({})) : {};
+  const files: FileTree = { ...tree, ...loaded };
+  Object.defineProperty(files, TREE_PATHS, { value: (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS], enumerable: false });
+  const record = await runFinalJudge({ outcome, manifest, answers: merge.answers, files }, gateway);
+  if (record.status === 'fallback') console.warn(JSON.stringify({ event: 'ai_judge_fallback', reason: record.reason, latencyMs: record.latencyMs }));
+  return record;
 }
 
 /**

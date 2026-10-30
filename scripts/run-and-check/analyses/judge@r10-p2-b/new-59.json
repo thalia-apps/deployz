@@ -1,0 +1,42 @@
+{
+  "id": "new-59",
+  "analyser": "judge@r10-p2-b",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 2,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "Gitea is a Git hosting service whose core data, the Git repositories, lives on a local /data volume, and Deployz provides no persistent disk.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 18,
+          "quote": "including Git hosting, code management, code review, issue tracking, project kanban, wiki,"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 82,
+          "quote": "VOLUME [\"/data\"]"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 69,
+          "quote": "    -h /data/git \\"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5722,
+      "completionTokens": 201,
+      "costUsd": 0.02663892
+    },
+    "latencyMs": 3980
+  }
+}

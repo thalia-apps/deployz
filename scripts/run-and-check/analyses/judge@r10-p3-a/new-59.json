@@ -1,0 +1,42 @@
+{
+  "id": "new-59",
+  "analyser": "judge@r10-p3-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "Gitea keeps its core data, the Git repositories, on a local data directory under /data, and Deployz offers no persistent volumes to hold it.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 18,
+          "quote": "including Git hosting, code management, code review, issue tracking, project kanban, wiki,"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 82,
+          "quote": "VOLUME [\"/data\"]"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 69,
+          "quote": "    -h /data/git \\"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5815,
+      "completionTokens": 200,
+      "costUsd": 0.0269874
+    },
+    "latencyMs": 3901
+  }
+}

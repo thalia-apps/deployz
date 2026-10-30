@@ -32,6 +32,8 @@ pnpm runcheck:claims [--repo <id>] [--analysis <dir>]
 pnpm runcheck:full [--repo <id>] [--analysis <dir>] [--force]
 pnpm runcheck:fixtures [--no-observe]
 pnpm runcheck:fetch --run <run id>       # results of a runcheck-exam.yml run
+pnpm runcheck:judge --from <ai@ dir> --out <judge@ dir> [--repo <id>]  # the final judge only, on stored AI analyses
+pnpm runcheck:judge --score <judge@ dir>  # wrong, not sure, too strict and fixed against the ground truth
 pnpm runcheck:stability --a <dir> --b <dir>  # claims that differ between two analyses
 ```
 
@@ -41,6 +43,16 @@ pnpm runcheck:stability --a <dir> --b <dir>  # claims that differ between two an
 then has an `ai` record: the status or the fallback reason, the token usage
 and the latency of each call, and the decision for each fact. Use `--out`
 for the second run of the stability criterion.
+
+`runcheck:judge` runs only the final judge
+([`../ai-analysis.md`](../ai-analysis.md#final-judge)) on stored AI
+analyses, so a judge prompt change costs one small call per repository and
+no new main Analysis. It reads the README, `.gitmodules`, the selected
+Dockerfile and the named files through the snapshot fetch. The exam
+workflow mode `judge` runs it on a runner with the gateway secrets (inputs
+`from`, the stored `ai@…` folder, and `analysis`, the `judge@…` output
+folder) and uploads one artifact with every result file. A "not sure" is
+not counted as a wrong outcome.
 
 ### Three modes
 

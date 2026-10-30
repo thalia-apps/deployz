@@ -1,0 +1,42 @@
+{
+  "id": "new-195",
+  "analyser": "judge@r10-p2-b",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 2,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "This repository is the Chroma vector database server that clients connect to, not a web application, and the selected Dockerfile builds an internal distributed-system component rather than a deployable web app.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 26,
+          "quote": "# for client-server mode, chroma run --path /chroma_db_path"
+        },
+        {
+          "path": "README.md",
+          "line": 31,
+          "quote": "Our hosted service, Chroma Cloud, powers serverless vector, hybrid, and full-text search."
+        },
+        {
+          "path": "rust/Dockerfile",
+          "line": 92,
+          "quote": "ENV EXCLUDED_PACKAGES=\"chromadb_rust_bindings chromadb-js-bindings chroma-benchmark \""
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5692,
+      "completionTokens": 262,
+      "costUsd": 0.02772792
+    },
+    "latencyMs": 4517
+  }
+}

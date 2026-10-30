@@ -1,5 +1,6 @@
 /** The one entry point of the `runcheck:*` commands: `tsx src/cli.ts <command> [args]`. */
 import { main as analyse } from './analysis/cli.js';
+import { main as judge } from './analysis/judge-cli.js';
 import { main as claims } from './claims/cli.js';
 import { main as stability } from './claims/stability.js';
 import { main as preflight } from './docker/preflight-cli.js';
@@ -19,6 +20,9 @@ const COMMANDS: Record<string, (argv: string[]) => Promise<unknown> | unknown> =
   fetch,
   full,
   fixtures,
+  judge: async (argv) => {
+    process.exitCode = await judge(argv);
+  },
   observe,
   preflight: () => preflight(),
   stability: (argv) => {

@@ -1,0 +1,42 @@
+{
+  "id": "new-180",
+  "analyser": "judge@r10-p2-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 2,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "AppFlowy in this repository is a Flutter desktop and mobile app, and the Dockerfile builds a Linux GTK desktop bundle rather than an HTTP web server that Deployz could route traffic to.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 55,
+          "quote": "- [Download AppFlowy Desktop (macOS, Windows, and Linux)](https://github.com/AppFlowy-IO/AppFlowy/releases)"
+        },
+        {
+          "path": "frontend/scripts/docker-buildfiles/Dockerfile",
+          "line": 35,
+          "quote": "RUN flutter config --enable-linux-desktop"
+        },
+        {
+          "path": "frontend/scripts/docker-buildfiles/Dockerfile",
+          "line": 67,
+          "quote": "RUN pacman -S --noconfirm xdg-user-dirs gtk3 libkeybinder3 libnotify rocksdb && \\"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6199,
+      "completionTokens": 324,
+      "costUsd": 0.03096324
+    },
+    "latencyMs": 5207
+  }
+}

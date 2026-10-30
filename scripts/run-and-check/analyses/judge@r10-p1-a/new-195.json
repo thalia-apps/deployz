@@ -1,0 +1,42 @@
+{
+  "id": "new-195",
+  "analyser": "judge@r10-p1-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 1,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "Chroma is a vector database server that clients connect to, not a web application, and its distributed build is several services (token bucket, log, query services) built from one multi-target Dockerfile.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 26,
+          "quote": "# for client-server mode, chroma run --path /chroma_db_path"
+        },
+        {
+          "path": "README.md",
+          "line": 31,
+          "quote": "Our hosted service, Chroma Cloud, powers serverless vector, hybrid, and full-text search."
+        },
+        {
+          "path": "rust/Dockerfile",
+          "line": 81,
+          "quote": "ARG LOG_SERVICE_CARGO_FEATURES="
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5487,
+      "completionTokens": 235,
+      "costUsd": 0.03180969
+    },
+    "latencyMs": 4309
+  }
+}

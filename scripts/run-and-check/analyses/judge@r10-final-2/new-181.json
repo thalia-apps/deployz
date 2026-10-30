@@ -1,0 +1,38 @@
+{
+  "id": "new-181",
+  "analyser": "judge@r10-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "no_application",
+      "reason": "The selected Dockerfile only wraps the published AFFiNE image instead of building this repository's source, so Deployz has no application built from this source to deploy.",
+      "evidence": [
+        {
+          "path": ".render/Dockerfile",
+          "line": 3,
+          "quote": "# Adds a start script to the published AFFiNE image. Nothing is compiled here."
+        },
+        {
+          "path": ".render/Dockerfile",
+          "line": 4,
+          "quote": "FROM ghcr.io/toeverything/affine:stable"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5665,
+      "completionTokens": 180,
+      "costUsd": 0.0259974
+    },
+    "latencyMs": 3644
+  }
+}

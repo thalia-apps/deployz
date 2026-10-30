@@ -1,0 +1,38 @@
+{
+  "id": "new-57",
+  "analyser": "judge@r10-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "several_services",
+      "reason": "Coolify runs Reverb (a WebSocket server) and a terminal server alongside the web app, and both need their own ports, so it may be several services that Deployz cannot run as one web process.",
+      "evidence": [
+        {
+          "path": "docker/production/Dockerfile",
+          "line": 76,
+          "quote": "# Stage 4: Terminal dependencies (match the production Node.js ABI and libc)"
+        },
+        {
+          "path": "README.md",
+          "line": 20,
+          "quote": "It helps you manage servers, applications, and databases on your own hardware. You only need an SSH connection."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6672,
+      "completionTokens": 202,
+      "costUsd": 0.03042072
+    },
+    "latencyMs": 3838
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "id": "new-66",
+  "analyser": "judge@r10-p2-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 2,
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "several_services",
+      "reason": "Appsmith runs as a supervisor-managed bundle of separate servers (a Java backend, the Node RTS server, an MCP server and the editor UI) that need a prebuilt base image, which Deployz's single web process may not support.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 34,
+          "quote": "COPY ./app/client/packages/rts/dist rts/"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 37,
+          "quote": "COPY ./app/client/packages/mcp/dist mcp/"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 68,
+          "quote": "CMD [\"/usr/bin/supervisord\", \"-n\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5564,
+      "completionTokens": 245,
+      "costUsd": 0.02688444
+    },
+    "latencyMs": 5374
+  }
+}

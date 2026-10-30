@@ -1,0 +1,33 @@
+{
+  "id": "new-135",
+  "analyser": "judge@r10-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "change",
+      "verdict": "needs_changes",
+      "category": null,
+      "reason": "The selected Dockerfile copies a prebuilt ntfy binary that only CI (goreleaser) produces and is not in the source archive, so the image does not build from this repository without a change such as using Dockerfile-build.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 16,
+          "quote": "COPY ntfy /usr/bin"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5059,
+      "completionTokens": 138,
+      "costUsd": 0.02276604
+    },
+    "latencyMs": 2640
+  }
+}

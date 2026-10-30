@@ -1,0 +1,43 @@
+{
+  "id": "new-110",
+  "analyser": "judge@r10-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "no_application",
+      "reason": "The Dockerfile does not build this repository's source; it only copies the docker directory and plugins onto a prebuilt Kestra base image pulled from a registry, so Deployz has no application built from this source to serve.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 1,
+          "quote": "ARG BASE_IMAGE=\"ghcr.io/kestra-io/kestra-base:latest-slim\""
+        },
+        {
+          "path": "Dockerfile",
+          "line": 6,
+          "quote": "COPY --chown=kestra:kestra docker /"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 17,
+          "quote": "CMD [\"--help\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 4891,
+      "completionTokens": 238,
+      "costUsd": 0.02408076
+    },
+    "latencyMs": 4314
+  }
+}

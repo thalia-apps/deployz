@@ -1,0 +1,38 @@
+{
+  "id": "new-122",
+  "analyser": "judge@r10-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "unsupported_service",
+      "reason": "Self-hosted Sentry needs Kafka, ClickHouse (Snuba), Symbolicator, Relay and other separate services that Deployz does not provide.",
+      "evidence": [
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 22,
+          "quote": "LABEL org.opencontainers.image.documentation=\"https://develop.sentry.dev/self-hosted/\""
+        },
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 50,
+          "quote": "# Keep pip in this venv: getsentry/self-hosted's sentry/Dockerfile and users'"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6486,
+      "completionTokens": 223,
+      "costUsd": 0.03009996
+    },
+    "latencyMs": 3972
+  }
+}

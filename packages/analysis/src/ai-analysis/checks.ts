@@ -24,7 +24,7 @@
 import { postgresSemantic } from '../bindings.js';
 import { composeServices, listDockerfileCandidates, productionStageText, type FileTree } from '../detectors.js';
 import type { BlockerAnswer, Confidence, Evidence, FactAnswer, SupportedEngine } from './analyst.js';
-import { DATASTORE_ROLE, isProductionFile, PACKAGE_MANIFEST, PACKAGE_MARKER, packFiles, ROOT_README, startScripts, type EvidencePack, type Question } from './evidence-pack.js';
+import { DATASTORE_ROLE, isProductionFile, PACKAGE_MANIFEST, PACKAGE_MARKER, packFiles, ROOT_README, startScripts, type EvidencePack, type PackFile, type Question } from './evidence-pack.js';
 import type { BlockerItem } from './open-items.js';
 
 export interface AnswerCheck {
@@ -58,11 +58,16 @@ const word = (name: string): RegExp => new RegExp(`(?<![\\w-])${escape(name)}(?!
  * One line of tolerance either way absorbs an off-by-one count.
  */
 export function citedLine(pack: EvidencePack, evidence: Evidence): string | null {
+  return citedLineIn(packFiles(pack), evidence);
+}
+
+/** `citedLine` over any set of windows. */
+export function citedLineIn(files: readonly PackFile[], evidence: Evidence): string | null {
   const quote = normalize(evidence.quote);
   if (quote.length < 2) return null;
   for (const offset of [0, -1, 1]) {
     const number = evidence.line + offset;
-    for (const file of packFiles(pack)) {
+    for (const file of files) {
       if (file.path !== evidence.path) continue;
       const line = file.lines[number - file.start];
       if (line !== undefined && normalize(line).includes(quote)) return line;

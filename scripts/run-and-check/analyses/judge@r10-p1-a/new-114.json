@@ -1,0 +1,42 @@
+{
+  "id": "new-114",
+  "analyser": "judge@r10-p1-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 1,
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "several_services",
+      "reason": "The selected Dockerfile bundles an embedded Postgres, Redis, nginx and Docker into one supervised image with a /data volume, and separate api/front/events-processor services suggest a multi-service product that Deployz may not run as one web process.",
+      "evidence": [
+        {
+          "path": "docker/Dockerfile",
+          "line": 53,
+          "quote": "apt-get install nginx xz-utils git libpq-dev postgresql-17 postgresql-17-partman redis-server docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y && \\"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 68,
+          "quote": "VOLUME /data"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 13,
+          "quote": "COPY ./front/ ."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5536,
+      "completionTokens": 288,
+      "costUsd": 0.03310164
+    },
+    "latencyMs": 6219
+  }
+}

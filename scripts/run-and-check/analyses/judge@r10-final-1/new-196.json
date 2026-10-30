@@ -1,0 +1,43 @@
+{
+  "id": "new-196",
+  "analyser": "judge@r10-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "This is code-server, a hosted VS Code whose core data is the user's workspace on local disk, and its image installs a prebuilt release package while the VS Code source lives only in a submodule, so Deployz's stateless containers cannot run it as built from this source.",
+      "evidence": [
+        {
+          "path": "ci/release-image/Dockerfile",
+          "line": 5,
+          "quote": "COPY release-packages/code-server*.deb /tmp/"
+        },
+        {
+          "path": ".gitmodules",
+          "line": 2,
+          "quote": "path = lib/vscode"
+        },
+        {
+          "path": "ci/release-image/Dockerfile",
+          "line": 61,
+          "quote": "ENTRYPOINT [\"/usr/bin/entrypoint.sh\", \"--bind-addr\", \"0.0.0.0:8080\", \".\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 3719,
+      "completionTokens": 286,
+      "costUsd": 0.02039004
+    },
+    "latencyMs": 4852
+  }
+}

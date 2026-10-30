@@ -410,6 +410,8 @@ export const analysisResultFileSchema = z
     outcome: z.enum(['DEPLOYABLE', 'DEPLOYABLE_WITH_CHANGES', 'NOT_DEPLOYABLE']).optional(),
     /** The AI engine record (`detected_metadata.aiEngine`): status or fallback reason, usage, latency, fact decisions. */
     ai: z.record(z.string(), z.unknown()).nullable().optional(),
+    /** The final judge record (`detected_metadata.aiJudge`): skipped, fallback, or the outcome it reviewed and its judgement. */
+    judge: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict();
 export type AnalysisResultFile = z.infer<typeof analysisResultFileSchema>;

@@ -541,15 +541,16 @@ export function checkOtherUnsupportedDatabases(tree: FileTree): RejectionFinding
       };
     }
   }
-  for (const path of listProductionComposeFiles(tree)) {
-    const image = [...(tree[path] ?? '').matchAll(/^\s*image:\s*["']?([^\s"'#]+)/gm)]
+  const stackFile = listProductionComposeFiles(tree)[0];
+  if (stackFile !== undefined && !isPublishedImageSample(tree, stackFile)) {
+    const image = [...(tree[stackFile] ?? '').matchAll(/^\s*image:\s*["']?([^\s"'#]+)/gm)]
       .map((match) => match[1] ?? '')
       .find((name) => POSTGRES_EXTENSION_IMAGE_REGEX.test(name));
     if (image) {
       return {
         detected: true,
         dependency: 'other-database',
-        reason: `Unsupported database: the production Compose file ${path} runs ${image}. The app needs a PostgreSQL extension that managed PostgreSQL (Amazon RDS) does not provide.`,
+        reason: `Unsupported database: the production Compose file ${stackFile} runs ${image}. The app needs a PostgreSQL extension that managed PostgreSQL (Amazon RDS) does not provide.`,
       };
     }
   }
@@ -642,6 +643,23 @@ const DEPLOYMENT_SAMPLE_DIR_REGEX =
 
 function outsideDeploymentSamples(paths: string[]): string[] {
   return paths.filter((path) => !DEPLOYMENT_SAMPLE_DIR_REGEX.test(path));
+}
+
+/**
+ * A Compose file in a deployment or sample directory that runs the application
+ * from a published image (every application service pulls one; infrastructure
+ * and profile-gated services may be built locally), next to a Dockerfile
+ * Deployz can build, is a self-hoster option, not the stack Deployz builds
+ * from the repository. Its services are no evidence of what the application
+ * needs: only the source (a client, a required connection variable) is.
+ */
+function isPublishedImageSample(tree: FileTree, file: string): boolean {
+  const apps = parseComposeServices(tree[file] ?? '').filter(
+    (service) =>
+      !service.optional &&
+      !(service.image !== null && (INFRA_COMPOSE_IMAGE_REGEX.test(service.image) || POSTGRES_EXTENSION_IMAGE_REGEX.test(service.image))),
+  );
+  return DEPLOYMENT_SAMPLE_DIR_REGEX.test(file) && selectedDockerfile(tree) !== null && apps.length > 0 && apps.every((service) => service.build === null);
 }
 
 /** A Go module that talks to the Kubernetes API is a cluster platform: its manifests are its runtime. */
@@ -801,9 +819,15 @@ function readsArePresenceGuarded(tree: FileTree, key: string, source: readonly s
 const KAFKA_ENV_REGEX = /^KAFKA_(?:URL|BROKERS?|BOOTSTRAP_SERVERS|HOSTS?)$/;
 const RABBITMQ_ENV_REGEX = /^(?:RABBITMQ_(?:URL|HOST)|AMQP_URL|CLOUDAMQP_URL)$/;
 
+/** The production Compose services, unless the file is a published-image sample (`isPublishedImageSample`). */
+function stackComposeServices(tree: FileTree): ReturnType<typeof composeServices> {
+  const compose = composeServices(tree);
+  return compose && !isPublishedImageSample(tree, compose.file) ? compose : null;
+}
+
 /** Kafka: clients/consumers + Kafka/Confluent images in compose. */
 export function checkKafka(tree: FileTree): RejectionFinding {
-  const compose = composeServices(tree);
+  const compose = stackComposeServices(tree);
   if (compose?.services.some((s) => !s.optional && s.image && /kafka|confluentinc/i.test(s.image))) {
     return { detected: true, dependency: 'kafka', reason: `Unsupported infrastructure: a Kafka service is defined in ${compose.file}.` };
   }
@@ -840,7 +864,7 @@ export function checkKafka(tree: FileTree): RejectionFinding {
 
 /** RabbitMQ: AMQP clients + rabbitmq services in compose. */
 export function checkRabbitMq(tree: FileTree): RejectionFinding {
-  const compose = composeServices(tree);
+  const compose = stackComposeServices(tree);
   // A service that `extends` another file's rabbitmq service has no image of its own (AutoGPT).
   if (compose?.services.some((s) => !s.optional && ((s.image && /rabbitmq/i.test(s.image)) || /^rabbitmq$/i.test(s.name)))) {
     return { detected: true, dependency: 'rabbitmq', reason: `Unsupported infrastructure: a RabbitMQ service is defined in ${compose.file}.` };
@@ -933,7 +957,7 @@ function composeDockerfileOf(build: string): string {
 /** Docker Compose defining TWO OR MORE independent application services — a multi-service app, not one container. */
 export function checkDockerComposeMultiService(tree: FileTree): RejectionFinding {
   const compose = composeApplicationServices(tree);
-  if (!compose || compose.services.length === 0) {
+  if (!compose || compose.services.length === 0 || isPublishedImageSample(tree, compose.file)) {
     return { detected: false, dependency: 'none', reason: 'No multi-service compose app detected' };
   }
   // Services that run the same build or image are one application: the extra

@@ -1,0 +1,43 @@
+{
+  "id": "new-205",
+  "analyser": "judge@r10-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "local_disk_data",
+      "reason": "Hermes Agent keeps its core state (SQLite sessions, memory, skills) in a local /opt/data volume, which Deployz cannot persist across restarts, and the shown lines do not prove a PostgreSQL option exists.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 51,
+          "quote": "# published container and writable state belongs under /opt/data."
+        },
+        {
+          "path": "Dockerfile",
+          "line": 1,
+          "quote": "# Debian 13 still ships SQLite 3.46.1, which contains the upstream WAL-reset"
+        },
+        {
+          "path": "README.md",
+          "line": 26,
+          "quote": "FTS5 session search with LLM summarization for cross-session recall."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6867,
+      "completionTokens": 249,
+      "costUsd": 0.03212352
+    },
+    "latencyMs": 4646
+  }
+}

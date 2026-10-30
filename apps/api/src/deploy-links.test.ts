@@ -39,6 +39,7 @@ const READY_METADATA = {
   envVars: ['NODE_ENV'],
   databaseState: 'none',
   externalServices: [] as string[],
+  analysisVersion: 80,
 } as Record<string, unknown>;
 
 async function signUpAndGetOrg(
@@ -268,7 +269,7 @@ describe('deploy links', () => {
       .from(schema.eventLogs)
       .where(and(eq(schema.eventLogs.eventType, 'deployment.created'), eq(schema.eventLogs.deploymentId, deploymentId)));
     expect(created).toHaveLength(1);
-    expect(created[0]!.payload).toMatchObject({ schemaVersion: 1, source: 'deploy_link' });
+    expect(created[0]!.payload).toMatchObject({ schemaVersion: 1, source: 'deploy_link', analysisVersion: 80 });
     expect(created[0]!.actorId).toBe(orgA.userId);
 
     const [link] = await db.select().from(schema.deployLinks).where(eq(schema.deployLinks.id, publicId));

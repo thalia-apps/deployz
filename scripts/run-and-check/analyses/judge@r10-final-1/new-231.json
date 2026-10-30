@@ -1,0 +1,43 @@
+{
+  "id": "new-231",
+  "analyser": "judge@r10-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Woodpecker is a CI/CD engine whose server needs separate agent processes, built as a different binary, to run pipelines, and they connect over a second gRPC port that Deployz's single HTTP port cannot serve.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 50,
+          "quote": "It requires around 100 MB of RAM (Server) and 30 MB (Agent) at runtime in idle mode."
+        },
+        {
+          "path": "docker/Dockerfile.server.multiarch.rootless",
+          "line": 29,
+          "quote": "EXPOSE 8000 9000 80 443"
+        },
+        {
+          "path": "README.md",
+          "line": 43,
+          "quote": "Woodpecker is a simple, yet powerful CI/CD engine with great extensibility."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5543,
+      "completionTokens": 474,
+      "costUsd": 0.03133548
+    },
+    "latencyMs": 7016
+  }
+}

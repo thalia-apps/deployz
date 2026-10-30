@@ -1,0 +1,42 @@
+{
+  "id": "new-82",
+  "analyser": "judge@r10-p2-b",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 2,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Dify needs several application services running together (a separate API server, a Next.js web frontend, a code sandbox and a plugin daemon), and Deployz runs only one web process per deployment.",
+      "evidence": [
+        {
+          "path": "api/Dockerfile",
+          "line": 45,
+          "quote": "EXPOSE 5001"
+        },
+        {
+          "path": "api/Dockerfile",
+          "line": 41,
+          "quote": "ENV CONSOLE_WEB_URL=http://127.0.0.1:3000"
+        },
+        {
+          "path": "docker/docker-compose.yaml",
+          "line": 8,
+          "quote": "x-shared-api-worker-config: &shared-api-worker-config"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8733,
+      "completionTokens": 231,
+      "costUsd": 0.03915648
+    },
+    "latencyMs": 4051
+  }
+}

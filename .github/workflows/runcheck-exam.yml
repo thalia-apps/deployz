@@ -2,26 +2,31 @@
 # runners: one matrix job per recipe, so a full exam takes about as long as
 # its slowest repository. It starts only by hand (workflow_dispatch) and
 # uploads one small JSON result per recipe. Fetch the results with
-# `pnpm runcheck:fetch --run <run id>`. Only the analyse-ai job reads secrets
-# (the AI gateway); it reads repository files as data and runs no repository
-# code. The jobs that build and run repository code get no secrets.
+# `pnpm runcheck:fetch --run <run id>`. Only the analyse-ai and judge jobs read
+# secrets (the AI gateway); they read repository files as data and run no
+# repository code. The jobs that build and run repository code get no secrets.
 name: runcheck-exam
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: observe (write observations), full (run the analysed settings twice) or analyse-ai (the AI engine Analysis)
+        description: observe (write observations), full (run the analysed settings twice), analyse-ai (the AI engine Analysis) or judge (the final judge only, on stored AI analyses)
         required: true
         type: choice
-        options: [observe, full, analyse-ai]
+        options: [observe, full, analyse-ai, judge]
       repos:
         description: Recipe ids separated by spaces, or "all"
         required: true
         default: all
         type: string
       analysis:
-        description: Folder under scripts/run-and-check/analyses to read (full) or to write (analyse-ai), for example rules@0fc073b8
+        description: Folder under scripts/run-and-check/analyses to read (full) or to write (analyse-ai, judge), for example rules@0fc073b8
+        required: false
+        default: ''
+        type: string
+      from:
+        description: The stored AI analyses the judge reads (judge only), for example ai@r9-final2; several folders separated by spaces, the first that has a recipe wins
         required: false
         default: ''
         type: string
@@ -50,6 +55,7 @@ jobs:
           MODE: ${{ inputs.mode }}
           REPOS: ${{ inputs.repos }}
           ANALYSIS: ${{ inputs.analysis }}
+          FROM: ${{ inputs.from }}
         run: |
           cd scripts/run-and-check
           if [[ "$MODE" == full ]]; then
@@ -57,6 +63,13 @@ jobs:
           fi
           if [[ "$MODE" == analyse-ai ]]; then
             [[ "$ANALYSIS" =~ ^ai@[A-Za-z0-9_.@-]+$ ]] || { echo "analyse-ai needs an output folder named ai@..."; exit 1; }
+          fi
+          if [[ "$MODE" == judge ]]; then
+            [[ "$ANALYSIS" =~ ^judge@[A-Za-z0-9_.@-]+$ ]] || { echo "judge needs an output folder named judge@..."; exit 1; }
+            [[ -n "$FROM" ]] || { echo "judge needs a stored ai@... folder"; exit 1; }
+            for dir in $FROM; do
+              [[ "$dir" =~ ^ai@[A-Za-z0-9_.@-]+$ && -d "analyses/$dir" ]] || { echo "invalid judge input folder $dir"; exit 1; }
+            done
           fi
           if [[ "$REPOS" == all ]]; then
             ids=$(ls recipes/*.yaml | xargs -n1 basename | sed 's/\.yaml$//')
@@ -153,9 +166,62 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  # One job: the judge makes one small call per repository and reads only the
+  # README, the selected Dockerfile and the files a blocking reason names.
+  judge:
+    needs: plan
+    if: inputs.mode == 'judge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm turbo run build --filter=./packages/* --filter=@deployz/api
+
+      - name: Final judge
+        env:
+          IDS: ${{ needs.plan.outputs.ids }}
+          ANALYSIS: ${{ inputs.analysis }}
+          FROM: ${{ inputs.from }}
+          GITHUB_TOKEN: ${{ github.token }}
+          AI_GATEWAY_BASE_URL: ${{ secrets.AI_GATEWAY_BASE_URL }}
+          AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
+          AI_PROVIDER_API_KEY: ${{ secrets.AI_PROVIDER_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          args=()
+          for id in $(jq -r '.[]' <<< "$IDS"); do args+=(--repo "$id"); done
+          for dir in $FROM; do args+=(--from "scripts/run-and-check/analyses/$dir"); done
+          pnpm runcheck:judge --out "scripts/run-and-check/analyses/$ANALYSIS" "${args[@]}"
+
+      - name: Upload judge results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: runcheck-judge-${{ inputs.analysis }}
+          path: scripts/run-and-check/analyses/${{ inputs.analysis }}/
+          if-no-files-found: warn
+          retention-days: 14
+
   run:
     needs: plan
-    if: inputs.mode != 'analyse-ai'
+    if: inputs.mode != 'analyse-ai' && inputs.mode != 'judge'
     runs-on: ubuntu-latest
     timeout-minutes: 300
     env:

@@ -1,0 +1,43 @@
+{
+  "id": "new-162",
+  "analyser": "judge@r10-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "AgentGPT is a separate Next.js frontend server and a FastAPI backend server built from different images that must run together, and Deployz runs only one web service.",
+      "evidence": [
+        {
+          "path": "docker-compose.yml",
+          "line": 7,
+          "quote": "      context: ./next"
+        },
+        {
+          "path": "docker-compose.yml",
+          "line": 20,
+          "quote": "      context: ./platform"
+        },
+        {
+          "path": "README.md",
+          "line": 43,
+          "quote": "- 🎨 [Frontend](https://github.com/reworkd/AgentGPT/tree/main/next) (Nextjs)"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6035,
+      "completionTokens": 210,
+      "costUsd": 0.0280566
+    },
+    "latencyMs": 3714
+  }
+}

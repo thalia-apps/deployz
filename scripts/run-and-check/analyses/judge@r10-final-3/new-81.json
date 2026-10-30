@@ -1,0 +1,38 @@
+{
+  "id": "new-81",
+  "analyser": "judge@r10-final-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "local_disk_data",
+      "reason": "AnythingLLM's Prisma schema uses SQLite. Its documents and its default built-in vector database live on local disk, and Deployz offers no persistent volumes, but the shown lines do not prove whether a PostgreSQL option exists.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 56,
+          "quote": "Out of the box you get built-in agents, multi-user support, vector databases, and document pipelines — no extra configuration required."
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 48,
+          "quote": "mkdir -p /app/frontend/ /app/server/ /app/collector/ && chown -R anythingllm:anythingllm /app"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7522,
+      "completionTokens": 244,
+      "costUsd": 0.03461832
+    },
+    "latencyMs": 3456
+  }
+}

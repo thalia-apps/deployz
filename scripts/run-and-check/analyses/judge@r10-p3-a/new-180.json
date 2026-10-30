@@ -1,0 +1,42 @@
+{
+  "id": "new-180",
+  "analyser": "judge@r10-p3-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "The repository builds the AppFlowy Flutter desktop application (a Linux GTK GUI binary), not a web server that Deployz can serve over HTTP.",
+      "evidence": [
+        {
+          "path": "frontend/scripts/docker-buildfiles/Dockerfile",
+          "line": 35,
+          "quote": "RUN flutter config --enable-linux-desktop"
+        },
+        {
+          "path": "frontend/scripts/docker-buildfiles/Dockerfile",
+          "line": 80,
+          "quote": "COPY --from=builder /appflowy/frontend/appflowy_flutter/build/linux/x64/release/bundle ."
+        },
+        {
+          "path": "README.md",
+          "line": 55,
+          "quote": "- [Download AppFlowy Desktop (macOS, Windows, and Linux)](https://github.com/AppFlowy-IO/AppFlowy/releases)"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6292,
+      "completionTokens": 299,
+      "costUsd": 0.03083652
+    },
+    "latencyMs": 4818
+  }
+}
