@@ -1,0 +1,43 @@
+{
+  "id": "new-83",
+  "analyser": "judge@r10-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "The product is an all-in-one bundle of separate application servers (agent server, automation backend, frontend/proxy, editor) built from different sources that must run together, which Deployz's single web process model cannot provide.",
+      "evidence": [
+        {
+          "path": "docker/Dockerfile",
+          "line": 6,
+          "quote": "# Combines three services into a single image:"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 74,
+          "quote": "FROM ${AGENT_SERVER_IMAGE} AS final"
+        },
+        {
+          "path": "docker/entrypoint.sh",
+          "line": 5,
+          "quote": "# Starts three services (plus an optional fourth):"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7512,
+      "completionTokens": 230,
+      "costUsd": 0.03430152
+    },
+    "latencyMs": 4500
+  }
+}

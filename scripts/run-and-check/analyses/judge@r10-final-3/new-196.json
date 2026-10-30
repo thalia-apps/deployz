@@ -1,0 +1,43 @@
+{
+  "id": "new-196",
+  "analyser": "judge@r10-final-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "This is code-server, a hosted VS Code editor whose core data is the user's workspace files on local disk, and its Dockerfile also installs a CI-built .deb package rather than building from this source, with the editor source itself only in the lib/vscode submodule.",
+      "evidence": [
+        {
+          "path": "ci/release-image/Dockerfile",
+          "line": 5,
+          "quote": "COPY release-packages/code-server*.deb /tmp/"
+        },
+        {
+          "path": ".gitmodules",
+          "line": 2,
+          "quote": "\tpath = lib/vscode"
+        },
+        {
+          "path": "ci/release-image/Dockerfile",
+          "line": 60,
+          "quote": "WORKDIR /home/coder"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 3719,
+      "completionTokens": 242,
+      "costUsd": 0.01951884
+    },
+    "latencyMs": 4362
+  }
+}

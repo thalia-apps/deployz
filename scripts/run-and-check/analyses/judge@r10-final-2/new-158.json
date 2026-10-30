@@ -1,0 +1,43 @@
+{
+  "id": "new-158",
+  "analyser": "judge@r10-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "change",
+      "verdict": "needs_changes",
+      "category": null,
+      "reason": "The Dockerfile copies a /sqlpad/docker-entrypoint file and root package files that are not among the repository's eight top-level entries, so the image cannot build from the source archive without a repository change.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 71,
+          "quote": "COPY --from=build /sqlpad/docker-entrypoint /"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 78,
+          "quote": "ENTRYPOINT [\"/docker-entrypoint\"]"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 26,
+          "quote": "COPY ./package* ./"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 4923,
+      "completionTokens": 697,
+      "costUsd": 0.03329568
+    },
+    "latencyMs": 10109
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "id": "new-57",
+  "analyser": "judge@r10-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "several_services",
+      "reason": "Coolify runs Reverb WebSocket and terminal servers alongside the web app in one container, which the browser UI needs on separate ports, and the shown lines do not prove that these can be dropped.",
+      "evidence": [
+        {
+          "path": "docker/production/Dockerfile",
+          "line": 76,
+          "quote": "# Stage 4: Terminal dependencies (match the production Node.js ABI and libc)"
+        },
+        {
+          "path": "README.md",
+          "line": 32,
+          "quote": "open container terminals"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6672,
+      "completionTokens": 179,
+      "costUsd": 0.02996532
+    },
+    "latencyMs": 3632
+  }
+}

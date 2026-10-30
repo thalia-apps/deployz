@@ -1,0 +1,38 @@
+{
+  "id": "new-133",
+  "analyser": "judge@r10-final-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": null,
+      "reason": "The build runs version.py to read version data from git, but the source archive has no .git directory, and the frontend (vue3) assets may need a build step that the shown Dockerfile does not run.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 52,
+          "quote": "RUN /opt/recipes/venv/bin/python version.py"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 51,
+          "quote": "# collect information from git repositories"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5513,
+      "completionTokens": 164,
+      "costUsd": 0.02507868
+    },
+    "latencyMs": 3689
+  }
+}

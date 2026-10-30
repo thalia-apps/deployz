@@ -1,0 +1,43 @@
+{
+  "id": "new-74",
+  "analyser": "judge@r10-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Mastodon needs a separate Node.js streaming API server, built from its own image and serving its own port, alongside the Rails web server for real-time timeline updates, and Deployz runs only one web service.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 53,
+          "quote": "- [Node.js](https://nodejs.org/) powers the streaming API."
+        },
+        {
+          "path": "README.md",
+          "line": 38,
+          "quote": "**Real-time, chronological timeline updates** - updates of people you're following appear in real-time in the UI."
+        },
+        {
+          "path": "docker-compose.yml",
+          "line": 65,
+          "quote": "command: bundle exec puma -C config/puma.rb"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8100,
+      "completionTokens": 237,
+      "costUsd": 0.0367686
+    },
+    "latencyMs": 4110
+  }
+}

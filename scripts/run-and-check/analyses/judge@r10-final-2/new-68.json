@@ -1,0 +1,43 @@
+{
+  "id": "new-68",
+  "analyser": "judge@r10-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "unsupported_service",
+      "reason": "PostHog's core analytics ingestion and storage depend on ClickHouse and Kafka, which Deployz does not provide, and the product also runs as several separate services built from different Dockerfiles.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 18,
+          "quote": "# Node.js services are built separately using Dockerfile.node."
+        },
+        {
+          "path": "README.md",
+          "line": 27,
+          "quote": "[PostHog](https://posthog.com/) ingests and stores your analytics, errors, replays, and business data so you and your agents can query and act on it."
+        },
+        {
+          "path": "livestream/docker-compose.yml",
+          "line": 38,
+          "quote": "            - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7505,
+      "completionTokens": 285,
+      "costUsd": 0.0353628
+    },
+    "latencyMs": 4944
+  }
+}

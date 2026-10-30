@@ -1,0 +1,38 @@
+{
+  "id": "new-76",
+  "analyser": "judge@r10-final-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "no_application",
+      "reason": "The selected Dockerfile downloads a released Mattermost package instead of building this repository's source, though another Dockerfile could build from source.",
+      "evidence": [
+        {
+          "path": "server/build/Dockerfile",
+          "line": 11,
+          "quote": "ARG MM_PACKAGE=\"https://latest.mattermost.com/mattermost-enterprise-linux\""
+        },
+        {
+          "path": "server/build/Dockerfile",
+          "line": 31,
+          "quote": "&& curl -L $MM_PACKAGE | tar -xvz \\"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6305,
+      "completionTokens": 195,
+      "costUsd": 0.0288288
+    },
+    "latencyMs": 3661
+  }
+}

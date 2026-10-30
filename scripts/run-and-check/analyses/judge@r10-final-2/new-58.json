@@ -1,0 +1,43 @@
+{
+  "id": "new-58",
+  "analyser": "judge@r10-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Supabase self-hosted requires many separate application services (API gateway, auth, realtime, storage, postgres-meta, functions) running together, which Deployz cannot run as one web process.",
+      "evidence": [
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 33,
+          "quote": "STUDIO_PG_META_URL: http://meta:8080"
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 51,
+          "quote": "SUPABASE_URL: http://api-gw:8000"
+        },
+        {
+          "path": "README.md",
+          "line": 44,
+          "quote": "Supabase is a combination of open source tools."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7968,
+      "completionTokens": 222,
+      "costUsd": 0.03594888
+    },
+    "latencyMs": 4016
+  }
+}

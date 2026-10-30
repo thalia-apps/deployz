@@ -1,0 +1,38 @@
+{
+  "id": "new-57",
+  "analyser": "judge@r10-final-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "Coolify is a self-hosted PaaS that manages servers and containers over SSH, and it runs Reverb WebSockets, a terminal server, Horizon and a scheduler together; Deployz cannot provide that set of services in a single-port stateless container.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 20,
+          "quote": "It helps you manage servers, applications, and databases on your own hardware. You only need an SSH connection."
+        },
+        {
+          "path": "docker/production/Dockerfile",
+          "line": 76,
+          "quote": "# Stage 4: Terminal dependencies (match the production Node.js ABI and libc)"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6672,
+      "completionTokens": 226,
+      "costUsd": 0.03089592
+    },
+    "latencyMs": 4094
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "id": "new-146",
+  "analyser": "judge@r10-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "openstatus is a stack of cooperating services (dashboard, server, workflows, status-page, checker, private-location) built from different images, plus libsql and Tinybird/ClickHouse datastores that Deployz does not provide.",
+      "evidence": [
+        {
+          "path": "docker-compose.yaml",
+          "line": 20,
+          "quote": "image: ghcr.io/tursodatabase/libsql-server:latest"
+        },
+        {
+          "path": "docker-compose.yaml",
+          "line": 54,
+          "quote": "image: tinybirdco/tinybird-local:latest"
+        },
+        {
+          "path": "apps/dashboard/Dockerfile",
+          "line": 48,
+          "quote": "DATABASE_URL=\"http://libsql:8080\" \\"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8539,
+      "completionTokens": 255,
+      "costUsd": 0.03886344
+    },
+    "latencyMs": 4523
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "id": "new-81",
+  "analyser": "judge@r10-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "local_disk_data",
+      "reason": "The scanner found Prisma configured for SQLite and local filesystem storage, and the shown lines do not prove that a PostgreSQL option exists for the core data, which Deployz cannot keep on its non-persistent disk.",
+      "evidence": [
+        {
+          "path": "docker/Dockerfile",
+          "line": 48,
+          "quote": "mkdir -p /app/frontend/ /app/server/ /app/collector/ && chown -R anythingllm:anythingllm /app"
+        },
+        {
+          "path": "README.md",
+          "line": 56,
+          "quote": "Out of the box you get built-in agents, multi-user support, vector databases, and document pipelines — no extra configuration required."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7522,
+      "completionTokens": 514,
+      "costUsd": 0.03996432
+    },
+    "latencyMs": 7582
+  }
+}

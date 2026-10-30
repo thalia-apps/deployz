@@ -1,0 +1,43 @@
+{
+  "id": "new-182",
+  "analyser": "judge@r10-final-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Huly is a stack of many cooperating services (stream, media, preview, link-preview, account, front, collaborator and more) with Kafka-compatible Redpanda and CockroachDB, which Deployz cannot run as one web process.",
+      "evidence": [
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 20,
+          "quote": "  media:"
+        },
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 66,
+          "quote": "    image: docker.redpanda.com/redpandadata/redpanda:v24.3.6"
+        },
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 8,
+          "quote": "      - STREAM_ENDPOINT_URL=datalake://huly.local:4030"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6692,
+      "completionTokens": 258,
+      "costUsd": 0.03160872
+    },
+    "latencyMs": 4484
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "id": "new-146",
+  "analyser": "judge@r10-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "openstatus runs as several cooperating application services (dashboard, server, workflows, checker, status-page) plus libSQL and Tinybird/ClickHouse, which Deployz cannot run as one web process.",
+      "evidence": [
+        {
+          "path": "docker-compose.yaml",
+          "line": 20,
+          "quote": "image: ghcr.io/tursodatabase/libsql-server:latest"
+        },
+        {
+          "path": "docker-compose.yaml",
+          "line": 54,
+          "quote": "image: tinybirdco/tinybird-local:latest"
+        },
+        {
+          "path": "apps/dashboard/Dockerfile",
+          "line": 48,
+          "quote": "DATABASE_URL=\"http://libsql:8080\" \\"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8539,
+      "completionTokens": 249,
+      "costUsd": 0.03874464
+    },
+    "latencyMs": 4120
+  }
+}
