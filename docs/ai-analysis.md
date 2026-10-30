@@ -868,7 +868,15 @@ describe the production deployment:
   optional and blocks nothing. Flagsmith's `docker-compose.flags-only.yml`
   runs the app and PostgreSQL without the ClickHouse, Kafka and ingestion
   services of `docker-compose.yml`. The variant must run an application
-  service of the main file and only services of the main file. Services on the same build or image are one
+  service of the main file and only services of the main file. A Compose
+  file in a deployment sample directory (`deploy`, `k8s`, `charts` and the
+  other deployment-file directories) whose application services all pull
+  published images, next to a Dockerfile Deployz can build, is a
+  self-hosting sample: its brokers (Kafka, RabbitMQ), its second application
+  service and its PostgreSQL extension image are no evidence (Langflow
+  `deploy/docker-compose.yml`, LobeHub `docker-compose/deploy/`). A client in
+  the source still blocks, and the sample's datastores stay declared
+  services. The extension check reads only the primary Compose file. Services on the same build or image are one
   application: the extra services are workers or replicas. Infrastructure
   images, bare runtime images (`node`), dev servers, database studios and
   services whose command, health probe or data volume is a database server

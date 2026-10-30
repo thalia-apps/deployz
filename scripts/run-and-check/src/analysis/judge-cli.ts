@@ -197,7 +197,10 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     while (next < ids.length) {
       const id = ids[next++]!;
       const fromDir = fromDirs.find((dir) => existsSync(join(dir, `${id}.json`)));
-      if (fromDir === undefined) throw new Error(`no stored analysis for ${id}`);
+      if (fromDir === undefined) {
+        console.log(`${id}: no stored analysis, skipped`);
+        continue;
+      }
       const analysis = analysisResultFileSchema.parse(JSON.parse(readFileSync(join(fromDir, `${id}.json`), 'utf8')));
       const recipe = recipeSchema.parse(parse(readFileSync(join(HARNESS_ROOT, 'recipes', `${id}.yaml`), 'utf8')));
       if (recipe.source.kind !== 'git') continue;
