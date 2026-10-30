@@ -1546,3 +1546,27 @@ vendor dispute for `final-review-unsupported`), or a measured judge error
 rate that makes the extra call worth less than its cost (about $0.028 and
 3.7 s per judged analysis).
 
+
+## A required declared Redis or database service is a setting (2026-10-30)
+
+Context: in the Round 10 held-out test, a declared Compose service of an
+engine that Deployz provides (Redis in wagtail/bakerydemo) stayed a code
+change after the AI answered "required" with a checked source line. That
+made a deployable app DEPLOYABLE_WITH_CHANGES. Round 7 deferred the fix as
+post-MVP.
+
+Decision:
+
+- When the declared-service question names one PostgreSQL, MySQL, Redis or
+  S3 service and the checked "required" answer cites a line that uses that
+  engine, Deployz adds the engine (the same override as an
+  `optional_by_setting` answer) and dismisses the question. The outcome
+  can then be DEPLOYABLE.
+- A question that names several services, a MariaDB service or an engine
+  that Deployz does not provide is unchanged.
+
+The support boundary does not change: Deployz already provides these
+engines ([`../product/mvp-scope.md`](../product/mvp-scope.md)).
+
+What would change it: apps that get a managed engine they do not use (cost
+to the customer) often enough that a vendor question is better.

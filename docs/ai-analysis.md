@@ -283,7 +283,11 @@ Repository (GitHub tree, bounded)
   `runMigrations()`, golang-migrate, Flask-Migrate `upgrade()`, Django
   `call_command('migrate')`) sets the migration mode to `startup`. Then no
   pre-deploy command is kept. Only the real start path counts: the image
-  CMD or ENTRYPOINT and the scripts it runs (a `./app migrate && ./app`
+  CMD or ENTRYPOINT and the scripts it runs, also an extension-less boot
+  script that it names by path (Rails `/rails/bin/docker-entrypoint` with
+  `bin/rails db:prepare`, `/scripts/init`; when several directories hold a
+  script of that name, the one next to the Dockerfile; the tree fetch
+  includes these scripts) (a `./app migrate && ./app`
   subcommand, a `migrate deploy` wrapper, an interpreter that runs the
   app's migrate script file such as `node ./db/migrations/pg/migrate.cjs`,
   or the app's own install or upgrade command, such as
@@ -398,7 +402,8 @@ is final.
     the item. These are an unsupported datastore (MongoDB, Elasticsearch,
     ClickHouse, MariaDB, SQLite, H2 and the other database rejections, but
     not a missing PostgreSQL extension or database version), durable local state (a declared
-    data directory, a data path in the app's own `config.yaml` or
+    data directory that is not under a temporary, cache or log path such as
+    `/tmp`, a data path in the app's own `config.yaml` or
     `config.toml` such as qdrant `storage_path: ./storage`, a `VOLUME`,
     Compose named volumes), a second
     application service in the production Compose file, and a declared
@@ -619,9 +624,12 @@ is final.
     service whose cited line names an engine that Deployz does not provide
     (MongoDB, Elasticsearch or OpenSearch, Kafka or Redpanda, RabbitMQ,
     CockroachDB and the other datastores) becomes that engine's rejection:
-    a CAPABILITY_GAP (outcome 3). A cited PostgreSQL, MySQL, Redis or
-    storage line, or a second app service, keeps the question (outcome 2).
-    Post-MVP: provision the supported engine on such an answer. Durable
+    a CAPABILITY_GAP (outcome 3). When the question names one PostgreSQL,
+    MySQL, Redis or S3 service and a cited line uses that engine, Deployz
+    adds the engine (as an `optional_by_setting` answer does) and the
+    question is dismissed: a setting, not a change. A question that names
+    several services, or a second app service, keeps the question (outcome
+    2). Durable
     local state and a second
     Compose service stay CODE_CHANGE (outcome 2) also when the AI says
     `required`: the app can move its data to S3 or the database, or drop
@@ -673,7 +681,9 @@ outcome that is too lenient. It never makes an outcome more lenient.
   Dockerfile, start command, port, managed services, migration, workers,
   required or infrastructure variable names), the blocking reasons of the
   manifest, the checked answers (subject, answer, decision), the top-level
-  directories, and the files it reads: the root README from its first
+  directories and every root file (hidden files too, at most 60 entries; a
+  longer listing says that it is partial, so an unlisted file is not proof
+  that it is missing), and the files it reads: the root README from its first
   heading (80 lines, 4000 characters), `.gitmodules`, the selected
   Dockerfile (4000 characters) and up to two files that a blocking reason
   names. Lines are redacted and keep their numbers. The system message is a
@@ -842,7 +852,7 @@ deployment until the vendor enters a command or chooses "No separate
 migration" — both are vendor overrides that re-analysis keeps. Analysis writes its result under a row lock from the row as it is at that moment, so an override saved while a run is in progress is kept. A row with no `vendorOverrides` list (older than the list) keeps its saved port, health path, migration and worker command; analysis fills only empty columns and does not add the list. A declared worker
 process is `worker-process` — informational, because Deployz now runs it
 as its own service. Worker-like code with no declared start command is
-`worker-command` and sets `worker.needsCommand`: a needs-input question
+`worker-command` (a SETTING: the vendor types the command) and sets `worker.needsCommand`: a needs-input question
 that is never provisioned from weak evidence such as a queue library
 alone. A Node job library (Bull, BullMQ, Agenda, Bree, pg-boss,
 graphile-worker) or `worker_threads` alone raises no question: these jobs

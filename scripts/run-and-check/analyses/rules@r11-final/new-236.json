@@ -1,0 +1,524 @@
+{
+  "id": "new-236",
+  "commit": "ca35caba3af2b888acc990b99152c500a1c44461",
+  "analyser": "rules@r11-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [ \"./entrypoint.sh\" ]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/healthz/",
+      "mode": "explicit",
+      "hostChecked": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ACCOUNT_EMAIL_VERIFICATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACCOUNT_SIGNUPS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGGRESSIVE_HASH_SALTING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOWED_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BLOCK_ALL_IPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CELERY_BROKER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CELERY_TASK_ALWAYS_EAGER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CSRF_TRUSTED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DASHBOARD_PAGE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DJANGO_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_HOST_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_HOST_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_USE_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_USE_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGUAGE_CODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCATION_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAXMIND_ASN_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAXMIND_CITY_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ONLY_SUPERUSERS_CREATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CACHE_LOCATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCRIPT_HEARTBEAT_FREQUENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCRIPT_USE_HTTPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_MEMORY_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHOW_SHYNET_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHOW_THIRD_PARTY_ICONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQLITE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TIME_ZONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_RELATIVE_MAX_IN_BAR_VISUALIZATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shynet/shynet/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": []
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE"
+}

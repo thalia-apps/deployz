@@ -1247,6 +1247,23 @@ describe('github — repository tree fetch (§18 analysis input)', () => {
     for (const path of lookalikes) expect(tree).not.toHaveProperty(path);
   });
 
+  it('fetches extension-less boot scripts (Rails bin/docker-entrypoint, scripts/init), and not other extension-less files', async () => {
+    const wanted = ['Dockerfile', 'bin/docker-entrypoint', 'docker/single-process/scripts/init'];
+    const lookalikes = ['bin/rails', 'bin/run', 'LICENSE'];
+    const fetchFn: FetchFn = async (url) => {
+      if (url.includes('/git/trees/')) {
+        return makeFetchResponse(200, { tree: [...wanted, ...lookalikes].map((path) => ({ path, type: 'blob', sha: `sha-${path}`, size: 10 })) });
+      }
+      const sha = url.split('/').pop();
+      return makeFetchResponse(200, { content: Buffer.from(`content-${sha}`).toString('base64'), encoding: 'base64' });
+    };
+
+    const tree = await buildFileTreeForAnalysis(REF, 'tok', fetchFn);
+
+    for (const path of wanted) expect(tree).toHaveProperty(path);
+    for (const path of lookalikes) expect(tree).not.toHaveProperty(path);
+  });
+
   it("protects the selected Dockerfile's CMD/ENTRYPOINT script chain from the ANALYSIS_MAX_FILES trim on a large repository (DEPLOY-029)", async () => {
     // An umami-shaped 250-file repository: CMD -> scripts/start-docker.sh
     // -> scripts/check-db.js. `scripts/` sinks both to the LOWEST relevance

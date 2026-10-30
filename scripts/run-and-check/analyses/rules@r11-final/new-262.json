@@ -1,0 +1,373 @@
+{
+  "id": "new-262",
+  "commit": "f4bcfaba7c85be3c6332cc74a20819f586dcdbc6",
+  "analyser": "rules@r11-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "backend",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "backend/Dockerfile"
+    },
+    "build": {
+      "command": "tsc -p tsconfig.build.json && vite build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"fastapi\", \"run\", \"--workers\", \"4\"]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/api/v1/utils/health-check/",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ACCESS_TOKEN_EXPIRE_MINUTES",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_V1_STR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares DATABASE_URL",
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "ELSE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EMAILS_FROM_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares EMAILS_FROM_EMAIL",
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAILS_FROM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_RESET_TOKEN_EXPIRE_HOURS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_TEST_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "FASTAPI_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares FASTAPI_ENV",
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FIRST_SUPERUSER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares FIRST_SUPERUSER",
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FIRST_SUPERUSER_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env declares FIRST_SUPERUSER_PASSWORD",
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FRONTEND_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env declares POSTGRES_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PROJECT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares PROJECT_NAME",
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env declares SECRET_KEY",
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares SMTP_HOST",
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares SMTP_PORT",
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares SMTP_TLS",
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/app/core/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ELSE. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE"
+}

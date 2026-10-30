@@ -36,6 +36,20 @@ describe('the judge pack', () => {
     expect(pack.prompt).not.toContain('badge.svg');
     expect(pack.prompt).toContain('5| CMD ["node", "src/index.js"]');
   });
+
+  it('lists the top-level directories and every root file, hidden files too', () => {
+    const listing: FileTree = { ...files };
+    Object.defineProperty(listing, TREE_PATHS, { value: [...Object.keys(files), 'pnpm-lock.yaml', '.version', '.github/workflows/ci.yml'], enumerable: false });
+    const prompt = buildJudgePack({ outcome: 'DEPLOYABLE', manifest, answers: [], files: listing }).prompt;
+    expect(prompt).toContain('## Top-level entries (6)\nsrc/\n.version\nDockerfile\nREADME.md\npackage.json\npnpm-lock.yaml');
+    expect(prompt).not.toContain('.github/');
+  });
+
+  it('says that a long listing is partial', () => {
+    const listing: FileTree = { ...files };
+    Object.defineProperty(listing, TREE_PATHS, { value: Array.from({ length: 70 }, (_, i) => `file${i}.txt`), enumerable: false });
+    expect(buildJudgePack({ outcome: 'DEPLOYABLE', manifest, answers: [], files: listing }).prompt).toContain('## Top-level entries (the first 60 of 70; an unlisted entry can exist)');
+  });
 });
 
 describe('decideJudgement (stricter only)', () => {

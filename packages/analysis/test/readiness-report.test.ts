@@ -329,6 +329,9 @@ describe('buildReadinessReport — finding classification', () => {
     });
     expect(report.state).toBe('READY');
     expect(report.findings.find((f) => f.id === 'worker-command')?.severity).toBe('recommended');
+    // A worker command is a setting the vendor types, never a repository change.
+    expect(report.findings.find((f) => f.id === 'worker-command')?.fixClass).toBe('SETTING');
+    expect(report.outcome).toBe('DEPLOYABLE');
   });
 
   it('never tells the vendor to merge jobs into the web process, replace a queue or remove infrastructure', () => {

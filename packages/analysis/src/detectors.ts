@@ -3179,8 +3179,13 @@ export interface MigrationStartupEvidence {
   readonly fromDockerCommand: boolean;
 }
 
-/** A token in Dockerfile CMD/ENTRYPOINT text (or a script it runs) that names a script file. */
-const SCRIPT_PATH_TOKEN_REGEX = /[\w./-]+\.(?:sh|js|mjs|cjs|ts|ini)\b/g;
+/**
+ * A token in Dockerfile CMD/ENTRYPOINT text (or a script it runs) that names a script file: a
+ * file with a script extension, or an extension-less boot script by its path (Rails
+ * `/rails/bin/docker-entrypoint`, Huginn `/scripts/init`).
+ */
+const SCRIPT_PATH_TOKEN_REGEX =
+  /[\w./-]+\.(?:sh|js|mjs|cjs|ts|ini)\b|(?<![\w.-])[\w./-]*\/(?:docker-entrypoint|entrypoint|docker-start|start|init|boot|startup)(?![\w./-])/g;
 
 /**
  * Maximum number of script-to-script hops followed from the CMD/ENTRYPOINT
@@ -3205,9 +3210,12 @@ function resolveCmdScriptPath(token: string, tree: FileTree, dockerDir: string):
     if (Object.prototype.hasOwnProperty.call(tree, candidate)) return candidate;
   }
   // The image copies a subdirectory to its root (`COPY server .`): a script
-  // named from there still resolves when exactly one tree path ends with it.
+  // named from there still resolves when exactly one tree path ends with it,
+  // or exactly one of those paths is under the Dockerfile's own directory.
   const suffixed = Object.keys(tree).filter((path) => path.endsWith(`/${clean}`));
-  return suffixed.length === 1 ? suffixed[0] : undefined;
+  if (suffixed.length === 1) return suffixed[0];
+  const nearDockerfile = dockerDir.length > 0 ? suffixed.filter((path) => path.startsWith(`${dockerDir}/`)) : [];
+  return nearDockerfile.length === 1 ? nearDockerfile[0] : undefined;
 }
 
 /**

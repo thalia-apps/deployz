@@ -540,7 +540,15 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // extension. Stored v79 rows can call a multi-service, Kafka, ClickHouse,
 // desktop or retired-source repository deployable, or reject Langflow and
 // LobeHub for their deploy samples.
-export const ANALYSIS_VERSION = 80;
+// Version 81 (2026-10 Round 11, judge prompt v4): the start-migration
+// evidence follows an extension-less boot script that CMD/ENTRYPOINT names
+// (Rails `bin/docker-entrypoint`, `/scripts/init`), and the tree fetch
+// includes such scripts. A data-directory variable under a temporary, cache
+// or log path is not durable state. A checked "required" answer for one
+// declared PostgreSQL, MySQL, Redis or S3 service adds that engine instead of
+// a code change. `worker-command` is a setting. The judge sees every root
+// file. Stored v80 rows can ask a code change for these apps.
+export const ANALYSIS_VERSION = 81;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

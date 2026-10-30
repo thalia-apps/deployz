@@ -1,0 +1,925 @@
+{
+  "id": "new-178",
+  "commit": "338ac6f1e851ee5c737069fab36e918a4524cdcd",
+  "analyser": "rules@r11-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "@nestjs/core",
+      "dockerfilePath": "docker/ce-production.Dockerfile"
+    },
+    "build": {
+      "command": "npm run build:plugins:prod && npm run build:frontend && npm run build:server",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/usr/bin/tini\", \"-g\", \"--\", \"./server/entrypoint.sh\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "TOOLJET_DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "TOOLJET_DB_PASS",
+          "kind": "password"
+        },
+        {
+          "name": "TOOLJET_DB_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "pre_deploy",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AI_ATTACHMENTS_MAX_PROVIDER_UPLOADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AI_ATTACHMENTS_MAX_PROVIDER_UPLOADS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AI_ATTACHMENTS_MAX_UPLOADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AI_ATTACHMENTS_MAX_UPLOADS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APM_VENDOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APM_VENDOR"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CHECK_FOR_UPDATES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CHECK_FOR_UPDATES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "COMMENT_FEATURE_ENABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares COMMENT_FEATURE_ENABLE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DEFAULT_FROM_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DEFAULT_FROM_EMAIL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISABLE_APP_EMBED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DISABLE_APP_EMBED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISABLE_GIT_OBJECT_CACHE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DISABLE_GIT_OBJECT_CACHE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISABLE_SIGNUPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DISABLE_SIGNUPS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ENABLE_CORS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ENABLE_CORS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ENABLE_MULTIPLAYER_EDITING",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ENABLE_MULTIPLAYER_EDITING"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ENABLE_ONBOARDING_QUESTIONS_FOR_ALL_SIGN_UPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ENABLE_ONBOARDING_QUESTIONS_FOR_ALL_SIGN_UPS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ENABLE_PRIVATE_APP_EMBED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ENABLE_PRIVATE_APP_EMBED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GIT_OBJECT_CACHE_MAX_GB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GIT_OBJECT_CACHE_MAX_GB"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GIT_OBJECT_CACHE_TTL_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GIT_OBJECT_CACHE_TTL_DAYS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GOOGLE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "LICENSE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/data-migrations/1683148731897-BackfillLicenseKeyFromEnv.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCKBOX_MASTER_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares LOCKBOX_MASTER_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOG_LEVEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MFA_MASTER_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares MFA_MASTER_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "ORGANIZATION_LICENSE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares ORGANIZATION_LICENSE_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ORGANIZATION_LICENSE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ORGANIZATION_LICENSE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ORM_LOGGING",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ORM_LOGGING"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PAT_EXPIRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PAT_EXPIRY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PAT_SESSION_EXPIRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PAT_SESSION_EXPIRY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PGRST_DB_PRE_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PGRST_DB_PRE_CONFIG"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PGRST_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PGRST_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PGRST_JWT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PGRST_JWT_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "PG_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PG_DB"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PG_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PG_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PG_PASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PG_PASS"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PG_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PG_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_DB"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares REDIS_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_TLS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_USERNAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SCIM_BASIC_AUTH_PASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SCIM_BASIC_AUTH_PASS"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SCIM_BASIC_AUTH_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SCIM_BASIC_AUTH_USER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SCIM_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SCIM_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SCIM_HEADER_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SCIM_HEADER_AUTH_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SECRET_KEY_BASE",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SECRET_KEY_BASE"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SENTRY_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_DEBUG"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_DNS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_DNS"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SERVER_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SERVER_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_DISABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_DOMAIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_PASSWORD"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_PORT",
+            "smtp requires SMTP_PORT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_USERNAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SSO_ACCEPTED_DOMAINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SSO_ACCEPTED_DOMAINS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SSO_DISABLE_SIGNUPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SSO_DISABLE_SIGNUPS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SSO_GIT_OAUTH2_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SSO_GIT_OAUTH2_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SSO_GIT_OAUTH2_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SSO_GIT_OAUTH2_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SSO_GIT_OAUTH2_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SSO_GIT_OAUTH2_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SSO_GOOGLE_OAUTH2_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SSO_GOOGLE_OAUTH2_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TOOLJET_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TOOLJET_DB"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TOOLJET_DB_DISABLE_BUILDER_EDIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TOOLJET_DB_DISABLE_BUILDER_EDIT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TOOLJET_DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TOOLJET_DB_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "TOOLJET_DB_PASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares TOOLJET_DB_PASS"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "TOOLJET_DB_RECONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TOOLJET_DB_RECONFIG"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TOOLJET_DB_STATEMENT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TOOLJET_DB_STATEMENT_TIMEOUT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TOOLJET_DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TOOLJET_DB_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "TOOLJET_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TOOLJET_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TOOLJET_QUEUE_DASH_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares TOOLJET_QUEUE_DASH_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TOOLJET_WORKFLOW_SANDBOX_BYPASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares TOOLJET_WORKFLOW_SANDBOX_BYPASS"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "USER_SESSION_EXPIRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares USER_SESSION_EXPIRY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WORKER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares WORKER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "sendgrid",
+      "smtp",
+      "sentry",
+      "openai",
+      "anthropic",
+      "twilio"
+    ],
+    "unsupported": [
+      "Unsupported architecture: docker-compose.yaml defines 3 application services (plugins, client, server). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Unconfirmed service: the repository declares redis (redis:7-alpine) in docker-compose.yaml. Deployz did not find how the application uses it."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yaml defines 3 application services (plugins, client, server). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares redis (redis:7-alpine) in docker-compose.yaml. Deployz did not find how the application uses it."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}
