@@ -1,0 +1,142 @@
+{
+  "id": "new-200",
+  "commit": "586726edb0170bb46f604e84fba09e5659610649",
+  "analyser": "rules@r10-compose",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "rust",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "result/bin/garage"
+      ]
+    },
+    "web": {
+      "command": "CMD: [ \"/garage\", \"server\"]",
+      "port": null
+    },
+    "health": {
+      "path": "/v0/status",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "GARAGE_LOG_FORMAT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/garage/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GARAGE_LOG_TO_JOURNALD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/garage/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GARAGE_LOG_TO_SYSLOG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/garage/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NO_COLOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/garage/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RUST_LOG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/garage/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (fuzz/Cargo.toml, src/api/admin/Cargo.toml, src/api/common/Cargo.toml), and no Dockerfile builds an application."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (fuzz/Cargo.toml, src/api/admin/Cargo.toml, src/api/common/Cargo.toml), and no Dockerfile builds an application."
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies result/bin/garage, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "NOT_DEPLOYABLE"
+}

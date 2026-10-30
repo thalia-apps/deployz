@@ -1,0 +1,42 @@
+{
+  "id": "new-71",
+  "analyser": "judge@r10-p3-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "Nextcloud stores its core product data (user files) in a server-owned local data directory, and its third-party PHP dependencies exist only in a git submodule that is absent from the source archive.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 18,
+          "quote": "You can store your files, contacts, calendars, and more on a server of your choosing."
+        },
+        {
+          "path": ".gitmodules",
+          "line": 5,
+          "quote": "path = 3rdparty"
+        },
+        {
+          "path": "README.md",
+          "line": 59,
+          "quote": "Third-party components are handled as git submodules which have to be initialized first."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 4470,
+      "completionTokens": 210,
+      "costUsd": 0.0218592
+    },
+    "latencyMs": 3912
+  }
+}

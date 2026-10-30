@@ -250,6 +250,9 @@ export async function runJudge(pack: JudgePack, gateway: AiGateway, options: { a
   };
 }
 
+/** The manifest's blocking reason for a judge block starts with this. */
+export const JUDGE_REASON_PREFIX = 'Final review: ';
+
 /** What the judge changes: a blocking finding, a required change, a vendor question, or nothing. */
 export type JudgeDecision = 'block' | 'change' | 'question' | 'none';
 
@@ -293,6 +296,8 @@ export type JudgeRecord =
   | {
       readonly status: 'ok';
       readonly promptVersion: number;
+      /** The outcome the judge reviewed. */
+      readonly outcome: JudgeInput['outcome'];
       readonly judgement: Judgement;
       readonly model: string | undefined;
       readonly usage: TokenUsage;
@@ -321,6 +326,7 @@ export async function runFinalJudge(
     return {
       status: 'ok',
       promptVersion: JUDGE_PROMPT_VERSION,
+      outcome,
       judgement: decideJudgement(outcome, result.output, pack.windows),
       model: result.model,
       usage: result.usage,

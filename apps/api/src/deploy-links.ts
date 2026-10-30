@@ -313,7 +313,11 @@ export async function createDeploymentRecord(
   });
   // Funnel event: the deployment record now exists. `source` is exactly what
   // the insert above wrote to deployments.source, so funnel queries can
-  // attribute origin without a join.
+  // attribute origin without a join. The analysis version and outcome are a
+  // snapshot (a later analysis overwrites the row), so a deployment's build
+  // and health results can be compared with the analysis that admitted it.
+  const analysisVersion = application.detectedMetadata?.['analysisVersion'];
+  const analysisOutcome = (application.detectedMetadata?.['readiness'] as { outcome?: unknown } | undefined)?.outcome;
   await recordEvent(db, {
     organizationId: params.organizationId,
     eventType: 'deployment.created',
@@ -323,6 +327,8 @@ export async function createDeploymentRecord(
     payload: {
       schemaVersion: 1,
       source: params.source,
+      ...(typeof analysisVersion === 'number' ? { analysisVersion } : {}),
+      ...(typeof analysisOutcome === 'string' ? { analysisOutcome } : {}),
     },
   });
   return { deployment: row!, application };

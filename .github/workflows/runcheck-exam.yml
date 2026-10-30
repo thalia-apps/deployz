@@ -26,7 +26,7 @@ on:
         default: ''
         type: string
       from:
-        description: The stored AI analyses the judge reads (judge only), for example ai@r9-final2
+        description: The stored AI analyses the judge reads (judge only), for example ai@r9-final2; several folders separated by spaces, the first that has a recipe wins
         required: false
         default: ''
         type: string
@@ -66,7 +66,10 @@ jobs:
           fi
           if [[ "$MODE" == judge ]]; then
             [[ "$ANALYSIS" =~ ^judge@[A-Za-z0-9_.@-]+$ ]] || { echo "judge needs an output folder named judge@..."; exit 1; }
-            [[ "$FROM" =~ ^ai@[A-Za-z0-9_.@-]+$ && -d "analyses/$FROM" ]] || { echo "judge needs a stored ai@... folder"; exit 1; }
+            [[ -n "$FROM" ]] || { echo "judge needs a stored ai@... folder"; exit 1; }
+            for dir in $FROM; do
+              [[ "$dir" =~ ^ai@[A-Za-z0-9_.@-]+$ && -d "analyses/$dir" ]] || { echo "invalid judge input folder $dir"; exit 1; }
+            done
           fi
           if [[ "$REPOS" == all ]]; then
             ids=$(ls recipes/*.yaml | xargs -n1 basename | sed 's/\.yaml$//')
@@ -204,7 +207,8 @@ jobs:
         run: |
           args=()
           for id in $(jq -r '.[]' <<< "$IDS"); do args+=(--repo "$id"); done
-          pnpm runcheck:judge --from "scripts/run-and-check/analyses/$FROM" --out "scripts/run-and-check/analyses/$ANALYSIS" "${args[@]}"
+          for dir in $FROM; do args+=(--from "scripts/run-and-check/analyses/$dir"); done
+          pnpm runcheck:judge --out "scripts/run-and-check/analyses/$ANALYSIS" "${args[@]}"
 
       - name: Upload judge results
         if: always()

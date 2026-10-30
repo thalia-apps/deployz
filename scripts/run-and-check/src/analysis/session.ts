@@ -49,6 +49,8 @@ export interface RawAnalysis {
   treeFiles: number;
   /** `detected_metadata.aiEngine` when the AI engine ran. */
   aiEngine: Record<string, unknown> | null;
+  /** `detected_metadata.aiJudge` when the final judge ran or was skipped. */
+  aiJudge: Record<string, unknown> | null;
 }
 
 /** What the session reads of a repository: its id, its GitHub name and the pinned commit. */
@@ -127,7 +129,7 @@ export async function openAnalysisSession(fetchFn: FetchFn, engine: SessionEngin
       const [row] = await db.select().from(schema.applications).where(eq(schema.applications.id, applicationId)).limit(1);
       if (!row) throw new Error(`application ${applicationId} vanished during analysis`);
       if (row.analysisStatus !== 'COMPLETE') {
-        return { status: 'failed', failure: row.compatibilityReason, row, analysis: null, manifest: null, gate: null, treeFiles: 0, aiEngine: null };
+        return { status: 'failed', failure: row.compatibilityReason, row, analysis: null, manifest: null, gate: null, treeFiles: 0, aiEngine: null, aiJudge: null };
       }
 
       // The persisted row carries the merged metadata but not the rejection
@@ -145,7 +147,8 @@ export async function openAnalysisSession(fetchFn: FetchFn, engine: SessionEngin
       const gate = evaluateManifestReadiness(manifest, { providedEnvKeys: [] });
 
       const aiEngine = (row.detectedMetadata?.['aiEngine'] as Record<string, unknown> | undefined) ?? null;
-      return { status: 'analysed', failure: null, row, analysis, manifest, gate, treeFiles: Object.keys(tree).length, aiEngine };
+      const aiJudge = (row.detectedMetadata?.['aiJudge'] as Record<string, unknown> | undefined) ?? null;
+      return { status: 'analysed', failure: null, row, analysis, manifest, gate, treeFiles: Object.keys(tree).length, aiEngine, aiJudge };
     },
     async close() {
       await client.close();

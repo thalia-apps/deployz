@@ -1,0 +1,37 @@
+{
+  "id": "new-81",
+  "analyser": "judge@r10-p3-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "local_disk_data",
+      "reason": "The scanner found a SQLite-only Prisma setup and local filesystem state, and the built-in vector database and documents appear to live on local disk, which Deployz cannot persist; the shown lines do not prove a PostgreSQL option exists.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 56,
+          "quote": "Out of the box you get built-in agents, multi-user support, vector databases, and document pipelines — no extra configuration required."
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 53,
+          "quote": "COPY --chown=anythingllm:anythingllm ./docker/.env.example /app/server/.env"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7522,
+      "completionTokens": 526,
+      "costUsd": 0.04020192
+    },
+    "latencyMs": 7878
+  }
+}

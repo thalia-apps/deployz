@@ -1,0 +1,42 @@
+{
+  "id": "new-122",
+  "analyser": "judge@r10-p2-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 2,
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "several_services",
+      "reason": "Sentry's production product appears to need several separate services (Snuba with ClickHouse, Kafka, Relay, Symbolicator) that Deployz cannot run, but the shown files do not prove it.",
+      "evidence": [
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 22,
+          "quote": "LABEL org.opencontainers.image.documentation=\"https://develop.sentry.dev/self-hosted/\""
+        },
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 93,
+          "quote": "VOLUME /data"
+        },
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 20,
+          "quote": "LABEL org.opencontainers.image.description=\"Sentry runtime image\""
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6393,
+      "completionTokens": 537,
+      "costUsd": 0.03594888
+    },
+    "latencyMs": 7826
+  }
+}

@@ -529,7 +529,18 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // after the server image; Terraform of CI directories and module libraries
 // is ignored. Stored v78 rows can call these apps deployable, or reject Vault
 // for its CI Terraform.
-export const ANALYSIS_VERSION = 79;
+// Version 80 (2026-10 Round 10, judge prompt v3): with the AI engine, a final
+// judge (`ai-analysis/judge.ts`) reviews a DEPLOYABLE or
+// DEPLOYABLE_WITH_CHANGES outcome and can only make it stricter: a cited
+// "not deployable" is `final-review-unsupported` (NOT_DEPLOYABLE and a gate
+// block), a cited "needs changes" is `final-review-changes`, and "not sure"
+// is the recommended `final-review-question`. A subdirectory Compose file
+// whose application services all run published images is a self-hosting
+// sample, not evidence of a second service, a broker or a PostgreSQL
+// extension. Stored v79 rows can call a multi-service, Kafka, ClickHouse,
+// desktop or retired-source repository deployable, or reject Langflow and
+// LobeHub for their deploy samples.
+export const ANALYSIS_VERSION = 80;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

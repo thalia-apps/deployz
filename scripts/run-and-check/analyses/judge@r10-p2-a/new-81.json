@@ -1,0 +1,37 @@
+{
+  "id": "new-81",
+  "analyser": "judge@r10-p2-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 2,
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "local_disk_data",
+      "reason": "AnythingLLM keeps its core data on local disk: a SQLite database through Prisma, plus document storage and a built-in vector store, and the files shown do not prove a PostgreSQL or MySQL option exists, which Deployz's stateless containers need.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 56,
+          "quote": "Out of the box you get built-in agents, multi-user support, vector databases, and document pipelines — no extra configuration required."
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 53,
+          "quote": "COPY --chown=anythingllm:anythingllm ./docker/.env.example /app/server/.env"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7429,
+      "completionTokens": 563,
+      "costUsd": 0.04056624
+    },
+    "latencyMs": 8435
+  }
+}

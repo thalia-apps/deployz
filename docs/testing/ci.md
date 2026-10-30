@@ -236,6 +236,11 @@ snapshot of its own runs or of `main`, and a run that fetched new files saves
 them under its own key. A file that is not in the snapshot is read from
 raw.githubusercontent.com by its path in the pinned tree, which the API rate
 limit does not count; only the tree and a failed raw read use the API.
+The `judge` mode runs the final judge only (`pnpm runcheck:judge`) in one
+job: inputs `from` (a stored `ai@…` folder) and `analysis` (a `judge@…`
+output folder). Like `analyse-ai`, it reads the gateway secrets and runs no
+repository code. It uploads one artifact, `runcheck-judge-<analysis>`, with
+every result file.
 
 ## Timing expectations
 

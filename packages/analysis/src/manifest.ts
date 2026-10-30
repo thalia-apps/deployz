@@ -32,7 +32,7 @@ import {
   type ManifestWorker,
 } from '@deployz/contracts';
 
-import { appliedJudgement } from './ai-analysis/judge.js';
+import { appliedJudgement, JUDGE_REASON_PREFIX } from './ai-analysis/judge.js';
 import type { AnalysisResult } from './analyser.js';
 import type { BindingSemantic, InfrastructureBinding } from './bindings.js';
 import { isGeneratableSecretName } from './env-classification.js';
@@ -475,7 +475,7 @@ export function normalizeDeploymentManifest(
   }
   // The final judge's NOT_DEPLOYABLE (`ai-analysis/judge.ts`) blocks the deployment too.
   const judgement = appliedJudgement(meta['aiJudge']);
-  if (judgement?.decision === 'block') unsupported.push(`Final review: ${judgement.reason}`);
+  if (judgement?.decision === 'block') unsupported.push(`${JUDGE_REASON_PREFIX}${judgement.reason}`);
   // DEPLOY-031: the source archive Deployz builds from has no git metadata,
   // so a Dockerfile that copies or reads .git fails every build.
   if (meta['copiesGitDirectory'] === true) {

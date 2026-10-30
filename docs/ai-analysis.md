@@ -658,6 +658,64 @@ is final.
   the checks decide each closed answer, and a reviewer objection only added
   vendor questions.
 
+## Final judge
+
+The final judge (`packages/analysis/src/ai-analysis/judge.ts`) is one more
+structured Opus call after the AI-first Analysis and its merge. It runs only
+with `ANALYSIS_ENGINE=ai` and a merged AI result. Its job is to catch an
+outcome that is too lenient. It never makes an outcome more lenient.
+
+- **Skip:** an outcome that is already NOT_DEPLOYABLE makes no call
+  (`aiJudge: {status: 'skipped', reason: 'not_deployable'}`). A row with
+  vendor "not used" answers is not judged (`reason: 'vendor_answers'`): the
+  vendor's answer is the newer evidence.
+- **Input:** the outcome so far, the merged manifest facts (runtime,
+  Dockerfile, start command, port, managed services, migration, workers,
+  required or infrastructure variable names), the blocking reasons of the
+  manifest, the checked answers (subject, answer, decision), the top-level
+  directories, and the files it reads: the root README from its first
+  heading (80 lines, 4000 characters), `.gitmodules`, the selected
+  Dockerfile (4000 characters) and up to two files that a blocking reason
+  names. Lines are redacted and keep their numbers. The system message is a
+  fixed support policy (`JUDGE_SYSTEM`): one image built from the
+  repository source, one HTTP web process plus same-image workers,
+  PostgreSQL, MySQL, Redis and S3, stateless disks, and the five impossible
+  cases (`unsupported_service`, `several_services`, `local_disk_data`,
+  `no_application`, `not_http`).
+- **Output:** `verdict` (`keep`, `needs_changes`, `not_deployable` or
+  `not_sure`), a category, a one-sentence reason and 1 to 3 cited
+  `path:line` quotes.
+- **Check and decision** (`decideJudgement`): every cited line must be one
+  the judge was shown and contain its quote (`citedLineIn`, the analyst
+  check). A cited `not_deployable` with a category blocks: the readiness
+  report adds `final-review-unsupported` (CAPABILITY_GAP, NOT_DEPLOYABLE)
+  and the manifest adds `Final review: <reason>` to `unsupported`, so the
+  deployment gate blocks too. A cited `needs_changes` on a DEPLOYABLE
+  outcome adds `final-review-changes` (CODE_CHANGE, DEPLOYABLE_WITH_CHANGES).
+  `not_sure`, and a `not_deployable` or `needs_changes` whose citation fails,
+  adds the recommended `final-review-question` (needs confirmation): the
+  outcome stays, and the vendor checks the technical details. The judge only
+  adds a finding; the rules, the checks and every other finding stay.
+- **Customer copy:** the finding copy is fixed per category in
+  `readiness-report.ts`. The judge's reason and cited lines are the
+  technical evidence, in the collapsed details section.
+- **Fallback:** a failure (timeout 90 s, schema, spend limit) stores
+  `aiJudge: {status: 'fallback'}` and changes nothing.
+- **Cost and settings:** low reasoning effort, about 5,900 prompt and 140
+  completion tokens, about $0.026 per call and 3.5 s. Claude Opus 5.5 does
+  not accept `temperature` (the API answers 400), so the call sets none.
+  The call uses no prompt cache: production analyses are minutes apart, so
+  a cache write (1.25 times the input price) costs more than the reads save.
+  Measured: the top-level `cache_control` through OpenRouter wrote the
+  whole prompt on every call and read nothing.
+- **Testing:** `pnpm runcheck:judge --from <ai@ folder> --out <judge@ folder>`
+  runs only the judge on stored AI analyses (the exam workflow mode
+  `judge`), and `--score <dir>` scores a run against the ground truth: a
+  wrong outcome, a "not sure", too strict and fixed.
+- **Post-MVP:** a vendor dispute of a judge block (today the vendor
+  re-analyses, or the vendor's "not used" answers skip the judge), and the
+  Anthropic Batch API for exam runs (the gateway has no Anthropic key).
+
 ## The canonical model
 
 `ApplicationAnalysis` (`packages/contracts/src/application-analysis.ts`,

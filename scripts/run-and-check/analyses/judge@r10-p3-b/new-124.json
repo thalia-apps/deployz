@@ -1,0 +1,42 @@
+{
+  "id": "new-124",
+  "analyser": "judge@r10-p3-b",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "This repository is the ClickHouse database server (and its Keeper coordination service), which clients connect to as a datastore, not a web application Deployz can host.",
+      "evidence": [
+        {
+          "path": "docker/keeper/Dockerfile",
+          "line": 42,
+          "quote": "ARG PACKAGES=\"clickhouse-keeper\""
+        },
+        {
+          "path": "README.md",
+          "line": 27,
+          "quote": "* [Tutorial](https://clickhouse.com/docs/getting_started/tutorial/) shows how to set up and query a small ClickHouse cluster."
+        },
+        {
+          "path": "docker/keeper/Dockerfile",
+          "line": 40,
+          "quote": "ARG REPOSITORY=\"https://packages.clickhouse.com/tgz/${REPO_CHANNEL}\""
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7532,
+      "completionTokens": 278,
+      "costUsd": 0.03533112
+    },
+    "latencyMs": 4553
+  }
+}

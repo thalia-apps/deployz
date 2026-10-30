@@ -3,9 +3,11 @@
  * analyses, so a judge prompt can be scored without running the main
  * analysis again.
  *
- *   tsx src/cli.ts judge --from <analyses dir> --out <dir> [--repo <id> ...]
+ *   tsx src/cli.ts judge --from <analyses dir> [--from <dir> ...] --out <dir> [--repo <id> ...]
  *   tsx src/cli.ts judge --score <dir> [--score <dir> ...]
  *
+ * Each id is read from the first `--from` folder that has it, so a run can
+ * put new analyses of a few repositories in front of an older full set.
  * The judge reads the stored manifest, outcome and checked answers, and the
  * repository files it asks for through the snapshot fetch (the tree listing
  * and the files `judgeFileRequests` names). Writes `<out>/<id>.json` with the
@@ -17,7 +19,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
-import { judgeFileRequests, runFinalJudge, TREE_PATHS, type DeployabilityOutcome, type FileTree, type JudgeRecord } from '@deployz/analysis';
+import { JUDGE_REASON_PREFIX, judgeFileRequests, runFinalJudge, TREE_PATHS, type DeployabilityOutcome, type FileTree, type JudgeRecord } from '@deployz/analysis';
 import { createAnalysisAiGateways, resolveAnalysisAiConfig } from '@deployz/api/ai-config';
 import { fetchFilesForAnalysis, fetchRepositoryTreeEntries } from '@deployz/api/github';
 import { parse } from 'yaml';
@@ -55,15 +57,27 @@ async function judgeOne(
   fetchFn: ReturnType<typeof createSnapshotFetch>,
   gateway: Parameters<typeof runFinalJudge>[1],
 ): Promise<JudgeRecord | null> {
-  if (analysis.status !== 'analysed' || analysis.manifest === null || analysis.outcome === undefined) return null;
-  if (analysis.outcome === 'NOT_DEPLOYABLE') return runFinalJudge({ outcome: analysis.outcome, manifest: analysis.manifest, answers: [], files: {} }, gateway);
+  const outcome = reviewedOutcome(analysis);
+  if (analysis.status !== 'analysed' || analysis.manifest === null || outcome === null) return null;
+  const manifest = { ...analysis.manifest, unsupported: analysis.manifest.unsupported.filter((reason) => !reason.startsWith(JUDGE_REASON_PREFIX)) };
+  if (outcome === 'NOT_DEPLOYABLE') return runFinalJudge({ outcome, manifest, answers: [], files: {} }, gateway);
   const entries = await fetchRepositoryTreeEntries(repository, BENCHMARK_INSTALLATION_TOKEN, fetchFn);
   const listing: FileTree = {};
   Object.defineProperty(listing, TREE_PATHS, { value: entries.filter((entry) => entry.type === 'blob').map((entry) => entry.path), enumerable: false });
-  const files: FileTree = await fetchFilesForAnalysis(repository, BENCHMARK_INSTALLATION_TOKEN, fetchFn, judgeFileRequests(analysis.manifest, listing));
+  const files: FileTree = await fetchFilesForAnalysis(repository, BENCHMARK_INSTALLATION_TOKEN, fetchFn, judgeFileRequests(manifest, listing));
   Object.defineProperty(files, TREE_PATHS, { value: (listing as FileTree & { [TREE_PATHS]: readonly string[] })[TREE_PATHS], enumerable: false });
   const answers = Array.isArray(analysis.ai?.['answers']) ? (analysis.ai['answers'] as { subject: string; answer: string; decision: 'ai' | 'rules' }[]) : [];
-  return runFinalJudge({ outcome: analysis.outcome, manifest: analysis.manifest, answers, files }, gateway);
+  return runFinalJudge({ outcome, manifest, answers, files }, gateway);
+}
+
+/**
+ * The outcome before any judge: an analysis that ran the judge stores the
+ * outcome the judge reviewed, and its manifest blocking reasons lose the
+ * judge's own line.
+ */
+export function reviewedOutcome(analysis: AnalysisResultFile): DeployabilityOutcome | null {
+  const judged = analysis.judge?.['status'] === 'ok' ? (analysis.judge['outcome'] as DeployabilityOutcome | undefined) : undefined;
+  return judged ?? analysis.outcome ?? null;
 }
 
 function acceptedOutcomes(id: string): readonly string[] | null {
@@ -151,7 +165,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   const { values } = parseArgs({
     args: [...argv],
     options: {
-      from: { type: 'string' },
+      from: { type: 'string', multiple: true },
       out: { type: 'string' },
       repo: { type: 'string', multiple: true },
       score: { type: 'string', multiple: true },
@@ -172,16 +186,18 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     console.error('judge needs AI_GATEWAY_BASE_URL and OPENROUTER_API_KEY.');
     return 1;
   }
-  const fromDir = resolve(values.from);
+  const fromDirs = values.from.map((dir) => resolve(dir));
   const outDir = resolve(values.out);
   mkdirSync(outDir, { recursive: true });
-  const ids = values.repo ?? readdirSync(fromDir).filter((name) => name.endsWith('.json')).map((name) => name.slice(0, -5));
+  const ids = values.repo ?? [...new Set(fromDirs.flatMap((dir) => readdirSync(dir).filter((name) => name.endsWith('.json')).map((name) => name.slice(0, -5))))].sort();
   const fetchFn = createSnapshotFetch({ cacheDir: SNAPSHOT_CACHE_DIR, token: resolveGithubToken() });
   const written: JudgeFile[] = [];
   let next = 0;
   const worker = async () => {
     while (next < ids.length) {
       const id = ids[next++]!;
+      const fromDir = fromDirs.find((dir) => existsSync(join(dir, `${id}.json`)));
+      if (fromDir === undefined) throw new Error(`no stored analysis for ${id}`);
       const analysis = analysisResultFileSchema.parse(JSON.parse(readFileSync(join(fromDir, `${id}.json`), 'utf8')));
       const recipe = recipeSchema.parse(parse(readFileSync(join(HARNESS_ROOT, 'recipes', `${id}.yaml`), 'utf8')));
       if (recipe.source.kind !== 'git') continue;
@@ -190,7 +206,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
         console.warn(`${id}: ${error instanceof Error ? error.message : String(error)}`);
         return null;
       });
-      const storedOutcome = analysis.outcome ?? null;
+      const storedOutcome = reviewedOutcome(analysis);
       const file: JudgeFile = { id, analyser: basename(outDir), from: basename(fromDir), storedOutcome, outcome: judgedOutcome(storedOutcome, judge), judge };
       writeFileSync(join(outDir, `${id}.json`), `${JSON.stringify(file, null, 2)}\n`);
       written.push(file);

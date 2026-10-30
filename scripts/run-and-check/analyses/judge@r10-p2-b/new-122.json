@@ -1,0 +1,42 @@
+{
+  "id": "new-122",
+  "analyser": "judge@r10-p2-b",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 2,
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "unsupported_service",
+      "reason": "Sentry's core event pipeline normally needs Kafka, ClickHouse (via Snuba) and Relay, which Deployz does not provide, but the shown files do not prove it.",
+      "evidence": [
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 77,
+          "quote": "COPY ./self-hosted/sentry.conf.py ./self-hosted/config.yml $SENTRY_CONF/"
+        },
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 93,
+          "quote": "VOLUME /data"
+        },
+        {
+          "path": "README.md",
+          "line": 14,
+          "quote": "Sentry is the debugging platform that helps every developer detect, trace, and fix issues. Code breaks, fix it faster."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6393,
+      "completionTokens": 543,
+      "costUsd": 0.03606768
+    },
+    "latencyMs": 8451
+  }
+}

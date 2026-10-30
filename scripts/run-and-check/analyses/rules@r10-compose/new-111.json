@@ -1,0 +1,2611 @@
+{
+  "id": "new-111",
+  "commit": "ce4f62d5582a60de6e84dbf5077e28bde224f5e2",
+  "analyser": "rules@r10-compose",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "hosting/single",
+      "runtime": "node",
+      "framework": "koa",
+      "dockerfilePath": "hosting/single/Dockerfile"
+    },
+    "build": {
+      "command": "DISABLE_V8_COMPILE_CACHE=1 NODE_OPTIONS=--max-old-space-size=1500 lerna run build --stream",
+      "context": ".",
+      "missingSources": [
+        "packages/server/dist",
+        "packages/server/client",
+        "packages/server/builder",
+        "packages/worker/dist"
+      ]
+    },
+    "web": {
+      "command": "CMD: [\"./runner.sh\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "COUCH_DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "COUCH_DB_URL",
+          "kind": "url"
+        },
+        {
+          "name": "COUCH_DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "LITELLM_DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "LITELLM_DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "LITELLM_DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "LITELLM_DB_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "APPS_BUCKET_NAME",
+          "kind": "bucket"
+        },
+        {
+          "name": "BACKUPS_BUCKET_NAME",
+          "kind": "bucket"
+        },
+        {
+          "name": "GLOBAL_BUCKET_NAME",
+          "kind": "bucket"
+        },
+        {
+          "name": "PLUGIN_BUCKET_NAME",
+          "kind": "bucket"
+        },
+        {
+          "name": "TEMP_BUCKET_NAME",
+          "kind": "bucket"
+        },
+        {
+          "name": "TEMPLATES_BUCKET_NAME",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "pre_deploy",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ACCOUNT_PORTAL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ACCOUNT_PORTAL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/api/controllers/system/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_DEV_AUTOMATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_ENCRYPTION_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "API_REQ_LIMIT_PER_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPS_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPS_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_FEATURES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/server/src/features.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_MIGRATION_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ATLASSIAN_API_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ATLASSIAN_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ATLASSIAN_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTOMATION_MAX_ITERATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/server/src/automations/automationUtils.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTOMATION_MAX_LOG_SIZE_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTOMATION_MAX_NESTED_LOOPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTOMATION_MAX_STORED_LOOP_RESULTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/server/src/automations/automationUtils.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTOMATION_THREAD_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/server/src/constants/index.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_SESSION_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BACKEND_JS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/string-templates/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BACKUPS_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BAMBOOHR_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BAMBOOHR_SUBDOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BBAI_LITELLM_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "BB_ADMIN_USER_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BB_ADMIN_USER_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "BLACKLIST_IPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BSON_BUFFER_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BUDIBASE_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts",
+            "read in packages/worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BUDIBASE_VERSION",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BUDICLOUD_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHAT_SDK_LOGGER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHECKLIST_CACHE_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUDFRONT_CDN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUDFRONT_PRIVATE_KEY_64",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLOUDFRONT_PUBLIC_KEY_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLUSTER_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLUSTER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COOKIE_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COUCH_DB_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "hosting/single/runner.sh declares COUCH_DB_PASSWORD",
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "COUCH_DB_SQL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COUCH_DB_SQS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COUCH_DB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "hosting/single/runner.sh declares COUCH_DB_URL",
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts",
+            "read in packages/server/src/db/index.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "COUCH_DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "hosting/single/runner.sh declares COUCH_DB_USER",
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "CUSTOM_CSP_CONNECT_SRC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CUSTOM_CSP_FONT_SRC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CUSTOM_CSP_FRAME_SRC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CUSTOM_CSP_IMG_SRC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CUSTOM_CSP_MEDIA_SRC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CUSTOM_CSP_SCRIPT_SRC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "hosting/single/runner.sh declares DATABASE_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DD_APM_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/app.ts",
+            "read in packages/server/src/ddApm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DD_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/ddApm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DD_LLMOBS_ML_APP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/ddApm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_LICENSE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEPLOYMENT_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEV_USE_CLIENT_FROM_STORAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_ACCOUNT_PORTAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/api/controllers/system/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_AUTOMATION_LOGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_AUTO_PROD_APP_SYNC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_CONTENT_SECURITY_POLICY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_DEVELOPER_LICENSE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_JWT_WARNING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/cli/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_PINO_LOGGER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/cli/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_RATE_LIMITING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_THREADING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_USER_SYNC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOCKER_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in globalSetup.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DYNAMO_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_TEMPLATE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts",
+            "read in packages/worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_ANALYTICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_AUDIT_LOG_IP_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_EMAIL_TEST_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_PLUGIN_GH_ORIGIN_BACKFILL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_SCIM_LOGGER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_SSO_MAINTENANCE_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENCRYPTED_TEST_PUBLIC_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENCRYPTION_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "FORKED_PROCESS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FORKED_PROCESS_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEMINI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GLOBAL_AGENT_FORCE_GLOBAL_AGENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GLOBAL_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_HEADERS_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts",
+            "read in packages/server/src/koa.ts",
+            "read in packages/worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_KEEPALIVE_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts",
+            "read in packages/server/src/koa.ts",
+            "read in packages/worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_LOGGING",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HTTP_MB_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/server/src/koa.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_REQUEST_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts",
+            "read in packages/server/src/koa.ts",
+            "read in packages/worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_SERVER_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts",
+            "read in packages/server/src/koa.ts",
+            "read in packages/worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INTERNAL_ACCOUNT_PORTAL_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "INTERNAL_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "INTERNAL_API_KEY_FALLBACK",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "JEST_WORKER_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/string-templates/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JS_PER_EXECUTION_TIME_LIMIT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JS_PER_INVOCATION_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/jsRunner/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JS_PER_REQUEST_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/jsRunner/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JS_PER_REQUEST_TIME_LIMIT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JS_RUNNER_MEMORY_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/server/src/jsRunner/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "JWT_SECRET_FALLBACK",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LITELLM_DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "hosting/single/runner.sh declares LITELLM_DB_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LITELLM_DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "hosting/single/runner.sh declares LITELLM_DB_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LITELLM_DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "hosting/single/runner.sh declares LITELLM_DB_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LITELLM_DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "hosting/single/runner.sh declares LITELLM_DB_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LITELLM_MASTER_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "LITELLM_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LITELLM_READINESS_POLL_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LITELLM_READINESS_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LITELLM_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LOGGER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIN_IP_LOCKOUT_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIN_LOCKOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIN_MAX_FAILED_ATTEMPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_JS_ERRORS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/server/src/jsRunner/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_IMPORT_SIZE_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/server/src/koa.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_RELATED_ROWS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_WORKER_RUNS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MICROSOFT_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MICROSOFT_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MICROSOFT_TENANT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MINIO_ACCESS_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MINIO_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MINIO_SECRET_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "MINIO_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MIN_VERSION_WITHOUT_POWER_ROLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MOCK_REDIS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MULTI_TENANCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/api/controllers/system/environment.ts",
+            "read in packages/worker/src/environment.ts",
+            "read in packages/server/src/automations/rehydrate.ts",
+            "read in packages/server/src/automations/triggers.ts",
+            "read in packages/server/src/middleware/currentWorkspace.ts",
+            "read in packages/server/src/middleware/ensureUserBelongsToWorkspaceTenant.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/string-templates/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NO_JS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/cli/src/environment.ts",
+            "read in packages/string-templates/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OFFLINE_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_ALLOW_UNVERIFIED_EMAIL_LINKING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENROUTER_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSPORT_GOOGLEAUTH_FAILURE_REDIRECT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSPORT_GOOGLEAUTH_SUCCESS_REDIRECT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSPORT_OIDCAUTH_FAILURE_REDIRECT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSPORT_OIDCAUTH_SUCCESS_REDIRECT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORD_MAX_LENGTH",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORD_MIN_LENGTH",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORD_REGEX",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "PASSWORD_REGEX_ERROR_MESSAGE",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "PASSWORD_RESET_RATE_EMAIL_LIMIT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORD_RESET_RATE_EMAIL_WINDOW_SECONDS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORD_RESET_RATE_IP_LIMIT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORD_RESET_RATE_IP_WINDOW_SECONDS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLATFORM_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/worker/src/api/controllers/system/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLUGINS_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/server/src/watch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLUGIN_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts",
+            "read in packages/server/src/koa.ts",
+            "read in packages/worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTHOG_API_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTHOG_FEATURE_FLAGS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTHOG_FEATURE_FLAGS_POLLING_INTERVAL_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTHOG_PERSONAL_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTHOG_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/builder/src/analytics/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUERY_THREAD_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts",
+            "read in packages/server/src/integrations/microsoftSqlServer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAG_SHAREPOINT_DEFAULT_SCOPE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "RECAPTCHA_SESSION_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RECAPTCHA_SITE_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "REDIS_CLUSTERED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "hosting/single/runner.sh declares REDIS_PASSWORD",
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "hosting/single/runner.sh declares REDIS_URL",
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "hosting/single/runner.sh declares REDIS_USERNAME",
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REST_REJECT_UNAUTHORIZED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ROLLING_LOG_MAX_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_IGNORE_SELF_SIGNED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SALT_ROUNDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SELF_HOSTED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/api/controllers/system/environment.ts",
+            "read in packages/worker/src/environment.ts",
+            "read in packages/server/src/automations/actions.ts",
+            "read in packages/server/src/automations/rehydrate.ts",
+            "read in packages/server/src/automations/triggers.ts",
+            "read in packages/server/src/events/AutomationEmitter.ts",
+            "read in packages/server/src/integrations/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_TOP_LEVEL_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_EXPIRY_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_UPDATE_PERIOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHAREPOINT_SYNC_INTERVAL_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHAREPOINT_SYNC_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SKIP_MIGRATION_LOCKS_IN_TESTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SKIP_WORKSPACE_MIGRATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FALLBACK_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FROM_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_HOST",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/worker/src/environment.ts",
+            "smtp requires SMTP_HOST"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/worker/src/environment.ts",
+            "smtp requires SMTP_PORT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_REJECT_UNAUTHORIZED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_USER",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/worker/src/environment.ts",
+            "smtp requires SMTP_USER"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SQL_ALIASING_DISABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQL_LOGGING_ENABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQL_MAX_ROWS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SYNC_MIGRATION_CHECKS_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TABLE_GENERATION_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEMPLATES_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEMPLATE_REPOSITORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEMP_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TENANT_FEATURE_FLAGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TESTCONTAINERS_RYUK_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in globalSetup.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TOP_LEVEL_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/server/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPLOAD_APPS_FILES_ON_TEST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_COUCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKER_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend-core/src/environment.ts",
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKER_TOP_LEVEL_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/worker/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "XSS_SAFE_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp",
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported database driver: @budibase/nano, and a couchdb-service service is defined in hosting/docker-compose.yaml. Deployz does not support this database.",
+      "Unsupported architecture: hosting/docker-compose.yaml defines 4 application services (app-service, proxy-service, couchdb-service, litellm-service). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Unconfirmed service: the repository declares redis-service (redis) in hosting/docker-compose.yaml. Deployz did not find how the application uses it.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database driver: @budibase/nano, and a couchdb-service service is defined in hosting/docker-compose.yaml. Deployz does not support this database."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: hosting/docker-compose.yaml defines 4 application services (app-service, proxy-service, couchdb-service, litellm-service). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares redis-service (redis) in hosting/docker-compose.yaml. Deployz did not find how the application uses it."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies packages/server/dist, packages/server/client, packages/server/builder, packages/worker/dist, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ATLASSIAN_API_TOKEN, BAMBOOHR_API_KEY, BBAI_LITELLM_KEY, BB_ADMIN_USER_PASSWORD, BUDIBASE_VERSION, and 16 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 15,
+  "outcome": "NOT_DEPLOYABLE"
+}

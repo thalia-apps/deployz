@@ -1,0 +1,42 @@
+{
+  "id": "new-114",
+  "analyser": "judge@r10-p2-b",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 2,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "no_application",
+      "reason": "The application source (API and front end) lives only in git submodules, which the source archive does not include, so the selected Dockerfile cannot build the app from this repository.",
+      "evidence": [
+        {
+          "path": ".gitmodules",
+          "line": 2,
+          "quote": "path = api"
+        },
+        {
+          "path": ".gitmodules",
+          "line": 5,
+          "quote": "path = front"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 62,
+          "quote": "COPY ./api ./api"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5857,
+      "completionTokens": 167,
+      "costUsd": 0.02650032
+    },
+    "latencyMs": 3712
+  }
+}

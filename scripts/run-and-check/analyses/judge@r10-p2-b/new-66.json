@@ -1,0 +1,42 @@
+{
+  "id": "new-66",
+  "analyser": "judge@r10-p2-b",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 2,
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "several_services",
+      "reason": "Appsmith runs as several separate services under supervisord in a CI-built base image, including a Java server, an RTS Node server and an MCP server, and it may also need MongoDB, so Deployz's single web process may not be able to run it.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 68,
+          "quote": "CMD [\"/usr/bin/supervisord\", \"-n\"]"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 34,
+          "quote": "COPY ./app/client/packages/rts/dist rts/"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 24,
+          "quote": "if ! [ -f server/mongo/server.jar ]; then"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5564,
+      "completionTokens": 243,
+      "costUsd": 0.02684484
+    },
+    "latencyMs": 4454
+  }
+}

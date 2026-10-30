@@ -128,6 +128,7 @@ export async function openAnalyser(options: AnalyserOptions): Promise<Analyser> 
         ...(typeof buildTarget === 'string' ? { buildTarget } : {}),
         ...(outcome === 'DEPLOYABLE' || outcome === 'DEPLOYABLE_WITH_CHANGES' || outcome === 'NOT_DEPLOYABLE' ? { outcome } : {}),
         ...(raw.aiEngine ? { ai: raw.aiEngine } : {}),
+        ...(raw.aiJudge ? { judge: raw.aiJudge } : {}),
       };
     },
     close: () => session.close(),

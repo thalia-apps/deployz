@@ -1,0 +1,37 @@
+{
+  "id": "new-72",
+  "analyser": "judge@r10-p2-b",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 2,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Penpot is several application services (frontend, backend, exporter, admin console, MCP) built from different images that must run together, which Deployz's single web process cannot provide.",
+      "evidence": [
+        {
+          "path": "docker/images/docker-compose.yaml",
+          "line": 51,
+          "quote": "## Single database configuration block, shared by backend and admin-console."
+        },
+        {
+          "path": "docker/imagemagick/Dockerfile",
+          "line": 87,
+          "quote": "ENTRYPOINT [\"/opt/imagick/bin/magick\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7071,
+      "completionTokens": 196,
+      "costUsd": 0.03188196
+    },
+    "latencyMs": 3918
+  }
+}

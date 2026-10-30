@@ -55,6 +55,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-23 | Until public launch, there is no pull-request CI: the full CI run on `main` is the only gate before production | Active |
 | 2026-10-27 | The MVP boundary expands to a customer page for each deployment, behind an emailed sign-in code; connector updates stay customer-run in AWS | Active |
 | 2026-10-27 | An app with a migration starts no task at install; a migration that fails on that first start is a failed environment (`FAILED`) | Active |
+| 2026-10-30 | A final AI judge reviews a DEPLOYABLE or DEPLOYABLE_WITH_CHANGES outcome and can only make it stricter or ask the vendor to confirm | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1510,3 +1511,38 @@ The user chose this semantics ("go with A"). It keeps the documented order
 
 What would change it: a first start that must serve before its migration
 (for example, a maintenance page), which would need a separate start policy.
+
+## A final judge can only make the outcome stricter (2026-10-30)
+
+Context: on the 188-repository corpus (AI analyses `ai@r9-final2`), 23
+outcomes were wrong. 16 said DEPLOYABLE_WITH_CHANGES for an app that cannot
+run on Deployz. In most of them the facts were found (a blocking reason
+existed), but the rules classed them as fixable (a second Compose service,
+local state, no Dockerfile). Cheap signals did not separate the wrong
+outcomes from the right ones: AI/rules disagreement caught 2 of 23.
+
+Decision:
+
+- One more Opus call after the AI-first Analysis judges the whole result
+  against a short support policy
+  ([`../ai-analysis.md`](../ai-analysis.md#final-judge)). It sees the
+  merged manifest facts, the blocking reasons, the checked answers and a
+  few files (README, `.gitmodules`, the Dockerfile, named files).
+- Stricter only. A cited "not deployable" adds a CAPABILITY_GAP finding and
+  blocks the deployment gate. A cited "needs changes" turns DEPLOYABLE into
+  DEPLOYABLE_WITH_CHANGES. "Not sure", or a citation that fails the check,
+  adds a recommended needs-confirmation finding and keeps the outcome. The
+  judge never removes a finding; the rules and the checks stay in control.
+- An outcome that is already NOT_DEPLOYABLE is not judged. A row with
+  vendor "not used" answers is not judged.
+- "Not sure" reuses a readiness finding with `needs_confirmation`, not a new
+  outcome value.
+
+The support boundary does not change: the judge applies the boundary in
+[`../product/mvp-scope.md`](../product/mvp-scope.md).
+
+What would change it: a judge block that vendors dispute often (then add a
+vendor dispute for `final-review-unsupported`), or a measured judge error
+rate that makes the extra call worth less than its cost (about $0.028 and
+3.7 s per judged analysis).
+

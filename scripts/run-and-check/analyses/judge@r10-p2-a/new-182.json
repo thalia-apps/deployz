@@ -1,0 +1,42 @@
+{
+  "id": "new-182",
+  "analyser": "judge@r10-p2-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 2,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Huly is a stack of many cooperating services (front, account, collaborator, stream, media, preview, link-preview and others) that need Kafka (Redpanda) and Elasticsearch, and Deployz runs only one web service per deployment.",
+      "evidence": [
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 66,
+          "quote": "image: docker.redpanda.com/redpandadata/redpanda:v24.3.6"
+        },
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 21,
+          "quote": "image: 'hardcoreeng/media'"
+        },
+        {
+          "path": "README.md",
+          "line": 27,
+          "quote": "This repository includes several applications, such as Chat, Project Management, CRM, HRM, and ATS."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6599,
+      "completionTokens": 264,
+      "costUsd": 0.03135924
+    },
+    "latencyMs": 4773
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "id": "new-66",
+  "analyser": "judge@r10-p1-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 1,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Appsmith runs as several cooperating servers under supervisord (Java API server, a separate Node RTS server, an MCP server and the editor frontend), which Deployz's single web process cannot host without rebuilding the product.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 34,
+          "quote": "COPY ./app/client/packages/rts/dist rts/"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 37,
+          "quote": "COPY ./app/client/packages/mcp/dist mcp/"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 68,
+          "quote": "CMD [\"/usr/bin/supervisord\", \"-n\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5359,
+      "completionTokens": 429,
+      "costUsd": 0.03501729
+    },
+    "latencyMs": 6808
+  }
+}

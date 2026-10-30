@@ -1,0 +1,42 @@
+{
+  "id": "new-124",
+  "analyser": "judge@r10-p3-a",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "This repository is the ClickHouse database server (with the selected Dockerfile running ClickHouse Keeper on port 2181), a datastore that clients connect to rather than a web application, and its image installs a released package instead of building this source.",
+      "evidence": [
+        {
+          "path": "docker/keeper/Dockerfile",
+          "line": 40,
+          "quote": "ARG REPOSITORY=\"https://packages.clickhouse.com/tgz/${REPO_CHANNEL}\""
+        },
+        {
+          "path": "docker/keeper/Dockerfile",
+          "line": 42,
+          "quote": "ARG PACKAGES=\"clickhouse-keeper\""
+        },
+        {
+          "path": "README.md",
+          "line": 19,
+          "quote": "curl https://clickhouse.com/ | sh"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7532,
+      "completionTokens": 268,
+      "costUsd": 0.03513312
+    },
+    "latencyMs": 4693
+  }
+}
