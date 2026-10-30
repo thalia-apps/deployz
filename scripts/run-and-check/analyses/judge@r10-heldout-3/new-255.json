@@ -1,0 +1,43 @@
+{
+  "id": "new-255",
+  "analyser": "judge@r10-heldout-3",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "unsupported_service",
+      "reason": "WeKan needs a MongoDB wire-protocol database, either MongoDB or a bundled FerretDB on local SQLite, and Deployz provides neither MongoDB nor persistent disk.",
+      "evidence": [
+        {
+          "path": "releases/ferretdb/wekan-entrypoint.sh",
+          "line": 9,
+          "quote": "#   WEKAN_DB=mongodb   -> never start FerretDB; use external MONGO_URL (a mongod"
+        },
+        {
+          "path": "releases/ferretdb/wekan-entrypoint.sh",
+          "line": 11,
+          "quote": "#   WEKAN_DB=ferretdb  -> start the bundled FerretDB (SQLite) on 127.0.0.1:27017"
+        },
+        {
+          "path": "README.md",
+          "line": 30,
+          "quote": "  - FerretDB v1 with SQLite, the default on every platform - bundle, Docker,"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7787,
+      "completionTokens": 316,
+      "costUsd": 0.03709332
+    },
+    "latencyMs": 7213
+  }
+}

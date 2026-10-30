@@ -1,0 +1,43 @@
+{
+  "id": "new-261",
+  "analyser": "judge@r10-heldout-2",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Lemmy needs a separate lemmy-ui frontend server and a pict-rs image server that run alongside the Rust backend, which is several application services and more than Deployz's single web process.",
+      "evidence": [
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 43,
+          "quote": "image: dessalines/lemmy-ui:nightly"
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 53,
+          "quote": "- LEMMY_UI_BACKEND=lemmy:8536"
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 64,
+          "quote": "image: asonix/pictrs:0.5"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7037,
+      "completionTokens": 232,
+      "costUsd": 0.03246012
+    },
+    "latencyMs": 4224
+  }
+}

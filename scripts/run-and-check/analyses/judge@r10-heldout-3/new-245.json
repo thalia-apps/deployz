@@ -1,0 +1,43 @@
+{
+  "id": "new-245",
+  "analyser": "judge@r10-heldout-3",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "HedgeDoc 2 is split into a separate backend server and frontend server built from different images, and they must run together behind a proxy, which Deployz cannot run as one web process.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 42,
+          "quote": "HedgeDoc 2 will be split in two components. The backend and the frontend. Both are present in this repository."
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 6,
+          "quote": "image: ghcr.io/hedgedoc/hedgedoc/backend:develop"
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 12,
+          "quote": "image: ghcr.io/hedgedoc/hedgedoc/frontend:develop"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7077,
+      "completionTokens": 256,
+      "costUsd": 0.03309372
+    },
+    "latencyMs": 4734
+  }
+}

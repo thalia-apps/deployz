@@ -1,0 +1,38 @@
+{
+  "id": "new-253",
+  "analyser": "judge@r10-heldout-1",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "change",
+      "verdict": "needs_changes",
+      "category": null,
+      "reason": "The Dockerfile copies root files such as package.json, pnpm-lock.yaml and .version, but the repository's top-level listing has none of them, so the image cannot build from the source archive without a repository change.",
+      "evidence": [
+        {
+          "path": "docker/Dockerfile",
+          "line": 13,
+          "quote": "COPY --chown=vp:vp package.json pnpm-workspace.yaml pnpm-lock.yaml .node-version ./"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 34,
+          "quote": "COPY .version .version"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 4869,
+      "completionTokens": 544,
+      "costUsd": 0.03005244
+    },
+    "latencyMs": 8292
+  }
+}
