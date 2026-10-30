@@ -1,0 +1,38 @@
+{
+  "id": "new-34",
+  "analyser": "judge@r11-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": null,
+      "reason": "The Go build stage declares RELEASE_VERSION with no default and runs the mage release build, which may read the version from git, and Deployz's source archive has no .git directory.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 26,
+          "quote": "ARG TARGETOS TARGETARCH TARGETVARIANT RELEASE_VERSION"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 31,
+          "quote": "(cd build && mage release:xgo vikunja \"${TARGETOS}/${TARGETARCH}/${TARGETVARIANT}\")"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5537,
+      "completionTokens": 397,
+      "costUsd": 0.02978712
+    },
+    "latencyMs": 6663
+  }
+}

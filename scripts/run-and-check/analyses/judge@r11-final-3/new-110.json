@@ -1,0 +1,43 @@
+{
+  "id": "new-110",
+  "analyser": "judge@r11-final-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "no_application",
+      "reason": "The Dockerfile copies only the docker directory onto a prebuilt Kestra base image and never builds the application from this source, so the image may run a released binary rather than this repository.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 1,
+          "quote": "ARG BASE_IMAGE=\"ghcr.io/kestra-io/kestra-base:latest-slim\""
+        },
+        {
+          "path": "Dockerfile",
+          "line": 6,
+          "quote": "COPY --chown=kestra:kestra docker /"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 17,
+          "quote": "CMD [\"--help\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5036,
+      "completionTokens": 225,
+      "costUsd": 0.02439756
+    },
+    "latencyMs": 4081
+  }
+}

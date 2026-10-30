@@ -1,0 +1,38 @@
+{
+  "id": "new-231",
+  "analyser": "judge@r11-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Woodpecker CI needs separate agent services that run the pipelines and reach the server over a second gRPC port (9000), and Deployz runs only one HTTP service on one port.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 50,
+          "quote": "It requires around 100 MB of RAM (Server) and 30 MB (Agent) at runtime in idle mode."
+        },
+        {
+          "path": "docker/Dockerfile.server.multiarch.rootless",
+          "line": 29,
+          "quote": "EXPOSE 8000 9000 80 443"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5745,
+      "completionTokens": 513,
+      "costUsd": 0.0329076
+    },
+    "latencyMs": 10317
+  }
+}

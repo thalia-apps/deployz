@@ -1,0 +1,43 @@
+{
+  "id": "new-36",
+  "analyser": "judge@r11-final-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": null,
+      "reason": "The server source includes the apps/server/src/ee directory as a git submodule, which is missing from the source archive, and the shown lines do not prove whether `pnpm build` still succeeds without it.",
+      "evidence": [
+        {
+          "path": ".gitmodules",
+          "line": 2,
+          "quote": "path = apps/server/src/ee"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 13,
+          "quote": "RUN pnpm build"
+        },
+        {
+          "path": "README.md",
+          "line": 43,
+          "quote": "  - apps/server/src/ee"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 4725,
+      "completionTokens": 403,
+      "costUsd": 0.0266904
+    },
+    "latencyMs": 6100
+  }
+}

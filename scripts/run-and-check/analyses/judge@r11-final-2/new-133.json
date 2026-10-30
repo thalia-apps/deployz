@@ -1,0 +1,43 @@
+{
+  "id": "new-133",
+  "analyser": "judge@r11-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": null,
+      "reason": "The Dockerfile runs a version script that reads git metadata, which the source archive lacks, and it has no step that builds the vue3 frontend, so the image may not build or serve its UI without changes.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 51,
+          "quote": "# collect information from git repositories"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 52,
+          "quote": "RUN /opt/recipes/venv/bin/python version.py"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 31,
+          "quote": "COPY . ./"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5658,
+      "completionTokens": 426,
+      "costUsd": 0.03084048
+    },
+    "latencyMs": 7155
+  }
+}

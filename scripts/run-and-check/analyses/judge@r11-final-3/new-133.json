@@ -1,0 +1,43 @@
+{
+  "id": "new-133",
+  "analyser": "judge@r11-final-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": null,
+      "reason": "The Dockerfile reads version data from git, which the source archive does not include, and it never builds the vue3 frontend assets, so the shown lines do not prove the image builds and serves a working UI from the archive alone.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 52,
+          "quote": "RUN /opt/recipes/venv/bin/python version.py"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 51,
+          "quote": "# collect information from git repositories"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 31,
+          "quote": "COPY . ./"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5658,
+      "completionTokens": 450,
+      "costUsd": 0.03131568
+    },
+    "latencyMs": 6892
+  }
+}

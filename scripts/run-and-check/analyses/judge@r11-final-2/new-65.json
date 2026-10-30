@@ -1,0 +1,43 @@
+{
+  "id": "new-65",
+  "analyser": "judge@r11-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Baserow runs as two application servers, a Django backend and a separate Nuxt web-frontend, behind a Caddy router, and Deployz runs only one web process per deployment.",
+      "evidence": [
+        {
+          "path": "docker-compose.yml",
+          "line": 8,
+          "quote": "# This compose file runs every service separately using a Caddy reverse proxy to route"
+        },
+        {
+          "path": "docker-compose.yml",
+          "line": 9,
+          "quote": "# requests to the backend or web-frontend, handle websockets and to serve uploaded files"
+        },
+        {
+          "path": "heroku.Dockerfile",
+          "line": 1,
+          "quote": "ARG FROM_IMAGE=baserow/baserow:2.4.1"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6600,
+      "completionTokens": 607,
+      "costUsd": 0.0381546
+    },
+    "latencyMs": 11287
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "id": "new-127",
+  "analyser": "judge@r11-final-3",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "unsupported_service",
+      "reason": "The production compose file makes the app depend on a Meilisearch search server, which Deployz does not provide, and the shown lines do not prove whether a database search driver can replace it.",
+      "evidence": [
+        {
+          "path": "docker-compose.production.yml",
+          "line": 9,
+          "quote": "      - meilisearch"
+        },
+        {
+          "path": "docker-compose.production.yml",
+          "line": 35,
+          "quote": "    image: docker.io/getmeili/meilisearch:v1.16"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7603,
+      "completionTokens": 463,
+      "costUsd": 0.03927528
+    },
+    "latencyMs": 11828
+  }
+}

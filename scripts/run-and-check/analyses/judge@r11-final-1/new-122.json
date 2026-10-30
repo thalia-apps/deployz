@@ -1,0 +1,38 @@
+{
+  "id": "new-122",
+  "analyser": "judge@r11-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "unsupported_service",
+      "reason": "Sentry's core event storage and ingestion need ClickHouse (Snuba), Kafka and separate services such as Relay and Snuba, which Deployz cannot provide.",
+      "evidence": [
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 22,
+          "quote": "LABEL org.opencontainers.image.documentation=\"https://develop.sentry.dev/self-hosted/\""
+        },
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 83,
+          "quote": "&& test -f /usr/src/sentry/src/sentry/static/sentry/dist/entrypoints/app.js \\"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6859,
+      "completionTokens": 232,
+      "costUsd": 0.03175524
+    },
+    "latencyMs": 4740
+  }
+}

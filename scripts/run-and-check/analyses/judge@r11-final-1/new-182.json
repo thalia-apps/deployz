@@ -1,0 +1,43 @@
+{
+  "id": "new-182",
+  "analyser": "judge@r11-final-1",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Huly is a stack of many cooperating application services (account, front, collaborator, stream, media, preview, link-preview and more) built from separate images, which Deployz cannot run as one web process.",
+      "evidence": [
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 21,
+          "quote": "    image: 'hardcoreeng/media'"
+        },
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 32,
+          "quote": "    image: 'hardcoreeng/preview'"
+        },
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 44,
+          "quote": "    image: 'hardcoreeng/link-preview'"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6797,
+      "completionTokens": 230,
+      "costUsd": 0.03147012
+    },
+    "latencyMs": 5360
+  }
+}

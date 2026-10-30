@@ -1,0 +1,43 @@
+{
+  "id": "new-174",
+  "analyser": "judge@r11-final-2",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "The self-hosted product is a separate Python API server (mem0) plus a Next.js dashboard server built from different images that must run together, which Deployz cannot run as one service.",
+      "evidence": [
+        {
+          "path": "server/docker-compose.yaml",
+          "line": 7,
+          "quote": "dockerfile: server/dev.Dockerfile"
+        },
+        {
+          "path": "server/docker-compose.yaml",
+          "line": 53,
+          "quote": "build: ./dashboard"
+        },
+        {
+          "path": "server/docker-compose.yaml",
+          "line": 60,
+          "quote": "- API_INTERNAL_URL=http://mem0:8000"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6844,
+      "completionTokens": 218,
+      "costUsd": 0.03141864
+    },
+    "latencyMs": 3968
+  }
+}

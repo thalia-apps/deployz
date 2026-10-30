@@ -1,0 +1,38 @@
+{
+  "id": "new-72",
+  "analyser": "judge@r11-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Penpot's production deployment needs several separate application services (frontend, backend, exporter, MCP) that run together from different images, and Deployz runs only one web service.",
+      "evidence": [
+        {
+          "path": "docker/images/docker-compose.yaml",
+          "line": 51,
+          "quote": "## Single database configuration block, shared by backend and admin-console."
+        },
+        {
+          "path": "docker/imagemagick/Dockerfile",
+          "line": 87,
+          "quote": "ENTRYPOINT [\"/opt/imagick/bin/magick\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7334,
+      "completionTokens": 195,
+      "costUsd": 0.03290364
+    },
+    "latencyMs": 4319
+  }
+}

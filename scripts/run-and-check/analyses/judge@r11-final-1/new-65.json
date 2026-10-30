@@ -1,0 +1,43 @@
+{
+  "id": "new-65",
+  "analyser": "judge@r11-final-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "several_services",
+      "reason": "Baserow appears to need a Django backend and a separate web-frontend server running together; the Heroku Dockerfile only works because it reuses the released all-in-one image, which runs both servers under a supervisor rather than building this source.",
+      "evidence": [
+        {
+          "path": "docker-compose.yml",
+          "line": 8,
+          "quote": "# This compose file runs every service separately using a Caddy reverse proxy to route"
+        },
+        {
+          "path": "docker-compose.yml",
+          "line": 9,
+          "quote": "# requests to the backend or web-frontend, handle websockets and to serve uploaded files"
+        },
+        {
+          "path": "heroku.Dockerfile",
+          "line": 1,
+          "quote": "ARG FROM_IMAGE=baserow/baserow:2.4.1"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6600,
+      "completionTokens": 753,
+      "costUsd": 0.0410454
+    },
+    "latencyMs": 10575
+  }
+}
