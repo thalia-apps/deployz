@@ -82,8 +82,6 @@ export interface TokenUsage {
   readonly completionTokens: number;
   /** The request's cost in USD, when the provider reports it (OpenRouter does). */
   readonly costUsd?: number | undefined;
-  /** Prompt tokens served from the provider's prompt cache, when it reports them. */
-  readonly cachedPromptTokens?: number | undefined;
 }
 
 /** The gateway's raw response: the model's output plus its token usage. */
@@ -137,11 +135,6 @@ export interface AiGenerateOptions {
    * task data, so untrusted repository content never shares the instruction message.
    */
   readonly system?: string | undefined;
-  /**
-   * Through OpenRouter: mark the request for the provider's prompt cache, so
-   * a fixed `system` message is read from the cache on the next call.
-   */
-  readonly cacheSystem?: boolean | undefined;
   /**
    * Abandon ONE attempt after this many ms and retry, while the caller's
    * `abortSignal` still bounds the whole call. Measured live: a Workers AI
@@ -394,7 +387,6 @@ export function createAiGateway(
             ok,
             ...(usage ? { promptTokens: usage.promptTokens, completionTokens: usage.completionTokens } : {}),
             ...(usage?.costUsd !== undefined ? { costUsd: usage.costUsd } : {}),
-            ...(usage?.cachedPromptTokens !== undefined ? { cachedPromptTokens: usage.cachedPromptTokens } : {}),
           }),
         );
       };
@@ -437,7 +429,6 @@ export function createAiGateway(
                     openrouter: {
                       provider: { require_parameters: true },
                       usage: { include: true },
-                      ...(options.cacheSystem === true ? { cache_control: { type: 'ephemeral' } } : {}),
                       ...(options.reasoning === false
                         ? { reasoning: { effort: 'low' } }
                         : options.reasoningEffort !== undefined
@@ -456,7 +447,6 @@ export function createAiGateway(
             promptTokens: usage.inputTokens ?? 0,
             completionTokens: usage.outputTokens ?? 0,
             ...(typeof costUsd === 'number' ? { costUsd } : {}),
-            ...(usage.inputTokenDetails.cacheReadTokens ? { cachedPromptTokens: usage.inputTokenDetails.cacheReadTokens } : {}),
           };
           const servedModel = response.modelId;
           // OpenRouter names the model it served, without a routing variant

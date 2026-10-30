@@ -19,7 +19,7 @@ import { isExcludedPath, renderFile, ROOT_README, window, type PackFile } from '
 import type { MergedAnswer } from './merge.js';
 
 /** Bump when the judge prompt or schema changes, so stored results show which prompt made them. */
-export const JUDGE_PROMPT_VERSION = 1;
+export const JUDGE_PROMPT_VERSION = 2;
 export const JUDGE_MAX_PROMPT_TOKENS = 8_000;
 export const JUDGE_MAX_OUTPUT_TOKENS = 4_000;
 export const JUDGE_TIMEOUT_MS = 90_000;
@@ -32,6 +32,8 @@ const MAX_NAMED_FILES = 2;
 const MAX_NAMED_FILE_CHARS = 2_500;
 const MAX_LISTED_ENTRIES = 60;
 const MAX_LISTED_VARIABLES = 40;
+const MAX_SUBMODULES_CHARS = 1_000;
+const SUBMODULES = '.gitmodules';
 
 export const JUDGE_VERDICTS = ['keep', 'needs_changes', 'not_deployable', 'not_sure'] as const;
 export type JudgeVerdict = (typeof JUDGE_VERDICTS)[number];
@@ -66,14 +68,14 @@ THE OUTCOMES
 - DEPLOYABLE_WITH_CHANGES: a contained change to the repository makes it run (add or fix a Dockerfile, bind 0.0.0.0, move uploads to S3, run one process instead of a supervisor, select a supported database by a setting, drop an optional service).
 - NOT_DEPLOYABLE: the app cannot run on Deployz without rebuilding the product. This is true only when one of these applies:
   1. unsupported_service: the core function needs a datastore, broker or server that Deployz does not provide (for example MongoDB, ClickHouse, Kafka, RabbitMQ, Elasticsearch or OpenSearch, Cassandra, a vector database, a workflow server), and no setting selects a supported one.
-  2. several_services: the product is several application services that must run together (a separate API server and frontend server, ingestion or plugin services, a code sandbox), built from different images or started as different servers. A worker of the same image is not a second service. An optional add-on is not a second service.
+  2. several_services: the product is several application services that must run together (a separate API server and frontend server, ingestion or plugin services, a code sandbox), built from different images or started as different servers. Two servers of one image that the browser UI both needs on different ports (for example a separate WebSocket server) are also several services. A worker of the same image takes no traffic and is not a second service. An optional add-on is not a second service.
   3. local_disk_data: the core data of the product lives only on local disk (for example Git repositories, a SQLite file with no PostgreSQL or MySQL option, a data directory that the server owns). Uploads that can go to S3 are not core data.
-  4. no_application: the repository has no application that this source builds and serves (only documents, a landing page, a retired project, an installer of released binaries, a platform that only runs code from another package).
+  4. no_application: the repository has no application that this source builds and serves (only documents, a landing page, a retired project, an image that installs a released package or binary instead of this source, application source that lives only in submodules).
   5. not_http: the repository is not a web application: a database, cache, search or broker server that clients connect to, a gRPC-only server, a desktop or mobile app, a CLI or a library.
 
 ANSWER
 - "keep": the outcome is right, or it is stricter than needed.
-- "needs_changes": only when the outcome is DEPLOYABLE and the evidence shows that the app does not run without a repository change (for example the Dockerfile cannot build from the repository source).
+- "needs_changes": only when the outcome is DEPLOYABLE and a shown line proves that the app does not build or start from this repository without a repository change. Check the build for a DEPLOYABLE outcome: the selected Dockerfile must build from the repository source archive alone. The archive has no .git directory and no submodule content (.gitmodules names the submodules), and Deployz passes no build arguments. A build argument with no default that the build needs, a file that only CI produces, frontend assets that the image needs but no build step makes, or a final stage that is not the production app (a development all-in-one stage) needs a change. Environment values and a separate worker command are settings, not changes.
 - "not_deployable": one of the five cases applies, and a shown line proves it.
 - "not_sure": the evidence points at one of the five cases but does not prove it.
 
@@ -132,7 +134,7 @@ function selectedDockerfile(manifest: DeploymentManifest, files: FileTree): stri
 /** The repository files the judge reads that the caller may not have loaded yet. */
 export function judgeFileRequests(manifest: DeploymentManifest, files: FileTree): string[] {
   const paths = treePaths(files);
-  const wanted = [rootReadme(paths), manifest.application.dockerfilePath ?? undefined, ...namedPaths(manifest, paths)];
+  const wanted = [rootReadme(paths), paths.includes(SUBMODULES) ? SUBMODULES : undefined, manifest.application.dockerfilePath ?? undefined, ...namedPaths(manifest, paths)];
   return wanted.filter((path): path is string => path !== undefined && !Object.prototype.hasOwnProperty.call(files, path));
 }
 
@@ -197,6 +199,7 @@ export function buildJudgePack(input: JudgeInput): JudgePack {
   };
   const top = () => 1;
   add(rootReadme(paths), readmeStart, MAX_README_LINES, MAX_README_CHARS);
+  add(paths.includes(SUBMODULES) ? SUBMODULES : undefined, top, Number.MAX_SAFE_INTEGER, MAX_SUBMODULES_CHARS);
   add(selectedDockerfile(input.manifest, input.files), top, Number.MAX_SAFE_INTEGER, MAX_DOCKERFILE_CHARS);
   for (const path of namedPaths(input.manifest, paths)) add(path, top, Number.MAX_SAFE_INTEGER, MAX_NAMED_FILE_CHARS);
   const prompt = [
@@ -235,7 +238,6 @@ export async function runJudge(pack: JudgePack, gateway: AiGateway, options: { a
     maxOutputTokens: JUDGE_MAX_OUTPUT_TOKENS,
     system: JUDGE_SYSTEM,
     reasoningEffort: 'low',
-    cacheSystem: true,
   });
   const used = response.usage.promptTokens + response.usage.completionTokens;
   if (used > JUDGE_MAX_TOTAL_TOKENS) throw new SpendLimitExceededError(used, JUDGE_MAX_TOTAL_TOKENS);
