@@ -4,7 +4,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createAiGateway, type AiGateway, type AnalysisEngine } from '@deployz/analysis';
+import { createAiGateway, JUDGE_SYSTEM, type AiGateway, type AnalysisEngine } from '@deployz/analysis';
 import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
@@ -40,6 +40,24 @@ const NOT_USED = {
 };
 
 const analyst = gateway(() => NOT_USED);
+
+/** The analyst answers "not used"; the final judge (its own system message) blocks on a cited Dockerfile line. */
+const JUDGE_BLOCKS = {
+  verdict: 'not_deployable',
+  category: 'not_http',
+  reason: 'It does not serve a web application.',
+  evidence: [{ path: 'Dockerfile', line: 8, quote: 'CMD ["node", "dist/index.js"]' }],
+};
+function judged(judge: unknown): AiGateway & { systems: Array<string | undefined> } {
+  const systems: Array<string | undefined> = [];
+  return {
+    systems,
+    async generate(_prompt, _schema, options) {
+      systems.push(options?.system);
+      return { object: options?.system === JUDGE_SYSTEM ? judge : NOT_USED, usage: { promptTokens: 1000, completionTokens: 200 }, model: 'fake' };
+    },
+  };
+}
 const broken: AiGateway = {
   async generate() {
     throw new Error('gateway down');
@@ -129,6 +147,34 @@ describe('analysis — ANALYSIS_ENGINE', () => {
   it('ai: invalid model output falls back to the rules result', async () => {
     const row = await analyse('ai', { analyst: gateway(() => ({ port: 'eighty' })) }, 'mongodb-app');
     expect(row.detectedMetadata?.['aiEngine']).toMatchObject({ status: 'fallback' });
+  });
+
+  it('ai: the final judge skips a NOT_DEPLOYABLE outcome and makes no call', async () => {
+    const judge = judged(JUDGE_BLOCKS);
+    const row = await analyse('ai', { analyst: judge }, 'mongodb-app');
+    expect(row.detectedMetadata?.['aiJudge']).toMatchObject({ status: 'skipped', reason: 'not_deployable' });
+    expect(judge.systems).not.toContain(JUDGE_SYSTEM);
+  });
+
+  it('ai: a cited final judge "not_deployable" blocks a deployable app', async () => {
+    const row = await analyse('ai', { analyst: judged(JUDGE_BLOCKS) });
+    expect(row.compatibilityStatus).toBe('NOT_COMPATIBLE');
+    expect((row.detectedMetadata?.['readiness'] as { outcome: string }).outcome).toBe('NOT_DEPLOYABLE');
+    expect(row.detectedMetadata?.['aiJudge']).toMatchObject({ status: 'ok', judgement: { decision: 'block' } });
+  });
+
+  it('ai: a final judge "not_deployable" that cites a line it was not shown only asks the vendor', async () => {
+    const row = await analyse('ai', { analyst: judged({ ...JUDGE_BLOCKS, evidence: [{ path: 'src/server.js', line: 1, quote: 'net.createServer' }] }) });
+    expect(row.compatibilityStatus).toBe('READY');
+    const readiness = row.detectedMetadata?.['readiness'] as { outcome: string; findings: Array<{ id: string }> };
+    expect(readiness.outcome).toBe('DEPLOYABLE');
+    expect(readiness.findings.map((finding) => finding.id)).toContain('final-review-question');
+  });
+
+  it('ai: a final judge failure changes nothing', async () => {
+    const row = await analyse('ai', { analyst: judged({ verdict: 'maybe' }) });
+    expect(row.compatibilityStatus).toBe('READY');
+    expect(row.detectedMetadata?.['aiJudge']).toMatchObject({ status: 'fallback' });
   });
 
   it('ai: without gateways it runs the rules only', async () => {
