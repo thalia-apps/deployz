@@ -7,12 +7,14 @@ summary: >
   image. The 3rdparty directory is a git submodule and is absent from a repository archive, so lib/OC.php stops at start.
   Install state lives in config/config.php on local disk.
 outcome:
-  accept: [NOT_DEPLOYABLE]
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
   reason: >
     No Dockerfile builds a production image from the repository alone, and the PHP dependencies in the 3rdparty submodule
     are not in an archive. A Dockerfile would also have to fetch the submodule and write config.php (install state, secrets,
     S3 primary storage) to local disk, which is ephemeral. The software itself can use PostgreSQL/MySQL, Redis and S3 with
     the task role, so this is a repository packaging blocker, not an app limit.
+    A packaging blocker is DEPLOYABLE_WITH_CHANGES in other ground truths. NOT_DEPLOYABLE stays accepted because the
+    install state in config.php on local disk is a durable-state limit.
 dockerfile:
   accept: []
   reject:
