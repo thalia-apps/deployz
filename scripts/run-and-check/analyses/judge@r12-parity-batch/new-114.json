@@ -1,0 +1,44 @@
+{
+  "id": "new-114",
+  "analyser": "judge@r12-parity-batch",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "no_application",
+      "reason": "The application source (api and front) lives only in git submodules that the source archive does not include, so the Dockerfile cannot build this app from the repository.",
+      "evidence": [
+        {
+          "path": ".gitmodules",
+          "line": 2,
+          "quote": "path = api"
+        },
+        {
+          "path": ".gitmodules",
+          "line": 5,
+          "quote": "path = front"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 13,
+          "quote": "COPY ./front/ ."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6009,
+      "completionTokens": 163,
+      "costUsd": 0.013648
+    },
+    "latencyMs": 167901
+  },
+  "softReview": null
+}

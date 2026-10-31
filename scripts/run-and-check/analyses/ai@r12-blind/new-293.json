@@ -1,0 +1,158 @@
+{
+  "id": "new-293",
+  "commit": "0dda4e3cb0b3f38e43ec1f2e6dce18e2bbfb5956",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "unknown",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "/usr/bin/goaccess --help",
+      "port": 7890
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Final review: GoAccess is a terminal log analyzer CLI that reads local log files and only exposes a WebSocket on 7890; the image starts with --help and serves no HTTP web application Deployz can run."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Final review: GoAccess is a terminal log analyzer CLI that reads local log files and only exposes a WebSocket on 7890; the image starts with --help and serves no HTTP web application Deployz can run."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.04349268,
+        "promptTokens": 6028,
+        "completionTokens": 991
+      },
+      "latencyMs": 13815
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": "/usr/bin/goaccess --help",
+        "answer": "value",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "ai"
+      },
+      {
+        "id": "q3",
+        "value": "cli",
+        "answer": "value",
+        "reasons": [
+          "no cited line supports the claim (README.md:6, README.md:27)"
+        ],
+        "subject": "repositoryKind",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 13920,
+    "questions": 3,
+    "generatedAt": "2026-10-31T06:58:45.921Z",
+    "failedChecks": 1,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02434212,
+      "promptTokens": 5012,
+      "completionTokens": 227
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "reason": "GoAccess is a terminal log analyzer CLI that reads local log files and only exposes a WebSocket on 7890; the image starts with --help and serves no HTTP web application Deployz can run.",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "decision": "block",
+      "evidence": [
+        {
+          "line": 5,
+          "path": "README.md",
+          "quote": "GoAccess is an open source, real-time web log analyzer and interactive viewer"
+        },
+        {
+          "line": 40,
+          "path": "Dockerfile",
+          "quote": "ENTRYPOINT [\"/usr/bin/goaccess\"]"
+        },
+        {
+          "line": 41,
+          "path": "Dockerfile",
+          "quote": "CMD [\"--help\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 3981,
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "final-review-unsupported",
+      "title": "Is not a web application",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Final review: GoAccess is a terminal log analyzer CLI that reads local log files and only exposes a WebSocket on 7890; the image starts with --help and serves no HTTP web application Deployz can run. Evidence: README.md:5 \"GoAccess is an open source, real-time web log analyzer and interactive viewer\"; Dockerfile:40 \"ENTRYPOINT [\"/usr/bin/goaccess\"]\"; Dockerfile:41 \"CMD [\"--help\"]\".",
+      "confidence": "likely"
+    }
+  ]
+}

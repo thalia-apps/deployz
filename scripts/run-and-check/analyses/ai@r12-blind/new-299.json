@@ -1,0 +1,238 @@
+{
+  "id": "new-299",
+  "commit": "6255a24111cdc32e1f93ac41b3b56703a836256a",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "nuxt generate",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [ \"/data/config.yml\" ]",
+      "port": 7745
+    },
+    "health": {
+      "path": "/status",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "UNSAFE_DISABLE_PASSWORD_PROJECTION",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/pkgs/hasher/password.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_REMOTE_DECIMALS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/composables/utils.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.085437,
+        "promptTokens": 17710,
+        "completionTokens": 773
+      },
+      "latencyMs": 10090
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 10091,
+    "questions": 3,
+    "generatedAt": "2026-10-31T06:58:47.901Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02690028,
+      "promptTokens": 6443,
+      "completionTokens": 70
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "Homebox supports PostgreSQL and a configurable storage connection string (which can point to S3), so a contained change is plausible.",
+      "verdict": "keep",
+      "category": null,
+      "decision": "none",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "latencyMs": 2489,
+    "promptVersion": 5
+  },
+  "softReview": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02398968,
+      "promptTokens": 5548,
+      "completionTokens": 102
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "reason": "The production image stores uploaded files on local disk under /data via a file:// storage connection string and sets a SQLite path in /data, and no shown line selects S3 or PostgreSQL in place of these.",
+        "verdict": "stands",
+        "evidence": [],
+        "question": false,
+        "findingId": "local-file-storage",
+        "checkReasons": [],
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /data (Dockerfile)"
+      }
+    ],
+    "latencyMs": 2728,
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "local-file-storage",
+      "title": "Files stored on local disk",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Durable local filesystem state declared: VOLUME /data (Dockerfile)",
+      "confidence": "confirmed"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "id": "new-135",
+  "analyser": "judge@r12-parity-batch",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "change",
+      "verdict": "needs_changes",
+      "category": null,
+      "reason": "The selected Dockerfile copies a prebuilt ntfy binary that only the goreleaser/CI build produces, so it does not build from the source archive without switching to a build Dockerfile.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 16,
+          "quote": "COPY ntfy /usr/bin"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 1,
+          "quote": "FROM alpine"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5164,
+      "completionTokens": 158,
+      "costUsd": 0.011908
+    },
+    "latencyMs": 167898
+  },
+  "softReview": null
+}

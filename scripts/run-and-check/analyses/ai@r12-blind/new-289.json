@@ -1,0 +1,172 @@
+{
+  "id": "new-289",
+  "commit": "70db8bcb6faf98e9c2a09018e26c28ae3eaa0b09",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": "run-p --aggregate-output build:client build:server",
+      "context": "."
+    },
+    "web": {
+      "command": "start: node index start",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "EDITOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/command-line/users/edit.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/rootpath.ts",
+            "read in server/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "THELOUNGE_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/command-line/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (package.json), and no Dockerfile builds an application.",
+      "Unsupported storage: the app declares durable local state (THELOUNGE_HOME (runtime source)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (package.json), and no Dockerfile builds an application."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported storage: the app declares durable local state (THELOUNGE_HOME (runtime source)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.04953564,
+        "promptTokens": 9964,
+        "completionTokens": 509
+      },
+      "latencyMs": 7589
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 7590,
+    "questions": 2,
+    "generatedAt": "2026-10-31T06:57:48.196Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "reason": "not_deployable",
+    "status": "skipped",
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "unsupported-library-repository",
+      "title": "Is a library, not an application",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (package.json), and no Dockerfile builds an application.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "unsupported-persistent-volume",
+      "title": "Needs a persistent disk volume",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported storage: the app declares durable local state (THELOUNGE_HOME (runtime source)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory.",
+      "confidence": "confirmed"
+    }
+  ]
+}

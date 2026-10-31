@@ -1,0 +1,185 @@
+{
+  "id": "new-304",
+  "commit": "7a60c50275da3ab6d68ed76a6bee4eb0c4e89353",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": null
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository.",
+      "Final review: The repository is a framework of OSGi bundles published as Maven artifacts, not a runnable web application that this source builds and serves."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Final review: The repository is a framework of OSGi bundles published as Maven artifacts, not a runnable web application that this source builds and serves."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.06526476,
+        "promptTokens": 13641,
+        "completionTokens": 568
+      },
+      "latencyMs": 8155
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "port",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": "framework",
+        "answer": "value",
+        "reasons": [
+          "no cited line supports the claim (README.md:13, README.md:16)"
+        ],
+        "subject": "repositoryKind",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 8156,
+    "questions": 3,
+    "generatedAt": "2026-10-31T06:59:38.271Z",
+    "failedChecks": 1,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.01855656,
+      "promptTokens": 3806,
+      "completionTokens": 176
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "The repository is a framework of OSGi bundles published as Maven artifacts, not a runnable web application that this source builds and serves.",
+      "verdict": "not_deployable",
+      "category": "no_application",
+      "decision": "block",
+      "evidence": [
+        {
+          "line": 13,
+          "path": "README.md",
+          "quote": "Please note that openHAB Core is not a product itself, but a framework to build solutions on top."
+        },
+        {
+          "line": 16,
+          "path": "README.md",
+          "quote": "This means that what you build is primarily an artifact repository of OSGi bundles that can be used within smart home products."
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 3424,
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "unsupported-no-dockerfile",
+      "title": "Has no Dockerfile that builds the app",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "final-review-unsupported",
+      "title": "Has no application to deploy",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Final review: The repository is a framework of OSGi bundles published as Maven artifacts, not a runnable web application that this source builds and serves. Evidence: README.md:13 \"Please note that openHAB Core is not a product itself, but a framework to build solutions on top.\"; README.md:16 \"This means that what you build is primarily an artifact repository of OSGi bundles that can be used within smart home products.\".",
+      "confidence": "likely"
+    }
+  ]
+}

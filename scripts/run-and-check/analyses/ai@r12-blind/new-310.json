@@ -1,0 +1,293 @@
+{
+  "id": "new-310",
+  "commit": "23412c64b091dafcbfb57bb1e2048a62ba7d1fd0",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "web",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "web/Dockerfile"
+    },
+    "build": {
+      "command": "npm run build-renderer && npm run build-main",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"nginx\", \"-g\", \"daemon off;\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_DB",
+          "kind": "database"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ENTE_CLI_CONFIG_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENTE_CLI_CONFIG_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MINIO_ROOT_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/config/compose.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MINIO_ROOT_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/config/compose.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/config/compose.yaml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/config/compose.yaml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Final review: Ente needs its separate Go API server (server/) running alongside this nginx web frontend image, and the frontend itself serves multiple apps on different ports, so Deployz's single web service cannot run the product."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Final review: Ente needs its separate Go API server (server/) running alongside this nginx web frontend image, and the frontend itself serves multiple apps on different ports, so Deployz's single web service cannot run the product."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: MINIO_ROOT_PASSWORD. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0728838,
+        "promptTokens": 14820,
+        "completionTokens": 717
+      },
+      "latencyMs": 9834
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": "/",
+        "answer": "value",
+        "reasons": [],
+        "subject": "healthPath",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": {
+          "mode": "none",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [
+          "mode none with a database needs a vendor decision"
+        ],
+        "subject": "migration",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 9836,
+    "questions": 2,
+    "generatedAt": "2026-10-31T07:00:17.095Z",
+    "failedChecks": 1,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.03137904,
+      "promptTokens": 6589,
+      "completionTokens": 267
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "Ente needs its separate Go API server (server/) running alongside this nginx web frontend image, and the frontend itself serves multiple apps on different ports, so Deployz's single web service cannot run the product.",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "decision": "block",
+      "evidence": [
+        {
+          "line": 117,
+          "path": "web/Dockerfile",
+          "quote": "ENV ENTE_API_ORIGIN=http://localhost:8080"
+        },
+        {
+          "line": 13,
+          "path": "README.md",
+          "quote": "This monorepo contains all our source code - the client apps (iOS / Android / F-Droid / Web / Linux / macOS / Windows) for both the products (and more planned future ones!), and the server that powers them."
+        },
+        {
+          "line": 51,
+          "path": "web/Dockerfile",
+          "quote": "    listen 3001;"
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 4336,
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "migration-command-needs-input",
+      "title": "Choose how Deployz runs database migrations",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "The AI Analysis could not tell how this app migrates its database.",
+      "confidence": "needs_confirmation"
+    },
+    {
+      "id": "final-review-unsupported",
+      "title": "Runs as several services",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Final review: Ente needs its separate Go API server (server/) running alongside this nginx web frontend image, and the frontend itself serves multiple apps on different ports, so Deployz's single web service cannot run the product. Evidence: web/Dockerfile:117 \"ENV ENTE_API_ORIGIN=http://localhost:8080\"; README.md:13 \"This monorepo contains all our source code - the client apps (iOS / Android / F-Droid / Web / Linux / macOS / Windows) for both the products (and more planned future ones!), and the server that powers them.\"; web/Dockerfile:51 \"    listen 3001;\".",
+      "confidence": "likely"
+    }
+  ]
+}

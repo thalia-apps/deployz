@@ -1,0 +1,178 @@
+{
+  "id": "new-298",
+  "commit": "b418951bae232aba7d35de3265c667349bfcf81c",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "php",
+      "framework": null,
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": "npm run build:website-min-css && npm run build:headless && npm run build:main",
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": null
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DROP_DEBUGGER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in rspack/rspack.build.js",
+            "read in rspack/rspack.headless.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in rspack/rspack.nodeps.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "XDG_STATE_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/headless/shims/node-storage.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (composer.json, src/headless/package.json, src/log/package.json), and no Dockerfile builds an application."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (composer.json, src/headless/package.json, src/log/package.json), and no Dockerfile builds an application."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.06248088,
+        "promptTokens": 13108,
+        "completionTokens": 534
+      },
+      "latencyMs": 7617
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "port",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": "library",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 7619,
+    "questions": 3,
+    "generatedAt": "2026-10-31T06:58:47.878Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "reason": "not_deployable",
+    "status": "skipped",
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "unsupported-library-repository",
+      "title": "Is a library, not an application",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (composer.json, src/headless/package.json, src/log/package.json), and no Dockerfile builds an application.",
+      "confidence": "confirmed"
+    }
+  ]
+}
