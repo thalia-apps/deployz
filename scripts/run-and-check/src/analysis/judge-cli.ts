@@ -99,11 +99,12 @@ function asReadinessFindings(findings: readonly StoredFinding[]): ReadinessFindi
 }
 
 /**
- * The findings that make the stored outcome: the analysis file's own, else
- * the rules analysis of the same commit when it reaches the same outcome.
+ * The findings that make the stored outcome before any judge: the analysis
+ * file's own without the embedded judge's findings, else the rules analysis
+ * of the same commit when it reaches the same outcome.
  */
 export function storedFindings(analysis: AnalysisResultFile, rules: AnalysisResultFile | null): readonly StoredFinding[] | null {
-  if (analysis.findings !== undefined) return analysis.findings;
+  if (analysis.findings !== undefined) return analysis.findings.filter((finding) => !finding.id.startsWith('final-review-'));
   if (rules?.findings === undefined || rules.commit !== analysis.commit || rules.outcome !== reviewedOutcome(analysis)) return null;
   return rules.findings;
 }

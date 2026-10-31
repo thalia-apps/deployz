@@ -112,7 +112,8 @@ describe('the soft review in the exam', () => {
   it('reads the findings of the analysis, else of a rules analysis of the same commit and outcome', () => {
     const base = { id: 'new-1', commit: 'a', analyser: 'ai@x', status: 'analysed' as const, failure: null, manifest: null, gate: null, vendorQuestions: 0, outcome: 'DEPLOYABLE_WITH_CHANGES' as const };
     const findings = [{ id: 'localhost-binding', title: 't', fixClass: 'CODE_CHANGE', technicalEvidence: 'e', confidence: 'likely' }];
-    expect(storedFindings({ ...base, findings }, null)).toBe(findings);
+    expect(storedFindings({ ...base, findings }, null)).toEqual(findings);
+    expect(storedFindings({ ...base, findings: [...findings, { ...findings[0]!, id: 'final-review-unsupported', fixClass: 'CAPABILITY_GAP' }] }, null)).toEqual(findings);
     expect(storedFindings(base, { ...base, analyser: 'rules@x', findings })).toBe(findings);
     expect(storedFindings(base, { ...base, analyser: 'rules@x', outcome: 'NOT_DEPLOYABLE', findings })).toBeNull();
     expect(storedFindings(base, { ...base, analyser: 'rules@x', commit: 'b', findings })).toBeNull();
