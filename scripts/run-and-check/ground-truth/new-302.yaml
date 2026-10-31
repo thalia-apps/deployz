@@ -1,0 +1,164 @@
+id: new-302
+repository: safebucket/safebucket
+commit: ecb121302ba055b7b57c563af0586c414d0ce343
+summary: >
+  SafeBucket is a file-sharing application written in Go with a React frontend that the binary serves (static files are
+  enabled by default). The root Dockerfile builds the web UI with node, builds the Go binary (CGO on) and runs it as
+  `./safebucket` in a distroless image on port 8080. Everything is configured by YAML or by environment variables with a
+  double underscore for nesting (APP__PORT, DATABASE__TYPE, STORAGE__TYPE, ...). Pluggable parts: database postgres
+  (default) or sqlite; storage minio, rustfs, s3, aws, gcp or azure; events jetstream, aws, gcp, azure or memory; cache
+  redis, valkey or memory; notifier smtp or filesystem; activity loki or filesystem. The profile (APP__PROFILE) is
+  default (HTTP server and workers in one process), api or worker. Migrations run when the database connection opens. The
+  project's own AWS example (deployments/aws) uses ECS, RDS, ElastiCache, S3, SQS and Loki, but the lite local example uses
+  SQLite, memory cache, memory events, filesystem notifier and activity, and one S3-compatible store.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    One Go web process built from the root Dockerfile. Settings alone choose the Deployz-supported parts:
+    DATABASE__TYPE=postgres (the default), STORAGE__TYPE=aws with a bucket, CACHE__TYPE=memory, EVENTS__TYPE=memory,
+    NOTIFIER__TYPE=smtp (or filesystem) and ACTIVITY__TYPE=filesystem. No Redis, SQS or Loki is needed, because memory
+    cache and memory events are valid for one task and the lite example runs this way. Files live in S3 and metadata in
+    PostgreSQL. The case is not fully clear: browsers upload to presigned S3 URLs, so the bucket needs a CORS rule for the
+    app origin, and bucket upload events normally reach the app through SQS (the file version is also confirmed by an API
+    route); an analysis that asks for these as repository changes is accepted too, but neither needs a code change.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 9, quote: "RUN npm install && npm run build"}
+    - {path: Dockerfile, line: 30, quote: "RUN CGO_ENABLED=1 GOOS=linux go build -ldflags=\"-s -w\" -a -o safebucket . && \\"}
+    - {path: Dockerfile, line: 35, quote: "FROM gcr.io/distroless/cc-debian12:nonroot"}
+    - {path: Dockerfile, line: 44, quote: "CMD [\"./safebucket\"]"}
+runtime: {accept: [go]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: Dockerfile, line: 42, quote: "EXPOSE 8080"}
+    - {path: internal/configuration/config.go, line: 124, quote: "\"app.port\":                                8080,"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: deployments/local/lite/docker-compose.yml, line: 48, quote: "- \"8080:8080\""}
+startCommand:
+  source: image
+  accept: ["./safebucket"]
+  evidence:
+    - {path: Dockerfile, line: 44, quote: "CMD [\"./safebucket\"]"}
+healthPath:
+  accept: ["/"]
+  # The UI is served from the binary at "/"; the AWS example's target group checks "/" and expects 200.
+  evidence:
+    - {path: internal/configuration/config.go, line: 133, quote: "\"app.static_files.enabled\":                true,"}
+    - {path: internal/core/bootstrap.go, line: 571, quote: "router.Mount(\"/\", staticFileService.Routes())"}
+    - {path: deployments/aws/terraform/ecs.tf, line: 185, quote: "path                = \"/\""}
+database:
+  status: required
+  engines: [postgres, sqlite]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {DATABASE__TYPE: postgres, DATABASE__POSTGRES__HOST: "<host>", DATABASE__POSTGRES__PORT: "5432", DATABASE__POSTGRES__USER: "<user>", DATABASE__POSTGRES__PASSWORD: "<password>", DATABASE__POSTGRES__NAME: "<db>", DATABASE__POSTGRES__SSLMODE: require}
+  connectionVars: [DATABASE__TYPE, DATABASE__POSTGRES__HOST, DATABASE__POSTGRES__PORT, DATABASE__POSTGRES__USER, DATABASE__POSTGRES__PASSWORD, DATABASE__POSTGRES__NAME, DATABASE__POSTGRES__SSLMODE]
+  # The default type is postgres; the lite example selects sqlite with DATABASE__SQLITE__PATH.
+  evidence:
+    - {path: internal/configuration/config.go, line: 136, quote: "\"database.type\":                           ProviderPostgres,"}
+    - {path: internal/models/configuration.go, line: 84, quote: "Type     string                  `mapstructure:\"type\"     validate:\"required,oneof=postgres sqlite\"`"}
+    - {path: internal/database/postgres.go, line: 16, quote: "dsn := fmt.Sprintf(\"host=%s user=%s password=%s dbname=%s port=%d sslmode=%s\","}
+    - {path: deployments/local/lite/.env, line: 28, quote: "DATABASE__TYPE=sqlite"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: internal/database/postgres.go, line: 33, quote: "RunMigrations(sqlDB, DialectPostgres)"}
+redis:
+  status: optional
+  selectBy: {CACHE__TYPE: memory}
+  # Cache type is redis, valkey or memory; memory is valid for one task and is the lite example setting.
+  evidence:
+    - {path: internal/models/configuration.go, line: 144, quote: "Type   string                    `mapstructure:\"type\"   validate:\"required,oneof=redis valkey memory\"`"}
+    - {path: deployments/local/lite/.env, line: 32, quote: "CACHE__TYPE=memory"}
+workers:
+  status: optional-independent
+  commands: []
+  # The default profile runs the HTTP server and the workers in one process; profiles api and worker split them.
+  evidence:
+    - {path: internal/models/configuration.go, line: 28, quote: "Profile                          string                 `mapstructure:\"profile\"                             validate:\"oneof=default api worker\"`"}
+    - {path: internal/configuration/config.go, line: 119, quote: "\"app.profile\":                             \"default\","}
+    - {path: internal/core/app.go, line: 70, quote: "if profile.Workers.AnyEnabled() {"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/app/data]
+  s3: native
+  s3SelectBy: {STORAGE__TYPE: aws, STORAGE__AWS__BUCKET_NAME: "<bucket>"}
+  # Objects live in the bucket. /app/data holds only the filesystem notifier and activity folders of the lite example; smtp replaces the notifier, and the activity files are a log.
+  evidence:
+    - {path: internal/models/configuration.go, line: 166, quote: "Type         string                      `mapstructure:\"type\"   validate:\"required,oneof=minio gcp aws rustfs s3 azure\"`"}
+    - {path: internal/models/configuration.go, line: 190, quote: "type AWSConfiguration struct {"}
+    - {path: deployments/aws/terraform/ecs_task_safebucket.tf, line: 105, quote: "value = \"aws\""}
+    - {path: deployments/local/lite/.env, line: 42, quote: "NOTIFIER__FILESYSTEM__DIRECTORY=/app/data/notifications"}
+    - {path: deployments/local/lite/.env, line: 46, quote: "ACTIVITY__FILESYSTEM__DIRECTORY=/app/data/activity"}
+env:
+  required:
+    - {name: APP__API_URL, secret: false, buildTime: false, note: "public URL of the API"}
+    - {name: APP__WEB_URL, secret: false, buildTime: false, note: "public URL of the web UI (the same host)"}
+    - {name: APP__ALLOWED_ORIGINS, secret: false, buildTime: false, note: "list of allowed origins, the public URL"}
+    - {name: APP__ADMIN_EMAIL, secret: false, buildTime: false, note: "first administrator email"}
+    - {name: APP__ADMIN_PASSWORD, secret: true, buildTime: false, note: "first administrator password"}
+    - {name: APP__TOKEN_SECRET, secret: true, buildTime: false, note: "JWT signing secret"}
+    - {name: APP__MFA_ENCRYPTION_KEY, secret: true, buildTime: false, note: "exactly 32 characters"}
+    - {name: DATABASE__TYPE, secret: false, buildTime: false, note: "postgres"}
+    - {name: DATABASE__POSTGRES__HOST, secret: false, buildTime: false, note: "PostgreSQL host"}
+    - {name: DATABASE__POSTGRES__USER, secret: false, buildTime: false, note: "database user"}
+    - {name: DATABASE__POSTGRES__PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: DATABASE__POSTGRES__NAME, secret: false, buildTime: false, note: "database name"}
+    - {name: STORAGE__TYPE, secret: false, buildTime: false, note: "aws"}
+    - {name: STORAGE__AWS__BUCKET_NAME, secret: false, buildTime: false, note: "S3 bucket"}
+    - {name: EVENTS__TYPE, secret: false, buildTime: false, note: "memory for one task"}
+    - {name: CACHE__TYPE, secret: false, buildTime: false, note: "memory for one task"}
+    - {name: NOTIFIER__TYPE, secret: false, buildTime: false, note: "smtp or filesystem"}
+    - {name: ACTIVITY__TYPE, secret: false, buildTime: false, note: "filesystem; loki is the other option"}
+  optional: [APP__PORT, APP__PROFILE, APP__LOG_LEVEL, APP__TRUSTED_PROXIES, APP__TRASH_RETENTION_DAYS, APP__MFA_REQUIRED, DATABASE__POSTGRES__PORT, DATABASE__POSTGRES__SSLMODE, STORAGE__AWS__EXTERNAL_ENDPOINT, AUTH__PROVIDERS__KEYS, NOTIFIER__SMTP__HOST, ACTIVITY__FILESYSTEM__DIRECTORY, NOTIFIER__FILESYSTEM__DIRECTORY, AWS_REGION]
+  buildTime: []
+  evidence:
+    - {path: internal/models/configuration.go, line: 29, quote: "AdminEmail                       string                 `mapstructure:\"admin_email\"                         validate:\"required,email\"`"}
+    - {path: internal/models/configuration.go, line: 33, quote: "TokenSecret                      string                 `mapstructure:\"token_secret\"                        validate:\"required\"`"}
+    - {path: internal/models/configuration.go, line: 34, quote: "MFAEncryptionKey                 string                 `mapstructure:\"mfa_encryption_key\"                  validate:\"len=32\"`"}
+    - {path: deployments/local/lite/.env, line: 35, quote: "EVENTS__TYPE=memory"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQS, ElastiCache and Loki in deployments/aws must not be reported as required: they are options, and memory events and cache plus filesystem activity are valid settings"
+    - "The SQLite default of the lite example and its /app/data volume must not block: DATABASE__TYPE defaults to postgres"
+    - "The rustfs bucket and the bucket-init service in the lite compose files must not be read as extra application services"
+    - "The api and worker profiles must not force a separate worker: the default profile runs everything in one process"
+    - "The jetstream (NATS) option must not be reported as a required broker"
+vendorQuestions:
+  legitimate:
+    - "What are the first administrator email and password? (APP__ADMIN_EMAIL, APP__ADMIN_PASSWORD)"
+    - "What is the public URL? (APP__API_URL, APP__WEB_URL, APP__ALLOWED_ORIGINS)"
+    - "Which SMTP server sends the invitation emails? (NOTIFIER__SMTP__*)"
+  unnecessary:
+    - "Which database? (the default is PostgreSQL)"
+    - "Is Redis, SQS or a worker needed? (no)"
+    - "Which port? (8080)"
+traps:
+  - "The project's own AWS example needs SQS, ElastiCache, Loki and Mailpit; that is the full-featured topology and not the minimum. The memory options and filesystem activity run the same binary with no extra service (deployments/aws/terraform/ecs_task_safebucket.tf:88-117; deployments/local/lite/.env:32-46)"
+  - "Environment variables use a double underscore for nesting and the queue names under EVENTS__QUEUES are required even for the memory type (internal/configuration/config.go:76-81; deployments/local/lite/.env:36-38)"
+  - "APP__MFA_ENCRYPTION_KEY must be exactly 32 characters (internal/models/configuration.go:34)"
+  - "Browsers upload and download through presigned S3 URLs, so the bucket needs a CORS rule for the app origin; the AWS example sets it in Terraform and the application does not (deployments/aws/terraform/s3.tf:34-40)"
+  - "With STORAGE__TYPE=aws the S3 upload events arrive through SQS in the AWS example; with memory events the confirm route /versions/{id}/confirm can complete a version (internal/services/bucket_file_version.go:37)"
+  - "The local profile name default runs the HTTP server and workers together; api and worker are split profiles (internal/core/app.go:58-71)"
+  - "The Dockerfile uses CGO and a distroless cc base image (Dockerfile:30,35)"
+openQuestions:
+  - "Whether the first upload of a new file completes without S3 bucket events when EVENTS__TYPE=memory is not proved by a client call in the web source; the lite example with RustFS and memory events shows it works in that setup."
+crossReview:
+  - {field: dockerfile, change: 'none: the root Dockerfile builds web and Go binary and runs ./safebucket', evidence: 'Dockerfile:9,30,35,44'}
+  - {field: database, change: 'none: postgres is the default type and the Postgres connection uses separate parts', evidence: 'internal/configuration/config.go:136; internal/database/postgres.go:16,33'}
+  - {field: redis / events, change: 'none: memory is a valid cache and events type; the AWS example uses Redis and SQS as options', evidence: 'internal/models/configuration.go:144,292; deployments/local/lite/.env:32,35'}
+  - {field: outcome, change: 'none: settings only; CORS on the bucket and the upload event path are open points, not code changes', evidence: 'deployments/aws/terraform/s3.tf:34-40; internal/services/bucket_file_version.go:37'}
+  - {field: all, change: verified, evidence: 30 citations checked}

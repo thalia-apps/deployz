@@ -1,0 +1,124 @@
+id: new-296
+repository: NginxProxyManager/nginx-proxy-manager
+commit: 1aca775cb983270a3f5be23fd32501173165ebd3
+summary: >
+  Nginx Proxy Manager is a web UI that manages an nginx reverse proxy: it writes proxy-host, redirect and stream
+  configuration files under /data/nginx and reloads nginx, and it issues Let's Encrypt certificates with certbot. The
+  image (docker/Dockerfile) is built on a prebuilt nginx-full base image, installs the s6-overlay supervisor and runs
+  three services together: nginx (ports 80 and 443 for the proxied traffic), the Node.js backend (port 3000, the API)
+  and the admin UI (port 81, nginx serves the built frontend). The Dockerfile copies frontend/dist, which a separate
+  script must build first. The backend stores its data in SQLite (/data/database.sqlite) by default, or in MySQL or
+  PostgreSQL when DB_MYSQL_* or DB_POSTGRES_* variables are set.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The product is a reverse proxy. Its job is to terminate traffic for other hosts on ports 80 and 443 and to forward
+    it, with nginx configuration files and certificates written to /data on local disk and nginx reloaded by the
+    backend. One Deployz service has one HTTP port behind the Deployz HTTPS load balancer, so the proxy function does
+    not apply, and the generated configuration state is local. The image also runs nginx, the backend and the UI under
+    s6-overlay as several processes, and it copies a frontend/dist folder that the Dockerfile does not build. The
+    database option (PostgreSQL or MySQL) does not change this.
+dockerfile:
+  accept: [docker/Dockerfile]
+  reject: [docker/dev/Dockerfile]
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 4, quote: "# This file assumes that the frontend has been built using ./scripts/frontend-build"}
+    - {path: docker/Dockerfile, line: 40, quote: "COPY backend       /app"}
+    - {path: docker/Dockerfile, line: 41, quote: "COPY frontend/dist /app/frontend"}
+    - {path: docker/Dockerfile, line: 58, quote: "ENTRYPOINT [ \"/init\" ]"}
+runtime: {accept: [node]}
+port:
+  accept: [81, 80, 443, 3000]
+  # 81 is the admin UI, 80 and 443 are the proxied traffic, 3000 is the backend API behind the internal nginx.
+  evidence:
+    - {path: docker/Dockerfile, line: 38, quote: "EXPOSE 80 81 443"}
+    - {path: backend/index.js, line: 33, quote: "const server = app.listen(3000, () => {"}
+    - {path: README.md, line: 85, quote: "When your docker container is running, connect to it on port `81` for the admin interface."}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: backend/index.js, line: 33, quote: "const server = app.listen(3000, () => {"}
+startCommand:
+  source: image
+  accept: ["/init"]
+  evidence:
+    - {path: docker/Dockerfile, line: 58, quote: "ENTRYPOINT [ \"/init\" ]"}
+    - {path: docker/rootfs/etc/s6-overlay/s6-rc.d/nginx/run, line: 9, quote: "exec s6-setuidgid \"$PUID:$PGID\" nginx"}
+healthPath:
+  accept: ["/api"]
+  # The backend answers {"status":"OK"} on GET /api through the internal nginx on port 81.
+  evidence:
+    - {path: backend/routes/main.js, line: 33, quote: "* GET /api"}
+    - {path: backend/routes/main.js, line: 40, quote: "status: \"OK\","}
+database:
+  status: required
+  engines: [sqlite, mysql, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DB_POSTGRES_HOST: "<host>", DB_POSTGRES_PORT: "5432", DB_POSTGRES_USER: "<user>", DB_POSTGRES_PASSWORD: "<password>", DB_POSTGRES_NAME: "<db>"}
+  connectionVars: [DB_POSTGRES_HOST, DB_POSTGRES_PORT, DB_POSTGRES_USER, DB_POSTGRES_PASSWORD, DB_POSTGRES_NAME, DB_MYSQL_HOST, DB_MYSQL_PORT, DB_MYSQL_USER, DB_MYSQL_PASSWORD, DB_MYSQL_NAME, DB_SQLITE_FILE]
+  evidence:
+    - {path: backend/lib/config.js, line: 57, quote: "if (envMysqlHost && envMysqlUser && envMysqlName) {"}
+    - {path: backend/lib/config.js, line: 80, quote: "if (envPostgresHost && envPostgresUser && envPostgresName) {"}
+    - {path: backend/lib/config.js, line: 97, quote: "const envSqliteFile = process.env.DB_SQLITE_FILE || \"/data/database.sqlite\";"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: backend/index.js, line: 7, quote: "import { migrateUp } from \"./migrate.js\";"}
+    - {path: backend/index.js, line: 14, quote: "return migrateUp()"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # nginx, the backend and the optional dev frontend run as s6 services in the one container.
+  evidence:
+    - {path: docker/rootfs/etc/s6-overlay/s6-rc.d/backend/run, line: 18, quote: "s6-setuidgid \"$PUID:$PGID\" bash -c \"export HOME=$NPMHOME;export CERTBOT_VERSION=$CERTBOT_VERSION;node --abort_on_uncaught_exception --max_old_space_size=250 index.js\""}
+    - {path: docker/rootfs/etc/s6-overlay/s6-rc.d/nginx/run, line: 9, quote: "exec s6-setuidgid \"$PUID:$PGID\" nginx"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/data, /etc/letsencrypt]
+  s3: none
+  s3SelectBy: {}
+  # Proxy configuration files and certificates are written to /data and read by nginx in the same container.
+  evidence:
+    - {path: docker/Dockerfile, line: 57, quote: "VOLUME [ \"/data\" ]"}
+    - {path: backend/internal/nginx.js, line: 133, quote: "return `/data/nginx/${internalNginx.getFileFriendlyHostType(host_type)}/${host_id}.conf`;"}
+    - {path: backend/internal/nginx.js, line: 286, quote: "fs.writeFileSync(filename, config_text, { encoding: \"utf8\" });"}
+env:
+  required: []
+  optional: [DB_POSTGRES_HOST, DB_POSTGRES_PORT, DB_POSTGRES_USER, DB_POSTGRES_PASSWORD, DB_POSTGRES_NAME, DB_MYSQL_HOST, DB_SQLITE_FILE, PUID, PGID, DISABLE_IPV6]
+  buildTime: []
+  evidence:
+    - {path: backend/lib/config.js, line: 77, quote: "const envPostgresHost = process.env.DB_POSTGRES_HOST || null;"}
+blockers:
+  expected:
+    - "The product is a reverse proxy for other hosts on ports 80 and 443 with its own nginx; Deployz serves one HTTP port behind its HTTPS load balancer"
+    - "Generated nginx configuration and certificates live in /data on local disk and are applied by an nginx reload in the same container"
+  mustNot:
+    - "The PostgreSQL and MySQL options must not be read as the only blocker: the proxy role and the local nginx state are the blockers"
+    - "The s6-overlay supervisor must not be the only reason: nginx, backend and UI are one image, but the reverse-proxy function remains"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (not useful: the product is not deployable)"
+    - "Is Redis or S3 needed? (no)"
+traps:
+  - "DB_POSTGRES_* and DB_MYSQL_* make a PostgreSQL or MySQL option exist, which looks like an easy case; the database is not the issue (backend/lib/config.js:57-97)"
+  - "The Dockerfile copies frontend/dist and says a script must build the frontend first, so the root build alone does not make the image (docker/Dockerfile:4,41)"
+  - "The container exposes three ports (80, 81, 443) and the backend listens on 3000 behind the internal nginx (docker/Dockerfile:38; backend/index.js:33)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: docker/Dockerfile is the production image; it expects frontend/dist from a prior build step', evidence: 'docker/Dockerfile:4,40,41,58'}
+  - {field: database, change: 'none: SQLite by default; PostgreSQL or MySQL when the DB_* variables are set', evidence: 'backend/lib/config.js:57,80,97'}
+  - {field: outcome, change: 'none: reverse proxy with local generated nginx state; not a plain web app', evidence: 'docker/Dockerfile:38,57; backend/internal/nginx.js:133,286'}
+  - {field: all, change: verified, evidence: 23 citations checked}

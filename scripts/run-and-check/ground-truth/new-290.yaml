@@ -1,0 +1,108 @@
+id: new-290
+repository: recurser/string-is
+commit: 5647108dbc2c075ccb785fa9264a32e0f3c031dd
+summary: >
+  string.is is a client-side web tool that detects and converts string formats (JSON, base64, hashes, dates and so
+  on). It is a Next.js 12.3.1 app (React 17, Yarn) with no API routes, no database, no Redis and no storage. The root
+  Dockerfile is a three-stage build on node:20-alpine: yarn install, `yarn build` with OUTPUT_STANDALONE=1 (which
+  makes next.config.js emit the standalone server), and a runner that copies .next/standalone and runs
+  `node server.js` as user nextjs on port 3000.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    The root Dockerfile builds the app from source and runs one Node process on port 3000. The app keeps no state and
+    needs no environment value: NEXT_PUBLIC_BASE_PATH and the analytics domain are build arguments with defaults. The
+    vendor needs no repository change.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 8, quote: "RUN yarn install --frozen-lockfile"}
+    - {path: Dockerfile, line: 21, quote: "ENV OUTPUT_STANDALONE 1"}
+    - {path: Dockerfile, line: 22, quote: "RUN yarn build"}
+    - {path: Dockerfile, line: 42, quote: "COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./"}
+    - {path: Dockerfile, line: 51, quote: "CMD [\"node\", \"server.js\"]"}
+    - {path: docker-compose.yml, line: 7, quote: "context: ."}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 47, quote: "EXPOSE 3000"}
+    - {path: Dockerfile, line: 49, quote: "ENV PORT 3000"}
+    - {path: docker-compose.yml, line: 11, quote: "- '3000:3000'"}
+bindAllInterfaces:
+  value: true
+  # The Next.js standalone server listens on all interfaces when HOSTNAME is not set to a narrower value.
+  evidence:
+    - {path: Dockerfile, line: 49, quote: "ENV PORT 3000"}
+startCommand:
+  source: image
+  accept: ["node server.js"]
+  evidence:
+    - {path: Dockerfile, line: 51, quote: "CMD [\"node\", \"server.js\"]"}
+healthPath:
+  accept: ["/"]
+  evidence:
+    - {path: next.config.js, line: 74, quote: "source: '/',"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: Dockerfile, line: 51, quote: "CMD [\"node\", \"server.js\"]"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: [NEXT_PUBLIC_BASE_PATH, NEXT_PUBLIC_ANALYTICS_DOMAIN]
+  buildTime: [NEXT_PUBLIC_BASE_PATH, ANALYTICS_DOMAIN]
+  evidence:
+    - {path: Dockerfile, line: 17, quote: "ARG NEXT_PUBLIC_BASE_PATH=\"\""}
+    - {path: Dockerfile, line: 28, quote: "ARG ANALYTICS_DOMAIN=string.is"}
+    - {path: next.config.js, line: 115, quote: "basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',"}
+blockers:
+  expected: []
+  mustNot:
+    - "The Dockerfile must not be treated as unbuildable because of the --platform=$BUILDPLATFORM flags: they are valid on a linux x86_64 builder"
+    - "Plausible analytics in the CSP must not be read as a required service"
+    - "No database, Redis, S3 or worker may be reported as required"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (none)"
+    - "Which port? (3000)"
+    - "Is a worker needed? (no)"
+traps:
+  - "The standalone output is switched on only by OUTPUT_STANDALONE=1, which the Dockerfile sets before the build; next 12.3.1 maps the old experimental.outputStandalone key to output standalone (next.config.js:99-101)"
+  - "NEXT_PUBLIC_BASE_PATH is inlined into the client bundle at build time, so a sub-path needs a rebuild (next.config.js:114-115)"
+  - "next.config.js sets a strict Content-Security-Policy and an Access-Control-Allow-Origin list for string.is hosts only (next.config.js:14-34)"
+  - "The package.json start script is `next start`; the image does not use it"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: 'none: stateless Next.js app with a working root Dockerfile', evidence: 'Dockerfile:21,22,42,51'}
+  - {field: all, change: verified, evidence: 17 citations checked}

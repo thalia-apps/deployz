@@ -1,0 +1,116 @@
+id: new-305
+repository: umputun/remark42
+commit: 0e1ad2ad6cb6acb7e92057c1ef44af7485bea47a
+summary: >
+  Remark42 is a self-hosted comment engine (Go backend with the frontend files embedded or served from /srv/web). The
+  root Dockerfile builds the frontend with pnpm and the backend with Go and runs `/srv/remark42 server` on port 8080.
+  All comments, users and settings are kept in BoltDB files under /srv/var (store type bolt; the only other store type is
+  rpc, a remote store that needs another server). Pictures and avatars default to the file system (fs). The README says
+  "No external databases, everything embedded in a single data file". docker-init.sh stops the container with exit 199
+  when /srv/var does not exist, because the state would be lost.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The core data (every comment and user) is in BoltDB files on local disk, and there is no PostgreSQL, MySQL or S3 store
+    option. The rpc store type needs a separate custom server that Deployz does not provide. Fargate task storage is
+    ephemeral and Deployz has no persistent volume, so the data would be lost at each restart. This is the durable local
+    state case, as new-267 (Trilium).
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 46, quote: "E2E_COVERAGE=$COVERAGE pnpm build; \\"}
+    - {path: Dockerfile, line: 94, quote: "go build -o remark42 -ldflags \"-X main.revision=${version} -s -w\" ./app ; \\"}
+    - {path: Dockerfile, line: 126, quote: "CMD [\"/srv/remark42\", \"server\"]"}
+runtime: {accept: [go]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: Dockerfile, line: 123, quote: "EXPOSE 8080"}
+    - {path: backend/app/cmd/server.go, line: 84, quote: "Port                       int           `long:\"port\" env:\"REMARK_PORT\" default:\"8080\" description:\"port\"`"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: backend/app/cmd/server.go, line: 85, quote: "Address                    string        `long:\"address\" env:\"REMARK_ADDRESS\" default:\"\" description:\"listening address\"`"}
+startCommand:
+  source: image
+  accept: ["/srv/remark42 server"]
+  evidence:
+    - {path: Dockerfile, line: 126, quote: "CMD [\"/srv/remark42\", \"server\"]"}
+healthPath:
+  accept: ["/ping"]
+  evidence:
+    - {path: Dockerfile, line: 124, quote: "HEALTHCHECK --interval=30s --timeout=3s CMD curl --fail http://localhost:8080/ping || exit 1"}
+database:
+  # BoltDB files only; no SQL driver.
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: README.md, line: 20, quote: "* No external databases, everything embedded in a single data file"}
+    - {path: backend/app/cmd/server.go, line: 186, quote: "Type string `long:\"type\" env:\"TYPE\" description:\"type of storage\" choice:\"bolt\" choice:\"rpc\" default:\"bolt\"` // nolint"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: optional
+  selectBy: {}
+  evidence:
+    - {path: backend/app/cmd/server.go, line: 227, quote: "RedisAddr string `long:\"redis_addr\" env:\"REDIS_ADDR\" default:\"127.0.0.1:6379\" description:\"address of Redis PubSub instance, turn redis_pub_sub cache on for distributed cache\"`"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: Dockerfile, line: 126, quote: "CMD [\"/srv/remark42\", \"server\"]"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/srv/var]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: backend/app/cmd/server.go, line: 188, quote: "Path    string        `long:\"path\" env:\"PATH\" default:\"./var\" description:\"parent directory for the bolt files\"`"}
+    - {path: docker-compose.yml, line: 43, quote: "- ./var:/srv/var"}
+    - {path: docker-init.sh, line: 30, quote: "exit 199"}
+env:
+  required:
+    - {name: REMARK_URL, secret: false, buildTime: false, note: "public URL of the service; the server stops when it does not start with http:// or https://"}
+    - {name: SECRET, secret: true, buildTime: false, note: "secret for the signing of the login tokens"}
+  optional: [SITE, ADMIN_PASSWD, AUTH_GOOGLE_CID, AUTH_GOOGLE_CSEC, AUTH_GITHUB_CID, AUTH_GITHUB_CSEC, REMARK_PORT, REDIS_ADDR]
+  buildTime: []
+  evidence:
+    - {path: docker-compose.yml, line: 27, quote: "- REMARK_URL"}
+    - {path: docker-compose.yml, line: 28, quote: "- SECRET"}
+    - {path: backend/app/cmd/server.go, line: 615, quote: "return nil, fmt.Errorf(\"invalid remark42 url %s\", s.RemarkURL)"}
+blockers:
+  expected:
+    - "Every comment is stored in BoltDB files under /srv/var on local disk; there is no PostgreSQL, MySQL or S3 store, and the image stops at start when /srv/var is missing"
+  mustNot:
+    - "The missing PostgreSQL or MySQL must not be reported as a setting to add: the application has no such driver"
+    - "The rpc store type must not be read as a Deployz-supported database"
+    - "docker-compose.yml (one service, one bind mount) must not be read as several services"
+    - "The frontend build and the backend build in one Dockerfile must not be read as two services"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (BoltDB files only)"
+    - "Which port? (8080)"
+    - "Is a worker needed? (no)"
+traps:
+  - "docker-init.sh exits with code 199 when /srv/var does not exist, so the image refuses to run without a mounted data directory (docker-init.sh:30)"
+  - "store.type has only bolt and rpc; rpc is a remote store that needs a separate server (backend/app/cmd/server.go:186)"
+  - "Pictures and avatars default to fs, so uploaded images are also local files (backend/app/cmd/server.go:196)"
+  - "The server stops at start when REMARK_URL has no http:// or https:// prefix (backend/app/cmd/server.go:614)"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: 'none: BoltDB on local disk, no SQL or S3 option; same case as new-267', evidence: 'README.md:20; backend/app/cmd/server.go:186,188'}
+  - {field: all, change: verified, evidence: 18 citations checked}

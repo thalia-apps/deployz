@@ -1,0 +1,105 @@
+id: new-289
+repository: thelounge/thelounge
+commit: 70db8bcb6faf98e9c2a09018e26c28ae3eaa0b09
+summary: >
+  The Lounge is a self-hosted web IRC client written in TypeScript (Node 22 or later, Express and socket.io, a Vue
+  client built by Vite). The package is started with `node index start` (npm script start). All state lives in one
+  home directory (THELOUNGE_HOME, default ~/.thelounge): config.js, one JSON file per user in users/ that holds the
+  user's IRC networks and password hash, per-user SQLite or text chat logs in logs/, and uploads. There is no
+  PostgreSQL or MySQL option and no S3 option. The repository has no Dockerfile (the Docker image lives in the separate
+  thelounge-docker repository).
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The core data (user accounts, their IRC network settings and the chat history) is written only to JSON and SQLite
+    files in the local home directory, with no remote database or object-storage backend. A container with no persistent
+    volume loses all accounts and networks at each task replacement. Settings are read from a config.js file in that
+    directory and not from environment values. The public mode that keeps no users is also set only in config.js.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: package.json, line: 28, quote: "\"start\": \"node index start\","}
+    - {path: README.md, line: 20, quote: "<a href=\"https://github.com/thelounge/thelounge-docker\">Docker</a>"}
+runtime: {accept: [node]}
+port:
+  accept: [9000]
+  evidence:
+    - {path: defaults/config.js, line: 36, quote: "port: 9000,"}
+bindAllInterfaces:
+  value: true
+  # host is undefined in the defaults, so Node listens on all interfaces.
+  evidence:
+    - {path: defaults/config.js, line: 29, quote: "host: undefined,"}
+    - {path: server/server.ts, line: 185, quote: "host: Config.values.host,"}
+startCommand:
+  source: explicit
+  accept: ["node index start", "thelounge start"]
+  evidence:
+    - {path: package.json, line: 28, quote: "\"start\": \"node index start\","}
+healthPath:
+  accept: ["/"]
+  evidence:
+    - {path: server/server.ts, line: 192, quote: "server.listen(listenParams, () => {"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # Data is in files: users/<name>.json and logs/<name>.sqlite3 under the home directory.
+  evidence:
+    - {path: server/config.ts, line: 147, quote: "getUserConfigPath(name: string) {"}
+    - {path: server/plugins/messageStorage/sqlite.ts, line: 150, quote: "const sqlitePath = path.join(logsPath, `${this.userName}.sqlite3`);"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: ["~/.thelounge", "users", "logs", "uploads", "storage"]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: server/config.ts, line: 144, quote: "return path.join(this.#homePath, \"users\");"}
+    - {path: server/config.ts, line: 132, quote: "return path.join(this.#homePath, \"logs\");"}
+    - {path: server/clientManager.ts, line: 209, quote: "fs.writeFileSync(tmpPath, JSON.stringify(user, null, \"\\t\"), {"}
+env:
+  required: []
+  optional: [THELOUNGE_HOME]
+  buildTime: []
+  evidence:
+    - {path: defaults/config.js, line: 136, quote: "in the `${THELOUNGE_HOME}/storage` folder."}
+blockers:
+  expected:
+    - "User accounts, IRC network settings and chat logs are only JSON and SQLite files in the local home directory"
+  mustNot:
+    - "The SQLite message storage must not be read as a database choice: it is a per-user local file"
+    - "The Docker link in the README must not be read as a Dockerfile in this repository"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (none: local files)"
+traps:
+  - "The default mode is private (public: false), so every visitor needs an account stored in users/<name>.json (defaults/config.js:19)"
+  - "Configuration is the file config.js in the home directory, copied from defaults at the first start; no environment value sets the port, the mode or the storage (server/command-line/start.ts:24-30)"
+  - "The README points to a separate thelounge-docker repository; this repository has no Dockerfile"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: 'NOT_DEPLOYABLE: accounts, networks and logs only on local disk, no remote backend', evidence: 'server/config.ts:132,144; server/clientManager.ts:209'}
+  - {field: all, change: verified, evidence: 12 citations checked}

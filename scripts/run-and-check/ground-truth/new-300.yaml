@@ -1,0 +1,142 @@
+id: new-300
+repository: RARgames/4gaBoards
+commit: 8d146f9c768a0c80957781229133fceac6c354d8
+summary: >
+  4ga Boards is a Kanban board (a fork of Planka) built with a Sails.js server (Node 24, sails-postgresql, sockets) and a
+  React client. The root Dockerfile is a multi-stage pnpm build that copies the client build into the server's public
+  folder and starts ./start.sh, which runs `node db/init.js` (knex migrations and a first-run seed) and then
+  `node app.js --prod` on port 1337. PostgreSQL is the only database (DATABASE_URL). Uploads (user avatars, project
+  backgrounds, card attachments, exports) are written to folders in the container: /app/public/user-avatars,
+  /app/public/project-background-images and /app/private/attachments, which the Dockerfile declares as VOLUMEs. The code
+  has no S3 option. Redis is optional (the upload rate-limit store defaults to memory; the Redis session and socket
+  adapters are commented out). Cron-like cleanups are Sails hooks inside the one process.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    PostgreSQL, migrations at start, one web process and no required Redis make this a normal web app, but card
+    attachments, avatars and board backgrounds are stored on the container disk through Skipper and fs calls
+    (attachmentsPath, user-avatars, project-background-images) and the Dockerfile declares them as volumes. Fargate keeps
+    no persistent volume, so the files are lost at each task replacement. A contained repository change that stores these
+    uploads in S3 makes the app deployable, so DEPLOYABLE_WITH_CHANGES is the main answer. NOT_DEPLOYABLE is also
+    accepted because the change touches several upload and download paths, and the uploads are a core feature of a
+    board tool.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 34, quote: "RUN DISABLE_ESLINT_PLUGIN=true pnpm client:build"}
+    - {path: Dockerfile, line: 51, quote: "COPY --from=client --chown=node:node /app/client/build public"}
+    - {path: Dockerfile, line: 59, quote: "EXPOSE 1337"}
+    - {path: Dockerfile, line: 60, quote: "CMD [\"./start.sh\"]"}
+runtime: {accept: [node]}
+port:
+  accept: [1337]
+  evidence:
+    - {path: Dockerfile, line: 59, quote: "EXPOSE 1337"}
+    - {path: server/.env.sample, line: 4, quote: "BASE_URL=http://localhost:1337"}
+bindAllInterfaces:
+  value: true
+  # Sails binds all interfaces when no host is set; the container healthcheck uses localhost and the compose file publishes 1337.
+  evidence:
+    - {path: Dockerfile, line: 58, quote: "HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=50 CMD wget -q --spider http://localhost:1337 || exit 1"}
+startCommand:
+  source: image
+  accept: ["./start.sh", "node app.js --prod"]
+  evidence:
+    - {path: Dockerfile, line: 60, quote: "CMD [\"./start.sh\"]"}
+    - {path: start.sh, line: 31, quote: "exec node app.js --prod $@"}
+healthPath:
+  accept: ["/", "/api/core-settings-public"]
+  # The image healthcheck requests the root page.
+  evidence:
+    - {path: Dockerfile, line: 58, quote: "HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=50 CMD wget -q --spider http://localhost:1337 || exit 1"}
+    - {path: server/config/routes.js, line: 21, quote: "'GET /api/core-settings-public': 'core/show',"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: "<postgres url>"}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: server/config/datastores.js, line: 49, quote: "adapter: 'sails-postgresql',"}
+    - {path: server/config/datastores.js, line: 50, quote: "url: process.env.DATABASE_URL,"}
+    - {path: server/db/knexfile.js, line: 11, quote: "client: 'pg',"}
+    - {path: server/.env.sample, line: 5, quote: "DATABASE_URL=postgresql://postgres@localhost/4gaBoards"}
+migrations:
+  mode: startup
+  accept: ["node db/init.js"]
+  evidence:
+    - {path: start.sh, line: 30, quote: "node db/init.js"}
+    - {path: server/db/init.js, line: 11, quote: "await knex.migrate.latest();"}
+    - {path: server/db/init.js, line: 13, quote: "await knex.seed.run();"}
+redis:
+  status: optional
+  selectBy: {UPLOAD_RATE_LIMIT_STORE: redis}
+  # The upload rate-limit store defaults to memory. The Redis adapters for sessions and sockets are commented out, so Redis only matters for the rate limit across several tasks.
+  evidence:
+    - {path: server/config/custom.js, line: 106, quote: "store: process.env.UPLOAD_RATE_LIMIT_STORE || 'memory',"}
+    - {path: docker-compose.yml, line: 51, quote: "UPLOAD_RATE_LIMIT_STORE: redis"}
+workers:
+  status: embedded
+  commands: []
+  # Cleanup and notification batching run as Sails hooks in the web process.
+  evidence:
+    - {path: server/api/hooks/cron-notifications-batching/index.js, line: 14, quote: "cron.schedule(cronSchedule, async () => {"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/app/public/user-avatars, /app/public/project-background-images, /app/private/attachments]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: Dockerfile, line: 54, quote: "VOLUME /app/public/user-avatars"}
+    - {path: Dockerfile, line: 55, quote: "VOLUME /app/public/project-background-images"}
+    - {path: Dockerfile, line: 56, quote: "VOLUME /app/private/attachments"}
+    - {path: server/config/custom.js, line: 31, quote: "attachmentsPath: path.join(sails.config.appPath, 'private', 'attachments'),"}
+    - {path: server/api/helpers/attachments/process-uploaded-file.js, line: 33, quote: "fs.copyFileSync(inputs.file.fd, filePath);"}
+env:
+  required:
+    - {name: BASE_URL, secret: false, buildTime: false, note: "public URL of the app; used for links, CORS and the allowed socket origin"}
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL; Deployz binds it"}
+    - {name: SECRET_KEY, secret: true, buildTime: false, note: "session secret; fixed across restarts"}
+  optional: [NODE_ENV, TRUST_PROXY, CLIENT_URL, UPLOAD_RATE_LIMIT_STORE, UPLOAD_RATE_LIMIT_REDIS_URL, AUTH_RATE_LIMIT_ENABLED, GOOGLE_CLIENT_ID, GITHUB_CLIENT_ID, MICROSOFT_CLIENT_ID, OIDC_CLIENT_ID, PUID, PGID]
+  buildTime: []
+  evidence:
+    - {path: server/.env.sample, line: 4, quote: "BASE_URL=http://localhost:1337"}
+    - {path: server/.env.sample, line: 6, quote: "SECRET_KEY=notsecretkey"}
+    - {path: server/config/session.js, line: 21, quote: "secret: process.env.SECRET_KEY,"}
+    - {path: server/config/env/production.js, line: 288, quote: "trustProxy: !!process.env.TRUST_PROXY,"}
+blockers:
+  expected:
+    - "Card attachments, avatars and board backgrounds are written to local container folders (declared VOLUMEs) and the code has no S3 option; a change must store uploads in S3"
+  mustNot:
+    - "PostgreSQL, the startup migration and the first-run seed must not block"
+    - "Redis in docker-compose.yml must not be reported as required: the rate-limit store defaults to memory"
+    - "The Sails cron hooks must not be read as a worker or an EventBridge schedule"
+    - "The Dockerfile must not be rejected: it builds the client and the server from the clone"
+vendorQuestions:
+  legitimate:
+    - "What is the public URL? (BASE_URL)"
+  unnecessary:
+    - "Which database? (PostgreSQL)"
+    - "Is Redis or a worker needed? (no)"
+    - "Which port? (1337)"
+traps:
+  - "docker-compose.yml shows Redis and three volumes, which looks like more services than needed; Redis only backs an optional rate limit (docker-compose.yml:21-33,51; server/config/custom.js:106)"
+  - "start.sh first remaps users with PUID and PGID when it runs as root; the image runs as user node otherwise (start.sh:5-27; Dockerfile:41)"
+  - "The first start seeds the database only when the migration table is missing (server/db/init.js:9-14)"
+  - "BASE_URL is also the allowed socket origin; a wrong value breaks the realtime updates (server/config/env/production.js:221)"
+  - "The default session secret in .env.sample is notsecretkey; SECRET_KEY must be a generated value (server/.env.sample:6)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the root Dockerfile builds the packages, the client and the server and ends with start.sh', evidence: 'Dockerfile:34,51,59,60'}
+  - {field: database / migrations, change: 'none: PostgreSQL only; knex migrations and seed run in start.sh before the server', evidence: 'start.sh:30-31; server/db/init.js:11-13'}
+  - {field: redis, change: 'none: optional, rate-limit store only', evidence: 'server/config/custom.js:106'}
+  - {field: storage / outcome, change: 'none: uploads on local disk with no S3 option; a contained change to S3 is needed', evidence: 'Dockerfile:54-56; server/api/helpers/attachments/process-uploaded-file.js:33'}
+  - {field: all, change: verified, evidence: 30 citations checked}

@@ -1,0 +1,137 @@
+id: new-311
+repository: rustrak/rustrak
+commit: bd69c14596122a27ceb3e7ca3fab6d9272b0d158
+summary: >
+  Rustrak is a self-hosted Sentry-compatible error tracker. The server (apps/server, Rust, actix-web) is one process that
+  answers the API and, when a compiled dashboard sits in ./static, also serves the React dashboard on port 8080. The
+  database engine is a Cargo feature chosen at build time: apps/server/Dockerfile has ARG FEATURES=sqlite, and a build with
+  FEATURES=postgres needs DATABASE_URL. Migrations run at start. A second Dockerfile (apps/dashboard/Dockerfile) builds the
+  dashboard alone as an nginx image on port 3000 that proxies to the server (RUSTRAK_API_URL). The server Dockerfile does
+  not build the dashboard: it only copies /app/static, which is empty in a plain clone, so such an image is API-only
+  (scripts/bundle-dashboard.sh and a prior pnpm build create static/). Source maps go to /data/sourcemaps; accepted events
+  are spooled to /tmp/rustrak/ingest before they are processed. Workers (source map assembly, session aggregator) and the
+  scheduler run inside the server process.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The architecture fits Deployz: one Rust web process on port 8080, PostgreSQL, no Redis, no separate worker. But the
+    server Dockerfile as it stands builds the SQLite variant (the database file would be on ephemeral Fargate storage) and
+    no dashboard, so a plain-clone image has no UI. The vendor must change the Dockerfile: set FEATURES to postgres (the
+    engine is a compile-time feature, not an environment value) and add a Node stage that builds apps/dashboard into
+    static/. The alternative of running the nginx dashboard image next to the API is a second application service.
+dockerfile:
+  accept: [apps/server/Dockerfile]
+  reject:
+    - {path: apps/dashboard/Dockerfile, reason: "builds only the dashboard as an nginx image that proxies to a separate API server; it is a second service and has no API"}
+  target: null
+  context: apps/server
+  evidence:
+    - {path: apps/server/Dockerfile, line: 1, quote: "ARG FEATURES=sqlite"}
+    - {path: apps/server/Dockerfile, line: 41, quote: "cargo build --release --locked --no-default-features --features ${FEATURES}"}
+    - {path: apps/server/Dockerfile, line: 54, quote: "RUN mkdir -p /app/static && chown -R 65532:65532 /app/static"}
+    - {path: apps/server/Dockerfile, line: 67, quote: "CMD [\"/app/rustrak\"]"}
+    - {path: apps/dashboard/Dockerfile, line: 44, quote: "ENV RUSTRAK_API_URL=http://server:8080"}
+runtime: {accept: [rust]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: apps/server/Dockerfile, line: 65, quote: "EXPOSE 8080"}
+    - {path: apps/server/src/config.rs, line: 172, quote: ".unwrap_or_else(|_| \"8080\".to_string())"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: apps/server/src/config.rs, line: 170, quote: "host: env::var(\"HOST\").unwrap_or_else(|_| \"0.0.0.0\".to_string()),"}
+startCommand:
+  source: image
+  accept: ["/app/rustrak"]
+  evidence:
+    - {path: apps/server/Dockerfile, line: 67, quote: "CMD [\"/app/rustrak\"]"}
+healthPath:
+  accept: ["/health", "/health/ready"]
+  evidence:
+    - {path: apps/server/src/routes/health.rs, line: 37, quote: "path = \"/health\","}
+    - {path: apps/server/src/routes/health.rs, line: 79, quote: "path = \"/health/ready\","}
+database:
+  status: required
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {FEATURES: "postgres", DATABASE_URL: "postgres://<user>:<password>@<host>:5432/<db>"}
+  connectionVars: [DATABASE_URL]
+  # The engine is a Cargo feature chosen at build time (Dockerfile ARG FEATURES). The sqlite build defaults DATABASE_URL to sqlite:///data/rustrak.db; the postgres build requires DATABASE_URL.
+  evidence:
+    - {path: apps/server/src/config.rs, line: 288, quote: "env::var(\"DATABASE_URL\").unwrap_or_else(|_| \"sqlite:///data/rustrak.db\".to_string());"}
+    - {path: apps/server/src/config.rs, line: 290, quote: "let url = env::var(\"DATABASE_URL\").map_err(|_| ConfigError::MissingDatabaseUrl)?;"}
+    - {path: docker-compose.postgres.yml, line: 25, quote: "image: rustrak/rustrak-server:postgres"}
+    - {path: docker-compose.postgres.yml, line: 32, quote: "- DATABASE_URL=postgres://${POSTGRES_USER:-rustrak}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rustrak}"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: apps/server/src/main.rs, line: 124, quote: "db::run_migrations(&db_pool).await.map_err(|e| {"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: apps/server/src/main.rs, line: 157, quote: "tokio::spawn(worker.run());"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # With the postgres build only source maps (/data/sourcemaps) and the ingest spool (/tmp/rustrak/ingest) use local disk. Source maps are optional uploads; the spool is transient.
+  local: conditional
+  paths: [/data, /tmp/rustrak/ingest]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: apps/server/src/config.rs, line: 180, quote: ".unwrap_or_else(|_| \"/data/sourcemaps\".to_string()),"}
+    - {path: apps/server/src/ingest/storage.rs, line: 15, quote: "const DEFAULT_INGEST_DIR: &str = \"/tmp/rustrak/ingest\";"}
+    - {path: apps/server/Dockerfile, line: 64, quote: "VOLUME /data"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL; Deployz supplies it. Required by the postgres build"}
+    - {name: SESSION_SECRET_KEY, secret: true, buildTime: false, note: "random hex of at least 64 characters; required when SSL_PROXY is true, which is the case behind the HTTPS load balancer"}
+    - {name: CREATE_SUPERUSER, secret: true, buildTime: false, note: "email:password of the first admin account; used only when the database is empty"}
+  optional: [PUBLIC_URL, SSL_PROXY, HOST, PORT, RUSTRAK_DASHBOARD, RUSTRAK_TELEMETRY, RUSTRAK_METRICS, SOURCEMAP_STORAGE_PATH, INGEST_DIR, OIDC_ISSUER_URL, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET]
+  buildTime: [FEATURES]
+  evidence:
+    - {path: apps/server/.env.example, line: 14, quote: "DATABASE_URL=sqlite://./rustrak.db"}
+    - {path: apps/server/.env.example, line: 33, quote: "# When true: secure cookies are enabled, SESSION_SECRET_KEY is required"}
+    - {path: apps/server/.env.example, line: 45, quote: "# CREATE_SUPERUSER=admin@example.com:changeme123"}
+    - {path: apps/server/.env.example, line: 76, quote: "# PUBLIC_URL=https://rustrak.example.com"}
+    - {path: docker-compose.postgres.yml, line: 37, quote: "- PUBLIC_URL=${PUBLIC_URL:-}"}
+blockers:
+  expected:
+    - "The server Dockerfile builds the SQLite variant and no dashboard; the vendor must build with the postgres feature and add the dashboard build"
+  mustNot:
+    - "The SQLite default must not be read as the final database: the postgres build is the supported route, and /data holds only optional source maps"
+    - "apps/dashboard/Dockerfile (nginx) must not be read as a second required service once the dashboard is bundled into the server"
+    - "docker-compose.postgres.yml (server plus PostgreSQL) must not be read as several application services"
+    - "Anonymous telemetry and OIDC must not block: both are optional"
+vendorQuestions:
+  legitimate:
+    - "Which email and password create the first admin? (CREATE_SUPERUSER)"
+    - "What is the public URL that SDKs use in the DSN? (PUBLIC_URL)"
+  unnecessary:
+    - "Which database? (PostgreSQL with the postgres build)"
+    - "Is a worker or Redis needed? (no)"
+    - "Which port? (8080)"
+traps:
+  - "The database engine is chosen at build time with ARG FEATURES (default sqlite); setting DATABASE_URL to a postgres URL on a sqlite build does not switch the engine (apps/server/Dockerfile:1,41)"
+  - "The Dockerfile has no Node stage; apps/server/static is created by scripts/bundle-dashboard.sh after a pnpm build, so a plain-clone image is API-only (apps/server/Dockerfile:54; scripts/bundle-dashboard.sh:24)"
+  - "SESSION_SECRET_KEY must have at least 64 characters or the server refuses to start (apps/server/.env.example:39)"
+  - "The Dockerfile COPY . . needs apps/server as the build context, because Cargo.toml and the migrations are there (apps/server/Dockerfile:38)"
+  - "Accepted events are first written to /tmp/rustrak/ingest and processed after the 200 answer; a task stop can lose the spooled events (apps/server/src/ingest/storage.rs:15)"
+  - "The sqlite image default DATABASE_URL points to /data/rustrak.db on the ephemeral disk (apps/server/src/config.rs:288)"
+openQuestions:
+  - "Whether Deployz can pass the Docker build argument FEATURES=postgres without a Dockerfile edit was not checked; the answer does not change the label because the dashboard still needs a Dockerfile change"
+crossReview:
+  - {field: dockerfile, change: 'none: apps/server/Dockerfile is the server image (context apps/server); apps/dashboard/Dockerfile is the nginx dashboard image', evidence: 'apps/server/Dockerfile:38,54; apps/dashboard/Dockerfile:44'}
+  - {field: database, change: 'none: sqlite and postgres are Cargo features; the postgres build requires DATABASE_URL', evidence: 'apps/server/src/config.rs:286-290'}
+  - {field: outcome, change: 'none: one server process with PostgreSQL after a Dockerfile change for the feature and the dashboard', evidence: 'apps/server/Dockerfile:1,54'}
+  - {field: all, change: verified, evidence: 25 citations checked}

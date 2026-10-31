@@ -1,0 +1,123 @@
+id: new-309
+repository: xwiki/xwiki-platform
+commit: a3de4aa544631de20b320aed81684abf26027b4b
+summary: >
+  XWiki Platform is a large Java wiki platform: a Maven multi-module repository (about 25,000 files; xwiki-platform-core,
+  xwiki-platform-distribution, xwiki-platform-tools). The runnable application is the web application that
+  xwiki-platform-distribution-war assembles (a servlet container such as Jetty or Tomcat is needed; the all-in-one
+  Jetty and HSQLDB package comes from xwiki-platform-distribution-jetty-hsqldb and its start_xwiki.sh listens on 8080).
+  The repository has no Dockerfile and no compose file (the official Docker image is in another repository). The database
+  is not chosen by an environment value: WEB-INF/hibernate.cfg.xml is generated from hibernate.cfg.xml.vm with Maven
+  properties (xwikiDbConnectionUrl and others), or edited by hand; the default is HSQLDB in the permanent directory, and
+  PostgreSQL, MySQL, MariaDB and others are supported. The permanent directory (environment.permanentDirectory in
+  xwiki.properties) also holds the embedded Solr index, the extension repository and the jobs.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The architecture can fit Deployz (one Java web process on one port, PostgreSQL or MySQL, no Redis, no worker), but
+    settings alone cannot deploy it. There is no Dockerfile, so the vendor must write one that builds the WAR with Maven
+    and adds a servlet container; the database connection and the permanent directory are set in configuration files
+    (hibernate.cfg.xml, xwiki.properties) and not in environment values, so a repository change is needed. That gives
+    DEPLOYABLE_WITH_CHANGES. NOT_DEPLOYABLE is also accepted because the change is large (a build of a 25,000-file Maven
+    multi-module tree) and the application keeps its Solr index, its installed extensions and its jobs on local disk in
+    the permanent directory, which Fargate does not keep between task starts.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 15, quote: "## Download"}
+    - {path: xwiki-platform-distribution/xwiki-platform-distribution-jetty-hsqldb/pom.xml, line: 33, quote: "<description>Jetty and HSQLDB based all in one package</description>"}
+runtime: {accept: [java]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: xwiki-platform-tools/xwiki-platform-tool-jetty/xwiki-platform-tool-jetty-resources/src/main/resources/start_xwiki.sh, line: 75, quote: "JETTY_PORT=8080"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: xwiki-platform-tools/xwiki-platform-tool-jetty/xwiki-platform-tool-jetty-resources/src/main/resources/start_xwiki.sh, line: 75, quote: "JETTY_PORT=8080"}
+startCommand:
+  source: explicit
+  accept: ["start_xwiki.sh", "./start_xwiki.sh -ni"]
+  evidence:
+    - {path: xwiki-platform-tools/xwiki-platform-tool-jetty/xwiki-platform-tool-jetty-resources/src/main/resources/start_xwiki.sh, line: 36, quote: "echo \"Usage: start_xwiki.sh <optional parameters>\""}
+healthPath:
+  accept: ["/"]
+  # No health route was found; XWiki serves its start page at the context root of the root webapp.
+  evidence: []
+database:
+  status: required
+  engines: [hsqldb, mysql, mariadb, postgres, oracle]
+  default: hsqldb
+  deployzEngine: postgres
+  selectBy: {xwikiDbConnectionUrl: "jdbc:postgresql://<host>:5432/<db>"}
+  connectionVars: [xwikiDbConnectionUrl, xwikiDbConnectionUsername, xwikiDbConnectionPassword, xwikiDbConnectionDriverClass]
+  # The connection is a build-time Maven property of the template, or a hand edit of WEB-INF/hibernate.cfg.xml; no environment value exists.
+  evidence:
+    - {path: xwiki-platform-tools/xwiki-platform-tool-configuration-resources/src/main/resources/hibernate.cfg.xml.vm, line: 26, quote: "## Template for hibernate configuration. processing by maven using profiles."}
+    - {path: xwiki-platform-tools/xwiki-platform-tool-configuration-resources/src/main/resources/hibernate.cfg.xml.vm, line: 123, quote: "<property name=\"hibernate.connection.url\">$xwikiDbConnectionUrl</property>"}
+    - {path: xwiki-platform-tools/xwiki-platform-tool-configuration-resources/src/main/resources/hibernate.cfg.xml.vm, line: 281, quote: "<property name=\"hibernate.connection.url\">jdbc:postgresql://localhost:5432/xwiki</property>"}
+    - {path: xwiki-platform-tools/xwiki-platform-tool-configuration-resources/src/main/resources/hibernate.cfg.xml.vm, line: 250, quote: "jdbc:hsqldb:file:${environment.permanentDirectory}/database/xwiki_db;shutdown=true</property>"}
+migrations:
+  mode: startup
+  accept: []
+  # The schema is created and updated by Hibernate and the data migrations when the application starts.
+  evidence:
+    - {path: xwiki-platform-tools/xwiki-platform-tool-configuration-resources/src/main/resources/hibernate.cfg.xml.vm, line: 77, quote: "<property name=\"hibernate.schema_update.unique_constraint_strategy\">skip</property>"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # The permanent directory holds the embedded Solr index, the installed extensions and the job data; with HSQLDB it also holds the database.
+  local: required
+  paths: [environment.permanentDirectory]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: xwiki-platform-tools/xwiki-platform-tool-configuration-resources/src/main/resources/xwiki.properties.vm, line: 92, quote: "environment.permanentDirectory = $xwikiPropertiesEnvironmentPermanentDirectory"}
+    - {path: xwiki-platform-tools/xwiki-platform-tool-configuration-resources/src/main/resources/xwiki.properties.vm, line: 94, quote: "# environment.permanentDirectory = /var/lib/xwiki/data/"}
+    - {path: xwiki-platform-tools/xwiki-platform-tool-configuration-resources/src/main/resources/xwiki.properties.vm, line: 810, quote: "# solr.type=embedded"}
+env:
+  required: []
+  optional: [JETTY_PORT, JETTY_STOP_PORT, XWIKI_OPTS]
+  buildTime: [xwikiDbConnectionUrl, xwikiDbConnectionUsername, xwikiDbConnectionPassword, xwikiPropertiesEnvironmentPermanentDirectory]
+  evidence:
+    - {path: xwiki-platform-tools/xwiki-platform-tool-jetty/xwiki-platform-tool-jetty-resources/src/main/resources/start_xwiki.sh, line: 74, quote: "if [ -z \"$JETTY_PORT\" ]; then"}
+    - {path: xwiki-platform-tools/xwiki-platform-tool-jetty/xwiki-platform-tool-jetty-resources/src/main/resources/start_xwiki.sh, line: 70, quote: "XWIKI_OPTS=\"-Xmx1024m\""}
+blockers:
+  expected:
+    - "No Dockerfile; the database and the permanent directory are set in configuration files that Maven generates, so the vendor must add a Dockerfile and a configuration step"
+  mustNot:
+    - "The supported databases other than PostgreSQL and MySQL (HSQLDB, Oracle) must not be reported as missing services"
+    - "The embedded Solr must not be read as a required second server: it runs in the same JVM (solr.type embedded)"
+    - "The many Maven modules must not be read as several services that run together"
+vendorQuestions:
+  legitimate:
+    - "Which database URL, user and password does the XWiki configuration use? (PostgreSQL or MySQL from Deployz)"
+    - "Which directory is the permanent directory?"
+  unnecessary:
+    - "Is Redis or a worker needed? (no)"
+    - "Which port? (8080)"
+traps:
+  - "hibernate.cfg.xml is a Maven-processed template; the default connection is HSQLDB in the permanent directory, and the PostgreSQL and MySQL blocks use localhost URLs that must be replaced (hibernate.cfg.xml.vm:250,281)"
+  - "environment.permanentDirectory is commented out by default; without it the data goes to a temporary directory (xwiki.properties.vm:94)"
+  - "The database driver JAR for PostgreSQL or MySQL is not part of the WAR by default and must be copied to WEB-INF/lib (hibernate.cfg.xml.vm:34)"
+  - "The repository holds only the platform; xwiki-commons and xwiki-rendering are separate repositories that the build takes from Maven repositories"
+openQuestions:
+  - "The exact Maven command and profile that produce a Jetty or Tomcat package with a chosen database were not traced in the pom files"
+crossReview:
+  - {field: dockerfile, change: 'none: the full tree has no Dockerfile or compose file', evidence: 'README.md:15'}
+  - {field: database, change: 'none: the connection is a build-time template property or a hand edit, not an environment value', evidence: 'hibernate.cfg.xml.vm:26,123,281'}
+  - {field: outcome, change: 'none: two outcomes accepted because of the missing Dockerfile and the local permanent directory', evidence: 'xwiki.properties.vm:92,94,810'}
+  - {field: all, change: verified, evidence: 15 citations checked}

@@ -1,0 +1,96 @@
+id: new-297
+repository: mail-in-a-box/mailinabox
+commit: 8c032705ae78daa237cd77affcc5087ca68e3a15
+summary: >
+  Mail-in-a-Box is a set of shell scripts that turn a fresh Ubuntu 22.04 server into a complete mail server: Postfix
+  (SMTP), Dovecot (IMAP), Nextcloud, z-push, nsd4 (DNS), OpenDKIM, ufw, fail2ban, duplicity backups and munin. A small
+  Python Flask management daemon (management/daemon.py, port 10222 on localhost) provides the admin API and control
+  panel. The installer is `sudo setup/start.sh` and it changes the operating system. The repository has no Dockerfile
+  and no container build.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The project is a machine installer, not an application image. It installs and configures system services (SMTP, IMAP,
+    DNS, firewall, backups) on a whole Ubuntu host and owns the mail, DNS and TLS ports. It has no Dockerfile, its core
+    data (mailboxes, DNS zones, certificates) is on local disk, and the only HTTP part is the management daemon on
+    localhost. Deployz runs one HTTP web process of one container image on Fargate; this repository is not an HTTP
+    web app and cannot be reduced to one.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence: []
+runtime: {accept: [python, shell]}
+port:
+  accept: []
+  # The only HTTP listener is the management daemon on port 10222 behind the host's nginx; the product serves SMTP, IMAP and DNS.
+  evidence:
+    - {path: management/daemon.py, line: 789, quote: "app.run(port=10222)"}
+bindAllInterfaces:
+  value: false
+  evidence:
+    - {path: management/daemon.py, line: 789, quote: "app.run(port=10222)"}
+startCommand:
+  source: explicit
+  accept: []
+  evidence:
+    - {path: README.md, line: 67, quote: "$ sudo setup/start.sh"}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/home/user-data, /var/lib/mailinabox]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: README.md, line: 26, quote: "Mail-in-a-Box turns a fresh Ubuntu 22.04 LTS 64-bit machine into a working mail server by installing and configuring various components."}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "No Dockerfile and no application source for a single web process: the repository is a server installer for a whole Ubuntu host"
+    - "The product runs SMTP, IMAP, DNS and firewall services and keeps mailboxes and DNS data on local disk"
+  mustNot:
+    - "The Flask management daemon on port 10222 must not be reported as the web application to deploy"
+    - "The setup shell scripts must not be reported as a start command for a container"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port, health path or database? (not useful: the product is not deployable)"
+traps:
+  - "A Python web daemon exists (management/daemon.py), but it is the admin panel of a host-level mail server and listens on localhost only (management/daemon.py:789)"
+  - "The README states the machine must be fresh Ubuntu 22.04 and the installer changes the operating system (README.md:26,57,67)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the repository has no Dockerfile', evidence: 'root listing: .editorconfig, README.md, Vagrantfile, api, conf, management, setup, tests, tools'}
+  - {field: outcome, change: 'none: a machine installer for a mail server with SMTP, IMAP and DNS services', evidence: 'README.md:26,32,35,67'}
+  - {field: all, change: verified, evidence: 4 citations checked}

@@ -1,0 +1,115 @@
+id: new-312
+repository: revive-adserver/revive-adserver
+commit: 5cc7dd9673af30302061c62a0207cbdfd03b7026
+summary: >
+  Revive Adserver is a classic PHP ad server (PHP 8.2 or later, MySQL or PostgreSQL). The repository root is the web root
+  layout: www/admin (the admin interface and the web installer install.php), delivery scripts at the root (adview.php,
+  adclick.php and others), lib, plugins and var. There is no Dockerfile, no compose file and no environment-variable
+  configuration. The web installer writes a host configuration file (var/<host>.conf.php, built from etc/dist.conf.php)
+  with the [database] section (type, host, port, username, password, name) and a marker file var/INSTALLED, both on the
+  local disk. The README warns that the GitHub source is a development tree that is not suitable for a server
+  installation; the release package is made by a build step.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The architecture fits Deployz (one PHP web process, MySQL or PostgreSQL, no Redis, no worker), but the repository has
+    no Dockerfile and keeps its database settings and its installed state in files that the web installer writes to the
+    local disk, which Fargate does not keep. A vendor must write a Dockerfile (PHP with Apache, composer install, the
+    development files removed) and bake or generate the configuration file and the INSTALLED marker, so settings alone
+    do not deploy it. That gives DEPLOYABLE_WITH_CHANGES. NOT_DEPLOYABLE is also accepted because the README says that this
+    source tree is not suitable for installation on a server and the installer needs a persistent var directory.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 18, quote: "**DO NOT DOWNLOAD AS A ZIP FILE FROM GITHUB**"}
+    - {path: composer.json, line: 29, quote: "\"php\": \">=8.2.35\","}
+runtime: {accept: [php]}
+port:
+  accept: [80, 8080]
+  # No port is set in the repository; the vendor's Apache or PHP server decides.
+  evidence: []
+bindAllInterfaces:
+  value: true
+  evidence: []
+startCommand:
+  source: explicit
+  accept: ["apache2-foreground", "php -S 0.0.0.0:8080 -t ."]
+  evidence: []
+healthPath:
+  accept: ["/www/admin/index.php", "/www/admin/install.php"]
+  # With the repository root as the document root the admin pages are under /www/admin. The installer page answers before the installation.
+  evidence:
+    - {path: init.php, line: 77, quote: "OX_getHostNameWithPort() . $path . '/www/admin/install.php';"}
+database:
+  status: required
+  engines: [mysql, postgres]
+  default: null
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: []
+  # The database is set in the [database] section of the generated var/<host>.conf.php; there is no environment variable.
+  evidence:
+    - {path: etc/dist.conf.php, line: 36, quote: "[database]"}
+    - {path: etc/dist.conf.php, line: 37, quote: "type                                ="}
+    - {path: etc/dist.conf.php, line: 59, quote: "[databasePgsql]"}
+    - {path: etc/dist.conf.php, line: 56, quote: "[databaseMysql]"}
+migrations:
+  mode: startup
+  accept: []
+  # The web installer and upgrader create and change the tables (etc/changes/*.xml).
+  evidence:
+    - {path: init.php, line: 65, quote: "if ($scriptName != 'install.php' && PHP_SAPI != 'cli' && OA_INSTALLATION_STATUS !== OA_INSTALLATION_STATUS_INSTALLED) {"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  # A maintenance job exists in the maintenance directory and is run by cron or by the delivery scripts; no separate worker process is part of the repository.
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # Installed state (var/INSTALLED and the host configuration file) and the delivery cache are local files.
+  local: required
+  paths: [var]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: init.php, line: 56, quote: "} elseif ($GLOBALS['_MAX']['CONF']['openads']['installed'] && file_exists(MAX_PATH . '/var/INSTALLED')) {"}
+    - {path: etc/dist.conf.php, line: 95, quote: "[store]"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "No Dockerfile; the database settings and the installed state are files that the web installer writes to local disk, so the vendor must write a Dockerfile and pre-generate the configuration"
+  mustNot:
+    - "The two supported databases (MySQL and PostgreSQL) must not be reported as missing; Deployz provides both"
+    - "The delivery scripts and the admin interface in one tree must not be read as several services"
+    - "The Hosted edition text must not be read as a requirement"
+vendorQuestions:
+  legitimate:
+    - "Which admin account and public URL does the installer use?"
+  unnecessary:
+    - "Is Redis or a worker needed? (no)"
+traps:
+  - "The README says the GitHub tree is not suitable for a server installation; it holds development files that the release build removes (README.md:22)"
+  - "Until var/INSTALLED and the host configuration file exist, every page redirects to www/admin/install.php; with ephemeral storage the installer runs again after each task start (init.php:65)"
+  - "The database type, host and credentials are written into a PHP configuration file, not read from environment variables (etc/dist.conf.php:36-43)"
+  - "composer.json requires PHP 8.2.35 or later with the intl, xml and zip extensions (composer.json:29-36)"
+openQuestions:
+  - "Which exact steps turn the GitHub tree into a working release (the phing build.xml target) were not traced"
+crossReview:
+  - {field: dockerfile, change: 'none: the full tree has no Dockerfile or compose file', evidence: 'README.md:18'}
+  - {field: database, change: 'none: configuration file only; no environment variable', evidence: 'etc/dist.conf.php:36-43'}
+  - {field: outcome, change: 'none: two outcomes accepted because of the missing Dockerfile and the file-based installed state', evidence: 'init.php:56,65'}
+  - {field: all, change: verified, evidence: 10 citations checked}

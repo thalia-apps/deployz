@@ -1,0 +1,109 @@
+id: new-293
+repository: allinurl/goaccess
+commit: 0dda4e3cb0b3f38e43ec1f2e6dce18e2bbfb5956
+summary: >
+  GoAccess is a C command-line web-log analyzer. It reads an access log (a file or standard input), prints a terminal
+  dashboard or writes a report file (HTML, JSON, CSV), and with --real-time-html it also runs a small WebSocket server
+  (default port 7890) that updates the HTML report. The root Dockerfile builds the binary with autotools in an Alpine
+  stage and sets ENTRYPOINT /usr/bin/goaccess with CMD --help. The container serves no HTTP page: the report is a file
+  that a separate web server must serve, and the log is piped in from outside (`tail -F access.log | docker run -i`).
+  There is no database, no Redis, no worker.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    GoAccess is a command-line log analyzer and not an HTTP web application. The image starts with --help and exits; the
+    useful run needs a log piped in on standard input and a separate web server that serves the generated report.html
+    (the WebSocket server on 7890 only pushes updates to that page). Deployz runs one long-lived HTTP web process behind
+    an HTTPS load balancer, so there is no web process to deploy and no repository change turns this tool into one.
+dockerfile:
+  accept: [Dockerfile]
+  reject: [Dockerfile.debian-12]
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 21, quote: "RUN make -j$(nproc) && make DESTDIR=/dist install"}
+    - {path: Dockerfile, line: 39, quote: "EXPOSE 7890"}
+    - {path: Dockerfile, line: 40, quote: "ENTRYPOINT [\"/usr/bin/goaccess\"]"}
+    - {path: Dockerfile, line: 41, quote: "CMD [\"--help\"]"}
+runtime: {accept: [c]}
+port:
+  accept: [7890]
+  # The WebSocket server of --real-time-html listens on 7890 by default; no HTTP server exists.
+  evidence:
+    - {path: Dockerfile, line: 39, quote: "EXPOSE 7890"}
+    - {path: README.md, line: 387, quote: "By default, GoAccess listens on port 7890, to use a different port other than"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: README.md, line: 392, quote: "And to bind the WebSocket server to a different address other than 0.0.0.0, you"}
+startCommand:
+  source: image
+  accept: ["/usr/bin/goaccess"]
+  evidence:
+    - {path: Dockerfile, line: 40, quote: "ENTRYPOINT [\"/usr/bin/goaccess\"]"}
+    - {path: Dockerfile, line: 41, quote: "CMD [\"--help\"]"}
+healthPath:
+  accept: []
+  # No HTTP route exists. The only listener is the WebSocket server.
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/var/www/goaccess]
+  s3: none
+  s3SelectBy: {}
+  # The report is written to a file; the log comes from outside.
+  evidence:
+    - {path: Dockerfile, line: 38, quote: "VOLUME /var/www/goaccess"}
+    - {path: README.md, line: 240, quote: "tail -F access.log | docker run -p 7890:7890 --rm -i -e LANG=$LANG allinurl/goaccess -a -o report.html --log-format COMBINED --real-time-html -"}
+env:
+  required: []
+  optional: [LANG]
+  buildTime: []
+  evidence:
+    - {path: README.md, line: 240, quote: "tail -F access.log | docker run -p 7890:7890 --rm -i -e LANG=$LANG allinurl/goaccess -a -o report.html --log-format COMBINED --real-time-html -"}
+blockers:
+  expected:
+    - "GoAccess is a command-line log analyzer: the container needs a log piped to standard input and has no HTTP web process"
+    - "The HTML report is a file that another web server must serve; the WebSocket server on 7890 only pushes updates"
+  mustNot:
+    - "The Dockerfile must not be rejected: it builds the binary from the clone"
+    - "The WebSocket port 7890 must not be reported as an HTTP web port that serves the application"
+    - "The docker-compose folder (nginx plus goaccess) must not be read as a deployable multi-service app for Deployz"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (none)"
+    - "Is Redis or a worker needed? (no)"
+traps:
+  - "The image has a Dockerfile, a port and a long-running mode (--real-time-html), which looks like a web app; the process serves no page and needs a piped log (README.md:240)"
+  - "The default CMD is --help, so the container exits at once (Dockerfile:41)"
+  - "docker-compose/docker-compose.traefik.yaml runs nginx for the logs and a second container for GoAccess; that is a log pipeline and not one application"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the root Dockerfile builds the C binary and its entrypoint is goaccess itself', evidence: 'Dockerfile:21,40,41'}
+  - {field: outcome, change: 'none: a command-line analyzer with a WebSocket push port; no HTTP web process exists', evidence: 'README.md:5,240,387'}
+  - {field: all, change: verified, evidence: 12 citations checked}

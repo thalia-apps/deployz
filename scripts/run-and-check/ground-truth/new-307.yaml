@@ -1,0 +1,117 @@
+id: new-307
+repository: karimz1/imgcompress
+commit: e21e0c9552dc53a16ae21744e8d8025784b0eaaf
+summary: >
+  imgcompress is a self-hosted image compression, conversion and background-removal tool: a Flask backend (served by
+  granian) with a Next.js static frontend. The root Dockerfile builds the frontend with pnpm, builds a Python 3.14
+  virtualenv with uv, pre-downloads a rembg model, and runs `python /container/entrypoint.py` under dumb-init, which
+  writes the frontend runtime.json and starts the web server on 0.0.0.0:5000. No database, no Redis, no worker. Uploads
+  and results are temporary files in /tmp, removed by an in-process scheduler after one hour. All three build stages use
+  base images from the dhi.io registry (Docker Hardened Images).
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The architecture fits Deployz: one stateless web process on port 5000, no database, only temporary files. But the
+    only Dockerfile pulls its three base images (node, debian-base and a uv image) from dhi.io, a registry that needs a
+    Docker login. Deployz builds have no credentials for it (the same reason as the other dhi.io repositories in this set
+    of tests). A contained change replaces the FROM lines with public Docker Hub or Debian images. The settings alone
+    cannot change the base images.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 11, quote: "FROM dhi.io/node:24-debian13-sfw-dev@sha256:d33e9108a3a7ef728ee61f90a951dce680433a768a9a09134fd721b10f8b110b AS frontend-build-stage"}
+    - {path: Dockerfile, line: 34, quote: "FROM dhi.io/debian-base:trixie-debian13-dev@sha256:cc4e05ff415ee2d83918f2af45c737983209924ef7362c53f00cfcdaa1c94326 AS backend-build-stage"}
+    - {path: Dockerfile, line: 169, quote: "FROM dhi.io/debian-base:trixie-debian13@sha256:2664ef25f3f63f5545a121a6a4676bf70da18df2bcadece1a913d6daaa19fdfb AS final-stage"}
+    - {path: Dockerfile, line: 210, quote: "ENTRYPOINT [\"/usr/bin/dumb-init\", \"--\", \"python\", \"/container/entrypoint.py\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [5000]
+  evidence:
+    - {path: Dockerfile, line: 203, quote: "EXPOSE 5000"}
+    - {path: backend/image_converter/config/app.json, line: 11, quote: "\"port\": 5000,"}
+    - {path: docker-compose.yml, line: 11, quote: "- \"3001:5000\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: backend/image_converter/config/app.json, line: 10, quote: "\"host\": \"0.0.0.0\","}
+startCommand:
+  source: image
+  accept: ["/usr/bin/dumb-init -- python /container/entrypoint.py", "python /container/entrypoint.py"]
+  evidence:
+    - {path: Dockerfile, line: 210, quote: "ENTRYPOINT [\"/usr/bin/dumb-init\", \"--\", \"python\", \"/container/entrypoint.py\"]"}
+    - {path: entrypoint.py, line: 19, quote: "os.execvp(\"python\", [\"python\", \"-m\", \"backend.image_converter.bootstraper\"] + sys.argv[1:])"}
+healthPath:
+  accept: ["/api/health/backend", "/"]
+  evidence:
+    - {path: backend/image_converter/presentation/web/routes.py, line: 141, quote: "@api_blueprint.route(\"/health/backend\", methods=[\"GET\"])"}
+    - {path: healthcheck.py, line: 17, quote: "backend_status, _, _ = _get(f\"{BASE_URL}/api/health/backend\")"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  # The scheduler (cleanup of temporary files) is a background thread of the web process.
+  status: embedded
+  commands: []
+  evidence:
+    - {path: backend/image_converter/bootstraper.py, line: 35, quote: "start_scheduler()"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # Uploads, results and the log file are temporary files in /tmp; the cleanup removes them after one hour.
+  local: ephemeral
+  paths: [/tmp]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: backend/image_converter/config/app.json, line: 3, quote: "\"directory\": \"/tmp\","}
+    - {path: backend/image_converter/config/app.json, line: 4, quote: "\"max_age_seconds\": 3600"}
+env:
+  required: []
+  optional: [DISABLE_LOGO, DISABLE_STORAGE_MANAGEMENT, DEV_MODE]
+  buildTime: []
+  evidence:
+    - {path: entrypoint.py, line: 10, quote: "\"DISABLE_LOGO\": os.environ.get(\"DISABLE_LOGO\", \"false\"),"}
+    - {path: entrypoint.py, line: 11, quote: "\"DISABLE_STORAGE_MANAGEMENT\": os.environ.get(\"DISABLE_STORAGE_MANAGEMENT\", \"false\"),"}
+blockers:
+  expected:
+    - "The only Dockerfile uses dhi.io base images (Docker login needed); the vendor must change the FROM lines to public images"
+  mustNot:
+    - "The Next.js frontend and the Flask backend must not be read as two services: the backend serves the exported static site on one port"
+    - "Temporary files in /tmp must not be read as durable local state: the app deletes them after one hour"
+    - "The rembg model download and the Ghostscript libraries must not block: both are installed in the image build"
+    - "docker/compose files (Traefik, log rotation) must not be read as extra required services"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (none)"
+    - "Is a worker or Redis needed? (no)"
+    - "Which port? (5000)"
+traps:
+  - "Every FROM line pulls from dhi.io, which needs `docker login dhi.io`; a build without credentials fails at the first stage (Dockerfile:11,34,169)"
+  - "The result files are kept in /tmp of the one task; with more than one task a download request can reach a task that does not hold the file (app.json:3)"
+  - "granian starts with workers auto (the CPU count), and the in-process cleanup scheduler runs once per process start (backend/image_converter/config/app.json:12; bootstraper.py:35)"
+  - "The default max upload size is 40960 MiB, which is larger than the ALB and /tmp can hold in practice (backend/image_converter/config/app.json:7)"
+  - "The final image has no shell; the health check is a Python script (Dockerfile:205-208)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the only Dockerfile; all three stages use dhi.io images', evidence: 'Dockerfile:11,34,169'}
+  - {field: outcome, change: 'none: stateless web app; the dhi.io base images make a repository change necessary', evidence: 'Dockerfile:11,34,169'}
+  - {field: all, change: verified, evidence: 17 citations checked}

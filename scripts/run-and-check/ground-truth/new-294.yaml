@@ -1,0 +1,112 @@
+id: new-294
+repository: fonoster/routr
+commit: 6b8037538e00b4465bafc9b57118a79b82b56e41
+summary: >
+  Routr is a SIP proxy, location server and registrar for telephony carriers, written as a monorepo of Node.js and Java
+  services (edgeport, dispatcher, location, connect, registry, requester, simpledata, rtprelay, ...). The edgeport
+  service terminates SIP on UDP and TCP 5060-5063; the other services talk gRPC (ports 51901-51910). The root Dockerfile
+  builds the "one" all-in-one image (Node.js runner, a custom JRE, an embedded PostgreSQL started by the CMD when
+  START_INTERNAL_DB is true, prisma migrations, a heplify capture agent). compose.yaml runs ten separate services. No
+  HTTP web application exists.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    Routr is a SIP telephony server. Its public protocol is SIP over UDP and TCP (5060 and up), and an HTTPS load
+    balancer cannot carry it. The services talk gRPC, and the all-in-one image starts an embedded PostgreSQL with a
+    local data directory. Deployz supports an HTTP web app behind an HTTPS load balancer, so this repository is not a
+    candidate even though the root Dockerfile builds.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 10, quote: "COPY mods/one ."}
+    - {path: Dockerfile, line: 28, quote: "FROM alpine:3.23 AS runner"}
+    - {path: Dockerfile, line: 88, quote: "ENTRYPOINT [\"tini\", \"-v\", \"-e\", \"143\", \"--\"]"}
+runtime: {accept: [node, java]}
+port:
+  accept: []
+  # No HTTP port. The root Dockerfile has no EXPOSE; compose.yaml publishes SIP on 5060-5063 (TCP and UDP).
+  evidence:
+    - {path: compose.yaml, line: 6, quote: "- 5060:5060"}
+    - {path: compose.yaml, line: 7, quote: "- 5060:5060/udp"}
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: image
+  accept: []
+  evidence:
+    - {path: Dockerfile, line: 103, quote: "su-exec $USER node ./dist/runner\" \\"}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: "<postgres url>", START_INTERNAL_DB: "false"}
+  connectionVars: [DATABASE_URL, START_INTERNAL_DB]
+  # The image runs an embedded PostgreSQL unless START_INTERNAL_DB=false.
+  evidence:
+    - {path: Dockerfile, line: 48, quote: "DATABASE_URL=$DATABASE_URL \\"}
+    - {path: Dockerfile, line: 50, quote: "START_INTERNAL_DB=true \\"}
+    - {path: mods/pgdata/schema.prisma, line: 7, quote: "url      = env(\"DATABASE_URL\")"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: Dockerfile, line: 99, quote: "/opt/prisma-cli/node_modules/.bin/prisma migrate deploy --schema=/service/schema.prisma; \\"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: independent
+  commands: []
+  # The services (dispatcher, location, connect, registry, requester, apiserver) are separate processes in compose.yaml.
+  evidence:
+    - {path: compose.yaml, line: 27, quote: "dispatcher:"}
+    - {path: compose.yaml, line: 35, quote: "location:"}
+    - {path: compose.yaml, line: 53, quote: "apiserver:"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/var/lib/postgresql/data, /etc/ssl/certs]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: Dockerfile, line: 73, quote: "&& mkdir -p ${PATH_TO_CERTS} /var/lib/postgresql/data /run/postgresql /root/.npm \\"}
+env:
+  required: []
+  optional: [DATABASE_URL, START_INTERNAL_DB, PKCS12_PASSWORD, TLS_ON, VERIFY_CLIENT_CERT, HEPLIFY_OPTIONS]
+  buildTime: []
+  evidence:
+    - {path: Dockerfile, line: 44, quote: "TLS_ON=false \\"}
+    - {path: Dockerfile, line: 97, quote: "heplify $HEPLIFY_OPTIONS & \\"}
+blockers:
+  expected:
+    - "The product is a SIP server: its public protocol is SIP on UDP and TCP 5060 and up, not HTTP"
+    - "The system is ten separate services (edgeport, dispatcher, location, connect, registry, requester, simpledata and others) that talk gRPC"
+  mustNot:
+    - "The embedded PostgreSQL and prisma migrations in the all-in-one image must not make the case look like a plain web app with a database"
+    - "The root Dockerfile must not be reported as a missing Dockerfile: it builds"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which HTTP port or health path? (none exists)"
+    - "Is Redis needed? (no)"
+traps:
+  - "The root Dockerfile builds the all-in-one image with a Node.js runner and a bundled JRE; it has no EXPOSE and the web port question has no answer (Dockerfile:28-103)"
+  - "The image starts PostgreSQL inside the container when START_INTERNAL_DB is true, which is local state (Dockerfile:50,92-95)"
+  - "compose.yaml publishes SIP on both TCP and UDP; an HTTPS load balancer cannot carry UDP SIP (compose.yaml:6-7)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the root Dockerfile builds the all-in-one image from mods/one', evidence: 'Dockerfile:10,28,88'}
+  - {field: outcome, change: 'none: SIP over UDP and TCP and several gRPC services; not an HTTP web app', evidence: 'compose.yaml:3-72'}
+  - {field: all, change: verified, evidence: 16 citations checked}

@@ -1,0 +1,135 @@
+id: new-284
+repository: usertour/usertour
+commit: 156c0b0bcd4bc8f1c22a7c7eb72881d418a96ee9
+summary: >
+  Usertour is a product-onboarding (user tour) platform: a React web app and an SDK built to static files, and a NestJS
+  server with Prisma on PostgreSQL, Redis (BullMQ queues, locks, socket adapter) and an optional S3 bucket. The root
+  Dockerfile builds everything and runs scripts/start.sh as CMD. That script starts nginx (static web app and SDK, proxy
+  to the Nest server) on PORT 80, runs `prisma migrate deploy` and `prisma db seed`, then `exec node dist/main` on
+  port 3000. The queue processors run inside the Nest process.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One image with a start script that fronts the Nest server with nginx on port 80. DATABASE_URL selects PostgreSQL
+    (the only engine), the Redis_* values select Redis, and migrations run at start. S3 is optional (a guard rejects
+    only the upload routes). nginx is the static file server for the web app and the proxy for the API in the same
+    container, so no repository change is needed. The vendor types JWT_SECRET, API_URL and the optional email and
+    S3 values.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 39, quote: "RUN pnpm build:server"}
+    - {path: Dockerfile, line: 40, quote: "RUN pnpm build:web"}
+    - {path: Dockerfile, line: 66, quote: "COPY --from=builder /app/apps/web/dist /usr/share/nginx/html/web"}
+    - {path: Dockerfile, line: 101, quote: "CMD [\"/app/scripts/start.sh\"]"}
+    - {path: docker-compose.yml, line: 5, quote: "dockerfile: Dockerfile"}
+runtime: {accept: [node]}
+port:
+  accept: [80]
+  evidence:
+    - {path: Dockerfile, line: 90, quote: "ENV PORT=80"}
+    - {path: Dockerfile, line: 93, quote: "EXPOSE 80"}
+    - {path: nginx/default.conf, line: 36, quote: "listen ${NGINX_PORT};"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: nginx/default.conf, line: 36, quote: "listen ${NGINX_PORT};"}
+startCommand:
+  source: image
+  accept: ["/app/scripts/start.sh"]
+  evidence:
+    - {path: Dockerfile, line: 101, quote: "CMD [\"/app/scripts/start.sh\"]"}
+    - {path: scripts/start.sh, line: 64, quote: "exec node dist/main"}
+healthPath:
+  accept: ["/api/health"]
+  # /api/health is liveness; /api/health/ready needs PostgreSQL and Redis.
+  evidence:
+    - {path: apps/server/src/modules/health/health.controller.ts, line: 21, quote: "@Controller('api/health')"}
+    - {path: apps/server/src/modules/health/health.controller.ts, line: 29, quote: "@Get()"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL, DATABASE_DIRECT_URL]
+  evidence:
+    - {path: apps/server/prisma/schema.prisma, line: 2, quote: "provider  = \"postgresql\""}
+    - {path: apps/server/prisma/schema.prisma, line: 3, quote: "url       = env(\"DATABASE_URL\") // PgBouncer connection"}
+    - {path: apps/server/prisma/schema.prisma, line: 4, quote: "directUrl = env(\"DATABASE_DIRECT_URL\") // Direct PostgreSQL connection"}
+    - {path: apps/server/src/modules/common/config/config.ts, line: 30, quote: "url: process.env.DATABASE_URL,"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: scripts/start.sh, line: 39, quote: "if npx prisma migrate deploy --preview-feature; then"}
+    - {path: scripts/start.sh, line: 55, quote: "npx prisma db seed"}
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: apps/server/src/modules/common/config/config.ts, line: 39, quote: "host: process.env.Redis_HOST,"}
+    - {path: apps/server/src/modules/common/config/config.ts, line: 43, quote: "tls: process.env.Redis_TLS === 'true',"}
+    - {path: apps/server/src/modules/common/services/redis.service.ts, line: 29, quote: "host: this.configService.getOrThrow('redis.host'),"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: apps/server/src/modules/audit/constants/audit-log-queue.constant.ts, line: 1, quote: "export const QUEUE_AUDIT_LOG = 'audit-log';"}
+    - {path: scripts/start.sh, line: 64, quote: "exec node dist/main"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: native
+  s3SelectBy: {AWS_S3_BUCKET: "<bucket>", AWS_S3_REGION: "<region>", AWS_S3_ACCESS_KEY_ID: "<key>", AWS_S3_SECRET_ACCESS_KEY: "<secret>"}
+  evidence:
+    - {path: apps/server/src/modules/common/guards/s3-config.guard.ts, line: 16, quote: "if (!s3Region || !s3AccessKeyId || !s3SecretAccessKey || !s3Bucket) {"}
+    - {path: apps/server/src/modules/common/config/config.ts, line: 78, quote: "bucket: process.env.AWS_S3_BUCKET,"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL; the .env.example value carries ?schema=usertour"}
+    - {name: Redis_HOST, secret: false, buildTime: false, note: "Redis host (the variable name has this exact case)"}
+    - {name: JWT_SECRET, secret: true, buildTime: false, note: "the code falls back to the public value 'test'; a vendor must set a random secret"}
+    - {name: API_URL, secret: false, buildTime: false, note: "public base URL of the instance"}
+  optional: [DATABASE_DIRECT_URL, Redis_PORT, Redis_PASS, Redis_USER, Redis_TLS, EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, EMAIL_SENDER, AWS_S3_REGION, AWS_S3_ENDPOINT, AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, AWS_S3_BUCKET, AWS_S3_DOMAIN, JWT_REFRESH_SECRET, GITHUB_AUTH_ENABLED, GOOGLE_AUTH_ENABLED, TRUST_PROXY, RUN_SEED, DB_MIGRATE_RETRIES]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 2, quote: "DATABASE_URL=postgresql://postgres:postgres@postgres:5432/usertour?schema=usertour&sslmode=prefer"}
+    - {path: .env.example, line: 12, quote: "Redis_HOST=redis"}
+    - {path: .env.example, line: 31, quote: "JWT_SECRET=test"}
+    - {path: .env.example, line: 91, quote: "API_URL=\"\""}
+    - {path: apps/server/src/modules/common/config/config.ts, line: 104, quote: "secret: process.env.JWT_SECRET || 'test',"}
+blockers:
+  expected: []
+  mustNot:
+    - "nginx in the image must not be read as a second application service: it is the static file server and proxy started by the CMD script"
+    - "docker-compose.yml (app, postgres, redis) must not be read as a multi-service app: postgres and redis are the datastores Deployz provides"
+    - "S3 must not be read as required: the guard fails only the upload routes"
+    - "The BullMQ queue processors are in the Nest process and must not be read as a separate worker"
+vendorQuestions:
+  legitimate:
+    - "What is the public URL of the instance? (API_URL)"
+    - "Which mail server sends invitations? (EMAIL_HOST and related, optional)"
+    - "Is a bucket for uploads wanted? (AWS_S3_*, optional)"
+  unnecessary:
+    - "Which database? (PostgreSQL only)"
+    - "Which port? (80)"
+    - "Is a migration command needed? (start.sh runs prisma migrate deploy)"
+traps:
+  - "The Redis variables are spelled Redis_HOST, Redis_PORT, Redis_PASS (mixed case), not REDIS_URL (apps/server/src/modules/common/config/config.ts:39)"
+  - "JWT_SECRET defaults to the public string 'test' (config.ts:104)"
+  - "start.sh runs nginx in the background, then migrations and seed, then Node; if migration fails the container exits (scripts/start.sh:44-46)"
+  - "The web config.js is generated from the VITE_ names in apps/web/.env.example and filled by envsubst at start (Dockerfile:25, scripts/start.sh:4)"
+  - "The deploy-time health check should use /api/health; /api/health/ready also needs Redis and PostgreSQL (health.controller.ts:36)"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: 'none: nginx and Node run from one CMD script of the one image, nginx serves the static files; PostgreSQL and Redis are supported; S3 is optional', evidence: 'Dockerfile:101; scripts/start.sh:26,39,64'}
+  - {field: workers, change: 'embedded: queue processors are Nest providers; no separate worker command', evidence: 'apps/server/src/modules/audit/processors/audit.processor.ts'}
+  - {field: all, change: verified, evidence: 30 citations checked}

@@ -1,0 +1,94 @@
+id: new-304
+repository: openhab/openhab-core
+commit: 7a60c50275da3ab6d68ed76a6bee4eb0c4e89353
+summary: >
+  openHAB Core holds the core bundles of the openHAB smart-home runtime: a Maven multi-module build of OSGi bundles in
+  bundles/, Karaf features in features/ and integration tests in itests/. The README states that it is not a product
+  itself but a framework (an artifact repository of OSGi bundles) that the separate openhab-distro repository packages.
+  The repository has no Dockerfile, no compose file and no start script. The REST and HTTP bundles exist, but no runnable
+  application is built here.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The repository builds a framework of OSGi bundles, not a runnable web application. The README says the project is
+    not a product and that the openHAB distribution (another repository) picks it up. No start command, port or image
+    exists in this repository. A vendor would have to use another repository to run anything, so the repository is not
+    an HTTP web app that Deployz can deploy.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 13, quote: "Please note that openHAB Core is not a product itself, but a framework to build solutions on top."}
+    - {path: README.md, line: 14, quote: "It is picked up by the main [openHAB distribution](https://github.com/openhab/openhab-distro)."}
+    - {path: README.md, line: 16, quote: "This means that what you build is primarily an artifact repository of OSGi bundles that can be used within smart home products."}
+runtime: {accept: [java]}
+port:
+  accept: []
+  evidence: []
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: explicit
+  accept: []
+  evidence:
+    - {path: README.md, line: 45, quote: "- run `mvn clean spotless:apply install` to compile and package all sources"}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository is a framework of OSGi bundles (the README says it is not a product); the runnable distribution is another repository"
+  mustNot:
+    - "The REST and HTTP bundles must not be read as a deployable web application"
+    - "A missing database or Redis must not be reported as the blocker"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (none)"
+    - "Which port or start command? (the repository has none)"
+traps:
+  - "bundles/ holds many org.openhab.core.io.* bundles (HTTP, REST, SSE) that sound like a web server, but they are libraries for the distribution, not an application (README.md:13,16)"
+  - "The only build instruction is a Maven build that produces artifacts (README.md:45)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the full tree has no Dockerfile or compose file', evidence: 'README.md:13,14'}
+  - {field: outcome, change: 'none: framework and artifact repository, not a runnable application', evidence: 'README.md:13,16'}
+  - {field: all, change: verified, evidence: 4 citations checked}
