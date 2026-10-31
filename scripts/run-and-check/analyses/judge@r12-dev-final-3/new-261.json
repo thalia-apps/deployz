@@ -1,0 +1,66 @@
+{
+  "id": "new-261",
+  "analyser": "judge@r12-dev-3b",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Lemmy's product needs a separate lemmy-ui frontend server (different image) and the pict-rs image service running alongside the Rust API server, so Deployz's single web process cannot serve it.",
+      "evidence": [
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 43,
+          "quote": "image: dessalines/lemmy-ui:nightly"
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 53,
+          "quote": "- LEMMY_UI_BACKEND=lemmy:8536"
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 64,
+          "quote": "image: asonix/pictrs:0.5"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7135,
+      "completionTokens": 236,
+      "costUsd": 0.0329274
+    },
+    "latencyMs": 5411
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker/docker-compose.yml defines 2 application services (lemmy, lemmy-ui). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "The compose file runs lemmy-ui as a separate frontend application and pictrs for image uploads, and no shown line proves the production deployment can do without them.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6100,
+      "completionTokens": 88,
+      "costUsd": 0.01308
+    },
+    "latencyMs": 167948
+  }
+}

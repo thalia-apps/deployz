@@ -55,8 +55,14 @@ workflow mode `judge` runs it on a runner with the gateway secrets (inputs
 folder) and uploads one artifact with every result file. `--transport batch`
 (input `transport`) sends all calls as one Anthropic Message Batch with
 `ANTHROPIC_API_KEY`. `runcheck:fetch` downloads the judge artifact into
-`analyses/<folder>/`. A "not sure" is
-not counted as a wrong outcome.
+`analyses/<folder>/`. The same run makes the soft review when only soft
+findings make the stored outcome. An analysis file from before version 82
+has no findings: `--rules <rules@ dir>` (input `rules`) gives the findings
+of a rules analysis of the same commit when it reaches the same outcome,
+and `--strict-from <judge@ dir>` (input `strict_from`, several folders
+allowed) reuses stored final judge records, so only the soft review calls
+the model. A "not sure" (a judge question or a soft finding the vendor
+must confirm) is not counted as a wrong outcome.
 
 ### Three modes
 
