@@ -4,7 +4,9 @@ import { z } from 'zod';
  * Blocking readiness findings that a vendor can mark as "not used in
  * production". A wrong answer only fails the vendor's own TEST deployment:
  * every other gate still runs. Hard constraints (GPU, architecture, no
- * buildable Dockerfile, a .git copy) are not on the list.
+ * buildable Dockerfile, a .git copy) are not on the list. A finding that is
+ * not a blocker (a required repository change) accepts an answer only while
+ * the final review asks the vendor to confirm it (`needs_confirmation`).
  */
 export const DISPUTABLE_FINDING_IDS = [
   'unsupported-database-mongo',
@@ -18,7 +20,18 @@ export const DISPUTABLE_FINDING_IDS = [
   'unconfirmed-declared-service',
   'unsupported-persistent-volume',
   'local-file-storage',
+  'localhost-binding',
 ] as const;
+
+/**
+ * Whether a vendor can answer "not used in production" on a readiness finding:
+ * a disputable blocker, or a disputable required finding that the final
+ * review asks the vendor to confirm.
+ */
+export function acceptsVendorAnswer(finding: { id: string; blocking: boolean; severity: string; confidence: string }): boolean {
+  if (!isDisputableFinding(finding.id)) return false;
+  return finding.blocking || (finding.severity === 'required' && finding.confidence === 'needs_confirmation');
+}
 
 const DISPUTABLE = new Set<string>(DISPUTABLE_FINDING_IDS);
 

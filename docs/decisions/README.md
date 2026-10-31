@@ -1534,7 +1534,9 @@ Decision:
   adds a recommended needs-confirmation finding and keeps the outcome. The
   judge never removes a finding; the rules and the checks stay in control.
 - An outcome that is already NOT_DEPLOYABLE is not judged. A row with
-  vendor "not used" answers is not judged.
+  vendor "not used" answers is not judged. (Changed 2026-10-31: a vendor
+  answer skips only its own item; see "Ask the vendor instead of saying
+  no".)
 - "Not sure" reuses a readiness finding with `needs_confirmation`, not a new
   outcome value.
 
@@ -1570,3 +1572,39 @@ engines ([`../product/mvp-scope.md`](../product/mvp-scope.md)).
 
 What would change it: apps that get a managed engine they do not use (cost
 to the customer) often enough that a vendor question is better.
+
+
+## Ask the vendor instead of saying no (2026-10-31)
+
+Context: every new blind set showed new error classes (1.6% wrong on the
+corpus, 13% and 30% on the Round 10 and 11 blind sets). Most errors on new
+repositories were too strict: a volume, a declared service, a configurable
+bind address or an AI answer read as a blocker. The final judge can only
+make an outcome stricter, so it cannot fix these. A vendor dispute of any
+blocker also skipped the whole judge.
+
+Decision:
+
+- Blocking findings are hard or soft. Soft findings come from a heuristic
+  signal (a volume or data directory, a local-state guess, a declared
+  service, a loopback bind address, a Compose stack, an SQLite driver).
+  Hard findings (security checks, platform limits, a quoted unsupported
+  engine, missing source, a verified datastore server, the judge's own
+  findings) stay final.
+- When only soft findings make the outcome DEPLOYABLE_WITH_CHANGES or
+  NOT_DEPLOYABLE, a soft review call checks them with the judge's evidence
+  rules. A cited "probably wrong" never makes the outcome more lenient: the
+  finding stays, and the vendor gets a "Confirm" question with the evidence.
+  The vendor's existing "not used in production" answer decides, also for
+  a required repository change such as `localhost-binding`.
+- A vendor answer skips only its own item. The judge still runs, reads the
+  answer as decided, and its block in the category of that answer only
+  asks.
+
+The support boundary does not change: Deployz decides nothing more
+leniently by itself. A wrong vendor answer only fails the vendor's own TEST
+deployment, as for every dispute.
+
+What would change it: vendors who answer the questions wrongly often (then
+show the question without the answer action), or a "not sure" rate that
+makes the questions noise (then narrow `SOFT_FINDING_IDS`).

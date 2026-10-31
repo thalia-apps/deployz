@@ -78,7 +78,7 @@ describe('analysis — ANALYSIS_ENGINE', () => {
     await client?.close();
   });
 
-  async function analyse(engine: AnalysisEngine, gateways: AnalysisRunnerDeps['aiAnalysis'], repo = 'express-api') {
+  async function analyse(engine: AnalysisEngine, gateways: AnalysisRunnerDeps['aiAnalysis'], repo = 'express-api', detectedMetadata?: Record<string, unknown>) {
     const organizationId = `org-engine-${crypto.randomUUID().slice(0, 8)}`;
     await db.insert(schema.organization).values({ id: organizationId, name: 'Acme', slug: organizationId });
     const [inserted] = await db
@@ -90,6 +90,7 @@ describe('analysis — ANALYSIS_ENGINE', () => {
         repoUrl: `https://github.com/deployz-demo/${repo}`,
         defaultBranch: 'main',
         analysisStatus: 'ANALYZING',
+        ...(detectedMetadata ? { detectedMetadata } : {}),
       })
       .returning();
     const deps: AnalysisRunnerDeps = {
@@ -169,6 +170,24 @@ describe('analysis — ANALYSIS_ENGINE', () => {
     const readiness = row.detectedMetadata?.['readiness'] as { outcome: string; findings: Array<{ id: string }> };
     expect(readiness.outcome).toBe('DEPLOYABLE');
     expect(readiness.findings.map((finding) => finding.id)).toContain('final-review-question');
+  });
+
+  it('ai: a vendor answer skips only its own item: the judge still runs, reads it, and a block in its category only asks', async () => {
+    const rules = await analyse('rules', undefined, 'mongodb-app');
+    const mongo = (rules.detectedMetadata?.['readiness'] as { findings: { id: string; technicalEvidence: string }[] }).findings.find((item) => item.id === 'unsupported-database-mongo')!;
+    const dispute = { findingId: mongo.id, reason: mongo.technicalEvidence, dismissedAt: new Date().toISOString(), dismissedBy: 'vendor' };
+    const prompts: string[] = [];
+    const judge: AiGateway = {
+      async generate(prompt, _schema, options) {
+        if (options?.system === JUDGE_SYSTEM) prompts.push(prompt);
+        const object = options?.system === JUDGE_SYSTEM ? { ...JUDGE_BLOCKS, category: 'unsupported_service' } : NOT_USED;
+        return { object, usage: { promptTokens: 1000, completionTokens: 200 }, model: 'fake' };
+      },
+    };
+    const row = await analyse('ai', { analyst: judge }, 'mongodb-app', { vendorDismissedRejections: [dispute] });
+    expect(row.compatibilityStatus).not.toBe('NOT_COMPATIBLE');
+    expect(row.detectedMetadata?.['aiJudge']).toMatchObject({ status: 'ok', judgement: { verdict: 'not_deployable', decision: 'question' } });
+    expect(prompts[0]).toContain(`- ${mongo.technicalEvidence}`);
   });
 
   it('ai: a final judge failure changes nothing', async () => {

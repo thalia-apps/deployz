@@ -34,6 +34,7 @@ pnpm runcheck:fixtures [--no-observe]
 pnpm runcheck:fetch --run <run id>       # results of a runcheck-exam.yml run
 pnpm runcheck:judge --from <ai@ dir> --out <judge@ dir> [--repo <id>]  # the final judge only, on stored AI analyses
 pnpm runcheck:judge --score <judge@ dir>  # wrong, not sure, too strict and fixed against the ground truth
+pnpm runcheck:judge --parity <judge@ dir A> --parity <judge@ dir B>  # ids whose verdict, decision or outcome differ
 pnpm runcheck:stability --a <dir> --b <dir>  # claims that differ between two analyses
 ```
 
@@ -51,7 +52,10 @@ no new main Analysis. It reads the README, `.gitmodules`, the selected
 Dockerfile and the named files through the snapshot fetch. The exam
 workflow mode `judge` runs it on a runner with the gateway secrets (inputs
 `from`, the stored `ai@…` folder, and `analysis`, the `judge@…` output
-folder) and uploads one artifact with every result file. A "not sure" is
+folder) and uploads one artifact with every result file. `--transport batch`
+(input `transport`) sends all calls as one Anthropic Message Batch with
+`ANTHROPIC_API_KEY`. `runcheck:fetch` downloads the judge artifact into
+`analyses/<folder>/`. A "not sure" is
 not counted as a wrong outcome.
 
 ### Three modes

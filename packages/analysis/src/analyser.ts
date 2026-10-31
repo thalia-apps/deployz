@@ -326,6 +326,8 @@ export interface ResourceOverrides {
   readonly storage?: boolean | undefined;
   /** False: the declared local-filesystem state is not durable app data. */
   readonly localFilesystem?: false | undefined;
+  /** False: the vendor answered that the loopback binding is not the production listen address. */
+  readonly loopbackBinding?: false | undefined;
   /** Rejection reasons that a checked AI answer dismissed. */
   readonly dismissedRejections?: readonly string[] | undefined;
 }
@@ -347,6 +349,7 @@ export function analyseRepo(tree: FileTree, overrides: ResourceOverrides = {}): 
     const finding = detector(tree);
     if (finding.detector === 's3' && overrides.storage !== undefined) findings.push({ ...finding, detected: overrides.storage });
     else if (finding.detector === 'local-filesystem' && overrides.localFilesystem === false) findings.push({ ...finding, detected: false });
+    else if (finding.detector === 'bind-address' && overrides.loopbackBinding === false) findings.push({ ...finding, detected: false });
     else findings.push(finding);
   }
 

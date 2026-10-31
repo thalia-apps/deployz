@@ -3,8 +3,9 @@
 # its slowest repository. It starts only by hand (workflow_dispatch) and
 # uploads one small JSON result per recipe. Fetch the results with
 # `pnpm runcheck:fetch --run <run id>`. Only the analyse-ai and judge jobs read
-# secrets (the AI gateway); they read repository files as data and run no
-# repository code. The jobs that build and run repository code get no secrets.
+# secrets (the AI gateway; the judge with transport batch reads the Anthropic
+# key instead, for one Anthropic Message Batch); they read repository files as
+# data and run no repository code. The jobs that build and run repository code get no secrets.
 name: runcheck-exam
 
 on:
@@ -27,6 +28,22 @@ on:
         type: string
       from:
         description: The stored AI analyses the judge reads (judge only), for example ai@r9-final2; several folders separated by spaces, the first that has a recipe wins
+        required: false
+        default: ''
+        type: string
+      transport:
+        description: How the judge reaches the model (judge only), gateway (OpenRouter, one call at a time) or batch (one Anthropic Message Batch, half the price)
+        required: false
+        default: gateway
+        type: choice
+        options: [gateway, batch]
+      rules:
+        description: A rules@... folder whose findings the soft review reads for stored AI analyses that have none (judge only)
+        required: false
+        default: ''
+        type: string
+      strict_from:
+        description: judge@... folders separated by spaces whose final judge records are reused (the first that has a recipe wins), so only the soft review calls the model (judge only)
         required: false
         default: ''
         type: string
@@ -56,6 +73,8 @@ jobs:
           REPOS: ${{ inputs.repos }}
           ANALYSIS: ${{ inputs.analysis }}
           FROM: ${{ inputs.from }}
+          RULES: ${{ inputs.rules }}
+          STRICT_FROM: ${{ inputs.strict_from }}
         run: |
           cd scripts/run-and-check
           if [[ "$MODE" == full ]]; then
@@ -69,6 +88,10 @@ jobs:
             [[ -n "$FROM" ]] || { echo "judge needs a stored ai@... folder"; exit 1; }
             for dir in $FROM; do
               [[ "$dir" =~ ^ai@[A-Za-z0-9_.@-]+$ && -d "analyses/$dir" ]] || { echo "invalid judge input folder $dir"; exit 1; }
+            done
+            [[ -z "$RULES" || ( "$RULES" =~ ^rules@[A-Za-z0-9_.@-]+$ && -d "analyses/$RULES" ) ]] || { echo "invalid rules folder"; exit 1; }
+            for dir in $STRICT_FROM; do
+              [[ "$dir" =~ ^judge@[A-Za-z0-9_.@-]+$ && -d "analyses/$dir" ]] || { echo "invalid strict_from folder $dir"; exit 1; }
             done
           fi
           if [[ "$REPOS" == all ]]; then
@@ -172,7 +195,8 @@ jobs:
     needs: plan
     if: inputs.mode == 'judge'
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # A batch usually ends within minutes; Anthropic allows up to 24 hours.
+    timeout-minutes: 180
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -199,7 +223,11 @@ jobs:
           IDS: ${{ needs.plan.outputs.ids }}
           ANALYSIS: ${{ inputs.analysis }}
           FROM: ${{ inputs.from }}
+          TRANSPORT: ${{ inputs.transport }}
+          RULES: ${{ inputs.rules }}
+          STRICT_FROM: ${{ inputs.strict_from }}
           GITHUB_TOKEN: ${{ github.token }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AI_GATEWAY_BASE_URL: ${{ secrets.AI_GATEWAY_BASE_URL }}
           AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
           AI_PROVIDER_API_KEY: ${{ secrets.AI_PROVIDER_API_KEY }}
@@ -208,7 +236,9 @@ jobs:
           args=()
           for id in $(jq -r '.[]' <<< "$IDS"); do args+=(--repo "$id"); done
           for dir in $FROM; do args+=(--from "scripts/run-and-check/analyses/$dir"); done
-          pnpm runcheck:judge --out "scripts/run-and-check/analyses/$ANALYSIS" "${args[@]}"
+          if [[ -n "$RULES" ]]; then args+=(--rules "scripts/run-and-check/analyses/$RULES"); fi
+          for dir in $STRICT_FROM; do args+=(--strict-from "scripts/run-and-check/analyses/$dir"); done
+          pnpm runcheck:judge --out "scripts/run-and-check/analyses/$ANALYSIS" --transport "$TRANSPORT" "${args[@]}"
 
       - name: Upload judge results
         if: always()

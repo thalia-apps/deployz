@@ -7,7 +7,7 @@
 import { isDisputableFinding, type VendorDismissedRejection } from '@deployz/contracts';
 
 import type { AnalysisResult, ResourceOverrides } from './analyser.js';
-import { localFileStorageEvidence, rejectionFindingId } from './readiness-report.js';
+import { localFileStorageEvidence, localhostBindingEvidence, rejectionFindingId } from './readiness-report.js';
 
 export interface VendorResourceOverrides {
   readonly overrides: ResourceOverrides;
@@ -23,14 +23,23 @@ export function vendorResourceOverrides(
 ): VendorResourceOverrides {
   const dismissedRejections: string[] = [];
   let localFilesystem: false | undefined;
+  let loopbackBinding: false | undefined;
   const matched = new Set<number>();
   const localFs = rules.findings.find((finding) => finding.detector === 'local-filesystem' && finding.detected);
+  const bind = rules.findings.find((finding) => finding.detector === 'bind-address' && finding.detected);
 
   entries.forEach((entry, index) => {
     if (!isDisputableFinding(entry.findingId)) return;
     if (entry.findingId === 'local-file-storage') {
       if (localFs && localFileStorageEvidence(localFs) === entry.reason) {
         localFilesystem = false;
+        matched.add(index);
+      }
+      return;
+    }
+    if (entry.findingId === 'localhost-binding') {
+      if (bind && localhostBindingEvidence(bind) === entry.reason) {
+        loopbackBinding = false;
         matched.add(index);
       }
       return;
@@ -47,6 +56,7 @@ export function vendorResourceOverrides(
   const overrides: ResourceOverrides = {
     ...(dismissedRejections.length > 0 ? { dismissedRejections } : {}),
     ...(localFilesystem === false ? { localFilesystem } : {}),
+    ...(loopbackBinding === false ? { loopbackBinding } : {}),
   };
   return { overrides, applied: matched.size > 0, matched };
 }

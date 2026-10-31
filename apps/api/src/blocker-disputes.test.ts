@@ -176,4 +176,29 @@ describe('blocker disputes', () => {
     expect(missing.statusCode).toBe(400);
     expect((await loadApplication(id)).detectedMetadata!['vendorDismissedRejections']).toBeUndefined();
   });
+
+  it('accepts an answer on a required soft finding only while the final review asks to confirm it', async () => {
+    const { id } = await analysedMongoApp();
+    const url = `/api/applications/${id}/blocker-disputes`;
+    const reason = "Server binds only to a loopback address: listen(3000, '127.0.0.1') (src/index.js)";
+    const withBinding = async (confidence: 'likely' | 'needs_confirmation') => {
+      const row = await loadApplication(id);
+      const readiness = row.detectedMetadata!['readiness'] as ReadinessReport;
+      const binding = { ...readiness.findings.find((item) => item.id === MONGO_FINDING)!, id: 'localhost-binding', blocking: false, fixClass: 'CODE_CHANGE' as const, technicalEvidence: reason, confidence };
+      await db
+        .update(schema.applications)
+        .set({ detectedMetadata: { ...row.detectedMetadata, readiness: { ...readiness, findings: [...readiness.findings, binding] } } })
+        .where(eq(schema.applications.id, id));
+    };
+
+    await withBinding('likely');
+    const unasked = await request('POST', url, vendor.cookie, { findingId: 'localhost-binding', reason });
+    expect(unasked.statusCode).toBe(409);
+    expect(unasked.json()).toMatchObject({ error: { code: 'FINDING_CHANGED' } });
+
+    await withBinding('needs_confirmation');
+    const asked = await request('POST', url, vendor.cookie, { findingId: 'localhost-binding', reason });
+    expect(asked.statusCode, asked.body).toBe(202);
+    expect((await loadApplication(id)).detectedMetadata!['vendorDismissedRejections']).toEqual([expect.objectContaining({ findingId: 'localhost-binding', reason })]);
+  });
 });

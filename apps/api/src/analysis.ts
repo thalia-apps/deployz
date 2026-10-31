@@ -10,9 +10,12 @@ import type {
   FileTree,
   JudgeRecord,
   MergeResult,
+  ReadinessFinding,
   ReadinessReport,
   RepositoryAiInput,
   ResourceOverrides,
+  SoftReviewRecord,
+  VendorAnswer,
 } from '@deployz/analysis';
 import {
   REPO_AI_TIMEOUT_MS,
@@ -27,7 +30,6 @@ import {
   detectDeclaredWorkerCommands,
   evidenceFileRequests,
   dockerfileWorkdirs,
-  JUDGE_PROMPT_VERSION,
   isDevToolCommand,
   listDockerfileCandidates,
   mainCommandRunsWorker,
@@ -39,8 +41,11 @@ import {
   redactSecrets,
   runAiAnalysis,
   runFinalJudge,
+  runSoftReview,
   selectAiContextFiles,
   selectMigrationScript,
+  softReviewFileRequests,
+  softReviewTargets,
   TREE_PATHS,
   vendorResourceOverrides,
   verdictFromReadiness,
@@ -548,7 +553,18 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // declared PostgreSQL, MySQL, Redis or S3 service adds that engine instead of
 // a code change. `worker-command` is a setting. The judge sees every root
 // file. Stored v80 rows can ask a code change for these apps.
-export const ANALYSIS_VERSION = 81;
+// Version 82 (2026-10 Round 12, judge prompt v5): ask instead of saying no.
+// When every finding that makes the outcome DEPLOYABLE_WITH_CHANGES or
+// NOT_DEPLOYABLE is soft (`SOFT_FINDING_IDS`: a volume, a local-state guess,
+// a declared service, a loopback bind address, a Compose stack, a SQLite
+// driver), a soft review (`aiSoftReview`) checks them. A cited "probably
+// wrong" keeps the finding, marks it `needs_confirmation` and adds the
+// recommended `final-review-confirm-<id>`; the vendor's dispute answer
+// decides (`localhost-binding` is disputable now). A vendor dispute no longer
+// skips the judge: the judge reads the answers, and its block in a disputed
+// category only asks. Stored v81 rows skip the judge after a dispute and
+// never ask about a soft finding.
+export const ANALYSIS_VERSION = 82;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
@@ -698,7 +714,7 @@ export async function runApplicationAnalysis(
     // run is fetching and analysing (PATCH /api/applications/:id), so the
     // outcome is derived from the row as it is when written, under its lock.
     const resolvedWorkerCommands = resolveWorkerCommands(tree);
-    const buildOutcome = (app: typeof application, aiJudge: JudgeRecord | null) => {
+    const buildOutcome = (app: typeof application, aiJudge: JudgeRecord | null, aiSoftReview: SoftReviewRecord | null) => {
       // The vendor-owned field list lives on detected_metadata, which this
       // write replaces wholesale — carry it across or every re-analysis would
       // forget which fields the vendor edited. A row with no list at all
@@ -725,7 +741,8 @@ export async function runApplicationAnalysis(
     // The semantic readiness report is built from the MERGED metadata, so a
     // start/migration command the AI resolved counts as resolved here too.
     // The persisted verdict is derived from the report — one source of truth.
-    const judgedAnalysis: AnalysisResult = aiJudge ? { ...mergedAnalysis, metadata: { ...mergedAnalysis.metadata, aiJudge } } : mergedAnalysis;
+    const reviewRecords = { ...(aiJudge ? { aiJudge } : {}), ...(aiSoftReview ? { aiSoftReview } : {}) };
+    const judgedAnalysis: AnalysisResult = { ...mergedAnalysis, metadata: { ...mergedAnalysis.metadata, ...reviewRecords } };
     const readiness: ReadinessReport = buildReadinessReport(judgedAnalysis, {
       workerCommandResolved: resolvedWorkerCommands.length > 0,
       migrationNeedsInput,
@@ -756,7 +773,7 @@ export async function runApplicationAnalysis(
       analysisVersion: ANALYSIS_VERSION,
       ...(engine !== 'rules' ? { analysisEngine: engine } : {}),
       ...(aiRun ? { aiEngine: aiRun.record } : {}),
-      ...(aiJudge ? { aiJudge } : {}),
+      ...reviewRecords,
       ...(headSha !== undefined ? { analysisCommitSha: headSha } : {}),
     };
     // The stored report keeps every finding; the persisted verdict reads the
@@ -769,20 +786,22 @@ export async function runApplicationAnalysis(
     const outcomeVerdict = verdictFromReadiness(outcomeReadiness.state);
       return { contractFieldUpdates, detectedMetadata, outcomeReadiness, outcomeVerdict };
     };
-    // The final judge (engine `ai`) reads the merged result as the row is now;
-    // it only adds a finding, so a vendor edit during the call changes nothing it decided.
-    const aiJudge =
+    // The final judge and the soft review (engine `ai`) read the merged result
+    // as the row is now; they only add findings, so a vendor edit during the
+    // calls changes nothing they decided. A vendor answer skips only its own
+    // item: the judge reads it as decided, and the review never sees it.
+    const vendorAnswers = disputes.filter((_, index) => vendor.matched.has(index)).map((entry) => ({ id: entry.findingId, technicalEvidence: entry.reason }));
+    const reviews =
       aiMerge && deps.aiAnalysis
-        ? vendor.applied
-          ? ({ status: 'skipped', reason: 'vendor_answers', promptVersion: JUDGE_PROMPT_VERSION } as const)
-          : await runJudgeEngine(
-              deps.aiAnalysis.analyst,
-              tree,
-              mergedAnalysis,
-              aiMerge,
-              buildOutcome(application, null).outcomeReadiness.outcome,
-              evidenceFileLoader(deps, application, realModeToken),
-            )
+        ? await runJudgeEngine(
+            deps.aiAnalysis.analyst,
+            tree,
+            mergedAnalysis,
+            aiMerge,
+            buildOutcome(application, null, null).outcomeReadiness,
+            vendorAnswers,
+            evidenceFileLoader(deps, application, realModeToken),
+          )
         : null;
     const durationMs = Date.now() - runStartedMs;
 
@@ -794,7 +813,7 @@ export async function runApplicationAnalysis(
         .limit(1)
         .for('update');
       if (!fresh) return undefined;
-      const outcome = buildOutcome(fresh, aiJudge);
+      const outcome = buildOutcome(fresh, reviews?.judge ?? null, reviews?.softReview ?? null);
       await tx
         .update(schema.applications)
         .set({
@@ -1137,25 +1156,38 @@ async function runAiEngine(
 
 /**
  * The final judge over the merged AI result: the manifest facts, the checked
- * answers and the files it reads (loaded when the tree lacks them). Never
- * throws; a failure is a fallback record that changes nothing.
+ * answers, the vendor's answers and the files it reads (loaded when the tree
+ * lacks them). In parallel, the soft review when every finding that makes the
+ * outcome is soft. Never throws; a failure is a fallback record that changes
+ * nothing.
  */
 async function runJudgeEngine(
   gateway: AiGateway,
   tree: FileTree,
   analysis: AnalysisResult,
   merge: MergeResult,
-  outcome: ReadinessReport['outcome'],
+  readiness: ReadinessReport,
+  vendorAnswers: readonly VendorAnswer[],
   loadFiles: ((paths: readonly string[]) => Promise<FileTree>) | null,
-): Promise<JudgeRecord> {
+): Promise<{ judge: JudgeRecord; softReview: SoftReviewRecord | null }> {
   const manifest = normalizeDeploymentManifest({ metadata: analysis.metadata }, {});
-  const requested = outcome === 'NOT_DEPLOYABLE' || loadFiles === null ? [] : judgeFileRequests(manifest, tree);
+  const { outcome } = readiness;
+  const softOutcome = outcome === 'DEPLOYABLE_WITH_CHANGES' || outcome === 'NOT_DEPLOYABLE' ? outcome : null;
+  const targets: ReadinessFinding[] = softOutcome === null ? [] : softReviewTargets(readiness.findings);
+  const requested =
+    loadFiles === null
+      ? []
+      : [...new Set([...(outcome === 'NOT_DEPLOYABLE' ? [] : judgeFileRequests(manifest, tree)), ...(targets.length > 0 ? softReviewFileRequests(manifest, targets, tree) : [])])];
   const loaded = requested.length > 0 && loadFiles !== null ? await loadFiles(requested).catch(() => ({})) : {};
   const files: FileTree = { ...tree, ...loaded };
   Object.defineProperty(files, TREE_PATHS, { value: (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS], enumerable: false });
-  const record = await runFinalJudge({ outcome, manifest, answers: merge.answers, files }, gateway);
-  if (record.status === 'fallback') console.warn(JSON.stringify({ event: 'ai_judge_fallback', reason: record.reason, latencyMs: record.latencyMs }));
-  return record;
+  const [judge, softReview] = await Promise.all([
+    runFinalJudge({ outcome, manifest, answers: merge.answers, files, vendorAnswers }, gateway),
+    softOutcome !== null && targets.length > 0 ? runSoftReview({ outcome: softOutcome, manifest, answers: merge.answers, files, findings: targets }, gateway) : null,
+  ]);
+  if (judge.status === 'fallback') console.warn(JSON.stringify({ event: 'ai_judge_fallback', reason: judge.reason, latencyMs: judge.latencyMs }));
+  if (softReview?.status === 'fallback') console.warn(JSON.stringify({ event: 'ai_soft_review_fallback', reason: softReview.reason, latencyMs: softReview.latencyMs }));
+  return { judge, softReview };
 }
 
 /**

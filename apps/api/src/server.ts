@@ -83,6 +83,7 @@ import {
   topologyDriftFor,
   workloadServicesFromSpec,
   MAX_VENDOR_DISMISSED_REJECTIONS,
+  acceptsVendorAnswer,
   isDisputableFinding,
   readVendorDismissedRejections,
   type ApplicationAnalysis,
@@ -4831,7 +4832,7 @@ export async function buildServer({
       if (!row) throw new NotFoundError('Application not found');
       requireDisputeAnalysisComplete(row.analysisStatus);
       const finding = readReadinessReport(row.detectedMetadata)?.findings.find(
-        (candidate) => candidate.id === findingId && candidate.blocking && candidate.technicalEvidence === reason,
+        (candidate) => candidate.id === findingId && acceptsVendorAnswer(candidate) && candidate.technicalEvidence === reason,
       );
       if (!finding) throw new ApiError(409, 'FINDING_CHANGED', 'The analysis changed. Review the item again.');
       const entries = [

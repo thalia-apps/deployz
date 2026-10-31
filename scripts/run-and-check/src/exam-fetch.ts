@@ -2,7 +2,8 @@
  * `pnpm runcheck:fetch --run <run id>` — downloads the results of one
  * `runcheck-exam.yml` run: each observation to `observations/<id>.json`, each
  * full run to `.runs/full/<analyser>/<id>.json`, each AI analysis to
- * `analyses/<folder>/<id>.json`. Needs `GITHUB_TOKEN`.
+ * `analyses/<folder>/<id>.json`, each judge artifact (many `<id>.json` files) to
+ * `analyses/<folder>/`. Needs `GITHUB_TOKEN`.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -23,6 +24,7 @@ const RUN_ID = /^\d+$/;
 const OBSERVE = /^runcheck-observe-([\w-]+)$/;
 const FULL = /^runcheck-full-([\w.@-]+)-((?:repo-\d{3}|new-\d+|F\d{1,2}))$/;
 const ANALYSIS = /^runcheck-analysis-([\w.@-]+)-((?:repo-\d{3}|new-\d+|F\d{1,2}))$/;
+const JUDGE = /^runcheck-judge-(judge@[\w.@-]+)$/;
 
 /** Where an artifact's one JSON file belongs, or null for an artifact of another kind. */
 export function artifactTarget(name: string, root: string = HARNESS_ROOT): string | null {
@@ -32,6 +34,8 @@ export function artifactTarget(name: string, root: string = HARNESS_ROOT): strin
   if (full) return join(root, '.runs', 'full', full[1]!);
   const analysis = ANALYSIS.exec(name);
   if (analysis) return join(root, 'analyses', analysis[1]!);
+  const judge = JUDGE.exec(name);
+  if (judge) return join(root, 'analyses', judge[1]!);
   return null;
 }
 

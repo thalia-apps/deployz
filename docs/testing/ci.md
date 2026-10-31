@@ -240,7 +240,9 @@ The `judge` mode runs the final judge only (`pnpm runcheck:judge`) in one
 job: inputs `from` (a stored `ai@…` folder) and `analysis` (a `judge@…`
 output folder). Like `analyse-ai`, it reads the gateway secrets and runs no
 repository code. It uploads one artifact, `runcheck-judge-<analysis>`, with
-every result file.
+every result file. Input `transport` `batch`
+sends every call in one Anthropic Message Batch (secret `ANTHROPIC_API_KEY`,
+half the price); the default `gateway` uses OpenRouter.
 
 ## Timing expectations
 

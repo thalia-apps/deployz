@@ -674,9 +674,15 @@ with `ANALYSIS_ENGINE=ai` and a merged AI result. Its job is to catch an
 outcome that is too lenient. It never makes an outcome more lenient.
 
 - **Skip:** an outcome that is already NOT_DEPLOYABLE makes no call
-  (`aiJudge: {status: 'skipped', reason: 'not_deployable'}`). A row with
-  vendor "not used" answers is not judged (`reason: 'vendor_answers'`): the
-  vendor's answer is the newer evidence.
+  (`aiJudge: {status: 'skipped', reason: 'not_deployable'}`).
+- **Vendor answers:** a vendor "not used in production" answer skips only
+  its own item, not the judge. The judge reads the answers that apply as
+  decided facts ("do not use them as a reason"), and `decideJudgement`
+  turns a block in the category that an answer decides (a database, broker
+  or declared service: `unsupported_service`; a Compose stack:
+  `several_services`; SQLite, a volume or local files: `local_disk_data`)
+  into a question. A block in another category still blocks. Before
+  version 82 any applied answer skipped the whole judge.
 - **Input:** the outcome so far, the merged manifest facts (runtime,
   Dockerfile, start command, port, managed services, migration, workers,
   required or infrastructure variable names), the blocking reasons of the
@@ -719,12 +725,60 @@ outcome that is too lenient. It never makes an outcome more lenient.
   Measured: the top-level `cache_control` through OpenRouter wrote the
   whole prompt on every call and read nothing.
 - **Testing:** `pnpm runcheck:judge --from <ai@ folder> --out <judge@ folder>`
-  runs only the judge on stored AI analyses (the exam workflow mode
-  `judge`), and `--score <dir>` scores a run against the ground truth: a
-  wrong outcome, a "not sure", too strict and fixed.
+  runs only the judge and the soft review on stored AI analyses (the exam
+  workflow mode `judge`), and `--score <dir>` scores a run against the
+  ground truth: a wrong outcome, a "not sure" (a judge question or a soft
+  finding the vendor must confirm), too strict and fixed. `--transport
+  batch` sends the calls as one Anthropic Message Batch at half the price
+  (exam runs only; production stays on the gateway).
 - **Post-MVP:** a vendor dispute of a judge block (today the vendor
-  re-analyses, or the vendor's "not used" answers skip the judge), and the
-  Anthropic Batch API for exam runs (the gateway has no Anthropic key).
+  re-analyses).
+
+## Soft review: ask instead of saying no
+
+Most wrong outcomes on new repositories are too strict, and the final judge
+can only make an outcome stricter. The soft review (same file, prompt
+version 5) is the other direction, without making Deployz more lenient by
+itself.
+
+- **Soft and hard findings** (`SOFT_FINDING_IDS`). A soft finding comes
+  from a heuristic or inferred signal: `unsupported-persistent-volume`
+  (a volume or a data directory), `local-file-storage` (a local-state
+  guess), `unconfirmed-declared-service` (a service a stack declares, also
+  when the AI "not used" answer failed its check), `localhost-binding` (a
+  bind address), `unsupported-multi-service` (a Compose stack) and
+  `unsupported-database-sqlite` (an embedded driver). Every other required
+  finding is hard: a security check, a platform limit (GPU, architecture),
+  a quoted unsupported engine (MongoDB, Elasticsearch, a broker, a checked
+  "required" answer), a missing or unbuildable source, a verified datastore
+  server, and every final judge finding. A hard finding is never reviewed.
+- **When:** with `ANALYSIS_ENGINE=ai`, when the outcome is
+  DEPLOYABLE_WITH_CHANGES or NOT_DEPLOYABLE and every required finding that
+  is not a setting is soft (`softReviewTargets`). It runs in parallel with
+  the final judge, so it adds no latency to the judge call.
+- **Input:** the merged manifest facts, the checked answers, the soft
+  findings as `f1`, `f2`, … with their title and evidence, the top-level
+  entries, the README, the selected Dockerfile, the root `.env` sample and
+  up to three files that the findings' evidence names
+  (`softReviewFileRequests`). The system message is `SOFT_REVIEW_SYSTEM`.
+- **Output and decision** (`decideSoftReview`): per finding `stands` (the
+  default) or `probably_wrong` with 1 to 3 cited lines. A `probably_wrong`
+  whose every cited line passes `citedLineIn` is a question. Nothing is
+  removed and the outcome does not change: the readiness report keeps the
+  finding (now `confidence: 'needs_confirmation'`) and adds the recommended
+  `final-review-confirm-<finding id>` (SETTING) with the review's reason and
+  cited lines as technical evidence. When the final judge blocks, no
+  question is added.
+- **The vendor decides:** a questioned finding accepts the "Not used in
+  production" answer (`acceptsVendorAnswer`, see "Vendor disputes"), also
+  when it is a repository change and not a blocker. The forced re-analysis
+  then runs without it. A wrong answer only fails the vendor's own TEST
+  deployment.
+- **Record:** `detected_metadata.aiSoftReview` (`status: 'ok'` with the
+  reviews, model, usage and latency, or `fallback`). A failure changes
+  nothing.
+- **Grading:** the exam counts a questioned outcome as "not sure", never as
+  right or wrong.
 
 ## The canonical model
 
@@ -958,7 +1012,12 @@ TEST deployment fails in the vendor's own account.
   `unsupported-database-mongo`, `-elasticsearch`, `-other`, `-sqlite`,
   `-mariadb`, `unsupported-redis-setup`, `unsupported-message-queue`,
   `unsupported-multi-service`, `unconfirmed-declared-service`,
-  `unsupported-persistent-volume` and `local-file-storage`. The rule: being wrong only fails the vendor's TEST
+  `unsupported-persistent-volume`, `local-file-storage` and
+  `localhost-binding`. A blocking finding on the list always accepts an
+  answer. A required finding on the list that is not a blocker (a
+  repository change) accepts one only while the soft review asks the vendor
+  to confirm it (`needs_confirmation`; `acceptsVendorAnswer` in the same
+  file). The rule: being wrong only fails the vendor's TEST
   deployment. It does not bypass security, and it does not give an image
   that Deployz cannot build. `unsupported-gpu`, `unsupported-architecture`,
   `unsupported-no-dockerfile`, `build-context-git-metadata` and the
@@ -972,7 +1031,9 @@ TEST deployment fails in the vendor's own account.
 - **Matching and staleness.** An answer applies only while a detected
   rejection has the same finding id and the same reason text. For
   `local-file-storage`, the text is the `local-filesystem` detector's
-  evidence, and a match sets `localFilesystem: false`. When the evidence
+  evidence, and a match sets `localFilesystem: false`. For
+  `localhost-binding`, the text is the `bind-address` detector's evidence,
+  and a match sets `loopbackBinding: false`. When the evidence
   changes, the answer stays in the list with `stale: true` and does not
   apply. The finding shows again with "Evidence changed". Note: a change to
   the reason text in a new analysis version also makes the answer stale.
@@ -986,8 +1047,9 @@ TEST deployment fails in the vendor's own account.
   `{findingId, reason}` and
   `DELETE /api/applications/:id/blocker-disputes/:findingId`. Both refuse
   with 409 `ANALYSIS_IN_PROGRESS` while an analysis runs. POST refuses an id
-  that is not on the list (422 `FINDING_NOT_DISPUTABLE`) and evidence that
-  is not the stored finding's (409 `FINDING_CHANGED`). Both write the list,
+  that is not on the list (422 `FINDING_NOT_DISPUTABLE`), and evidence that
+  is not the stored finding's or a finding that does not accept an answer
+  now (409 `FINDING_CHANGED`). Both write the list,
   set `ANALYZING` and record the event in one transaction, then run a
   forced analysis (the commit-SHA cache never answers it).
   `GET …/readiness` returns the list as `vendorDismissedRejections`.
