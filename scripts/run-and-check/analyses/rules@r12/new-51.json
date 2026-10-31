@@ -1,0 +1,154 @@
+{
+  "id": "new-51",
+  "commit": "9d281ccaba65f2686eb7b0b614ccda72d1116a1b",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": "dprint fmt && vite build",
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": null
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "PB_FILES_DELETE_MAX_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in core/base.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PB_THUMBS_MAX_WAIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apis/file.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PB_THUMBS_MAX_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apis/file.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported database: a Go SQLite driver is declared in go.mod. Deployz hosts PostgreSQL and MySQL only.",
+      "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database: a Go SQLite driver is declared in go.mod. Deployz hosts PostgreSQL and MySQL only."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 4,
+  "outcome": "NOT_DEPLOYABLE",
+  "findings": [
+    {
+      "id": "unsupported-database-sqlite",
+      "title": "Your database needs a supported engine",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Unsupported database: a Go SQLite driver is declared in go.mod. Deployz hosts PostgreSQL and MySQL only.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "unsupported-no-dockerfile",
+      "title": "Has no Dockerfile that builds the app",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "health-check",
+      "title": "Give Deployz a way to check your app",
+      "fixClass": "SETTING",
+      "technicalEvidence": "No health endpoint or container health check was found (no /health-style route, no HEALTHCHECK instruction).",
+      "confidence": "likely"
+    }
+  ]
+}

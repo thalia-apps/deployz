@@ -1,0 +1,193 @@
+{
+  "id": "new-248",
+  "commit": "6b000b5d23a36c45e01472471b84a44fa2464044",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": "npm run webapp:prod --",
+      "context": "."
+    },
+    "web": {
+      "command": "start: ng serve --hmr",
+      "port": 8080
+    },
+    "health": {
+      "path": "/actuator/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "SPRING_DATASOURCE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "SPRING_DATASOURCE_URL",
+          "kind": "jdbc_url"
+        },
+        {
+          "name": "SPRING_DATASOURCE_USERNAME",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "APP_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in build-plugins/define-esbuild.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SPRING_DATASOURCE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/main/resources/config/application-prod.yml",
+            "read in src/main/resources/config/application-secret-samples.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SPRING_DATASOURCE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/resources/config/application-prod.yml",
+            "read in src/main/resources/config/application-secret-samples.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SPRING_DATASOURCE_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/resources/config/application-prod.yml",
+            "read in src/main/resources/config/application-secret-samples.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: The only Dockerfile is for development or a template (.devcontainer/Dockerfile). Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: The only Dockerfile is for development or a template (.devcontainer/Dockerfile). Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "findings": [
+    {
+      "id": "unsupported-no-dockerfile",
+      "title": "Has no Dockerfile that builds the app",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported container setup: The only Dockerfile is for development or a template (.devcontainer/Dockerfile). Deployz builds the app from a Dockerfile in the repository.",
+      "confidence": "confirmed"
+    }
+  ]
+}

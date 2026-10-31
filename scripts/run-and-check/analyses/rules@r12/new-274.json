@@ -1,0 +1,163 @@
+{
+  "id": "new-274",
+  "commit": "39ff06a4cae838f2b3e67c0fbe79158f2146067d",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "bridge",
+      "runtime": "php",
+      "framework": null,
+      "dockerfilePath": "bridge/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"svix-bridge\"]",
+      "port": 5000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/svix-server/src/cfg.rs"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in regen_openapi.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RUST_LOG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bridge/svix-bridge/src/main.rs",
+            "read in server/svix-server/src/lib.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unconfirmed service: the repository declares redis (docker.io/redis:7-alpine) in server/docker-compose.yml. Deployz did not find how the application uses it."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares redis (docker.io/redis:7-alpine) in server/docker-compose.yml. Deployz did not find how the application uses it."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "findings": [
+    {
+      "id": "unconfirmed-declared-service",
+      "title": "Declares a service that Deployz could not confirm",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unconfirmed service: the repository declares redis (docker.io/redis:7-alpine) in server/docker-compose.yml. Deployz did not find how the application uses it.",
+      "confidence": "confirmed"
+    }
+  ]
+}

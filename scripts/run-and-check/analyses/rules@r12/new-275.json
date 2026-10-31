@@ -1,0 +1,238 @@
+{
+  "id": "new-275",
+  "commit": "9cd770d2ac839999d6a425f70f3bd2cf3a0ee5cd",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "SPRING_DATASOURCE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "SPRING_DATASOURCE_URL",
+          "kind": "jdbc_url"
+        },
+        {
+          "name": "SPRING_DATASOURCE_USERNAME",
+          "kind": "username"
+        }
+      ],
+      "engine": "mysql"
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "SPRING_DATASOURCE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in ruoyi-admin/src/main/resources/application-druid.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SPRING_DATASOURCE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ruoyi-admin/src/main/resources/application-druid.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SPRING_DATASOURCE_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ruoyi-admin/src/main/resources/application-druid.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "allowOverwrite",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ruoyi-generator/src/main/java/com/ruoyi/generator/config/GenConfig.java"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "autoRemovePre",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ruoyi-generator/src/main/java/com/ruoyi/generator/config/GenConfig.java"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "packageName",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ruoyi-generator/src/main/java/com/ruoyi/generator/config/GenConfig.java"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "tablePrefix",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ruoyi-generator/src/main/java/com/ruoyi/generator/config/GenConfig.java"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: allowOverwrite, autoRemovePre, packageName, tablePrefix. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses MySQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 6,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "findings": [
+    {
+      "id": "unsupported-no-dockerfile",
+      "title": "Has no Dockerfile that builds the app",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository.",
+      "confidence": "confirmed"
+    }
+  ]
+}

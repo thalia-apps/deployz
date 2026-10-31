@@ -1,0 +1,188 @@
+{
+  "id": "new-160",
+  "commit": "81328b61d2a4ab597a7a057be70e785cf756d9f8",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": "next build",
+      "context": "."
+    },
+    "web": {
+      "command": "start: next start",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": "supabase migration up && npm run db-types",
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "NEXT_PUBLIC_OLLAMA_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in components/chat/chat-helpers/index.ts",
+            "read in components/utility/global-state.tsx",
+            "read in lib/models/fetch-models.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_OPENAI_ORGANIZATION_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in components/utility/profile-settings.tsx"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lib/server/server-chat-helpers.ts",
+            "read in lib/supabase/server.ts",
+            "read in app/[locale]/layout.tsx",
+            "read in lib/supabase/middleware.ts",
+            "read in lib/supabase/browser-client.ts",
+            "read in lib/supabase/client.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/server/server-chat-helpers.ts",
+            "read in lib/supabase/server.ts",
+            "read in app/api/chat/custom/route.ts",
+            "read in app/api/retrieval/retrieve/route.ts",
+            "read in app/api/retrieval/process/docx/route.ts",
+            "read in app/api/retrieval/process/route.ts",
+            "read in app/api/username/available/route.ts",
+            "read in app/api/username/get/route.ts",
+            "read in app/[locale]/layout.tsx",
+            "read in lib/supabase/middleware.ts",
+            "read in lib/supabase/browser-client.ts",
+            "read in lib/supabase/client.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_USER_FILE_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in db/storage/files.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPABASE_SERVICE_ROLE_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in app/api/chat/custom/route.ts",
+            "read in app/api/retrieval/retrieve/route.ts",
+            "read in app/api/retrieval/process/docx/route.ts",
+            "read in app/api/retrieval/process/route.ts",
+            "read in app/api/username/available/route.ts",
+            "read in app/api/username/get/route.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": [
+      "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: SUPABASE_SERVICE_ROLE_KEY. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-database-missing",
+        "category": "database",
+        "severity": "error",
+        "message": "This app is configured to run a database migration on deploy but the manifest does not require a database. Turn on the managed database, or choose \"No separate migration\" in the application settings."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "findings": [
+    {
+      "id": "unsupported-no-dockerfile",
+      "title": "Has no Dockerfile that builds the app",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository.",
+      "confidence": "confirmed"
+    }
+  ]
+}

@@ -1,0 +1,186 @@
+{
+  "id": "new-269",
+  "commit": "75bdd80a29bb0fb87bfd340efb5e6c4138ede8ec",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "bun run build:app",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"label-studio\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/apps/labelstudio/src/config/Sentry.ts",
+            "read in web/libs/core/src/lib/api-proxy/index.ts",
+            "read in web/libs/datamanager/src/utils/api-proxy/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/libs/editor/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "RELEASE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/apps/labelstudio/src/config/Sentry.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STATIC_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/libs/editor/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "sentry",
+      "openai"
+    ],
+    "unsupported": [
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "findings": [
+    {
+      "id": "local-file-storage",
+      "title": "Files stored on local disk",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Durable local filesystem state declared: volume ./mydata:/label-studio/data:rw (docker-compose.yml nginx), volume ./mydata:/label-studio/data:rw (docker-compose.yml app)",
+      "confidence": "confirmed"
+    }
+  ]
+}

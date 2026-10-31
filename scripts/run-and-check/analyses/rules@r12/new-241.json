@@ -1,0 +1,59 @@
+{
+  "id": "new-241",
+  "commit": "74edd257819b2f09778012dff8d8bd745b5e3de2",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "astro check && astro build && pagefind --site dist && cp -r dist/pagefind public/",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"nginx\", \"-g\", \"daemon off;\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": []
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE",
+  "findings": []
+}

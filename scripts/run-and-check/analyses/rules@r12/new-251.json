@@ -1,0 +1,100 @@
+{
+  "id": "new-251",
+  "commit": "4d05739da559360e91214815d97dd2cfa37154ce",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "nuxt",
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": "nuxt build",
+      "context": "."
+    },
+    "web": {
+      "command": "start: node .output/server/index.mjs",
+      "port": null
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BASE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "findings": [
+    {
+      "id": "unsupported-no-dockerfile",
+      "title": "Has no Dockerfile that builds the app",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository.",
+      "confidence": "confirmed"
+    }
+  ]
+}
