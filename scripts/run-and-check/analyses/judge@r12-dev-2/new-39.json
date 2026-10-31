@@ -1,0 +1,39 @@
+{
+  "id": "new-39",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "several_services",
+      "reason": "The production compose runs Formbricks alongside separate Hub and Cube services that the web app may require, which Deployz cannot run as one service, but the shown lines do not prove they are mandatory for core function.",
+      "evidence": [
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 48,
+          "quote": "# Formbricks Hub (port 8080): API key required. Use e.g. openssl rand -hex 32"
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 4,
+          "quote": "x-hub-runtime-environment: &hub-runtime-environment"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8205,
+      "completionTokens": 210,
+      "costUsd": 0.0366498
+    },
+    "latencyMs": 5187
+  },
+  "softReview": null
+}

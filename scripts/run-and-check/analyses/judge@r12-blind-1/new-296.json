@@ -1,0 +1,44 @@
+{
+  "id": "new-296",
+  "analyser": "judge@r12-blind-1",
+  "from": "ai@r12-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "Nginx Proxy Manager is a reverse-proxy gateway that must take traffic on ports 80 and 443 and keep its generated nginx configs and Let's Encrypt certificates on local disk, which Deployz's single-port, stateless containers cannot provide.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 49,
+          "quote": "2. Add port forwarding for ports 80 and 443 to the server hosting this project"
+        },
+        {
+          "path": "README.md",
+          "line": 72,
+          "quote": "      - ./letsencrypt:/etc/letsencrypt"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 57,
+          "quote": "VOLUME [ \"/data\" ]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5605,
+      "completionTokens": 251,
+      "costUsd": 0.01372
+    },
+    "latencyMs": 138694
+  },
+  "softReview": null
+}

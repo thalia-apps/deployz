@@ -1,0 +1,81 @@
+{
+  "id": "new-220",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "PeerTube supports S3 object storage for videos and PostgreSQL/Redis, so the outcome with changes is not too lenient.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7236,
+      "completionTokens": 73,
+      "costUsd": 0.03009996
+    },
+    "latencyMs": 3891
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: support/docker/production/docker-compose.yml defines 3 application services (webserver, certbot, peertube). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "probably_wrong",
+        "reason": "The webserver and certbot services are an optional reverse proxy and certificate renewer that the compose file says can be commented out, and the load balancer replaces them, so only the peertube app service is needed.",
+        "evidence": [
+          {
+            "path": "support/docker/production/docker-compose.yml",
+            "line": 3,
+            "quote": "# You can comment this webserver section if you want to use another webserver/proxy or test PeerTube in local"
+          },
+          {
+            "path": "support/docker/production/docker-compose.yml",
+            "line": 30,
+            "quote": "# You can comment this certbot section if you want to use another webserver/proxy or test PeerTube in local"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      },
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares redis (redis:8-alpine) in support/docker/production/docker-compose.yml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "The declared service is Redis, which Deployz provides as a managed service.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": [
+          "no evidence"
+        ]
+      },
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /data (support/docker/production/Dockerfile), VOLUME /config (support/docker/production/Dockerfile)",
+        "verdict": "stands",
+        "reason": "The production image declares /data and /config as volumes, and none of the shown lines prove that uploaded videos and configuration are kept somewhere other than local disk.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6432,
+      "completionTokens": 363,
+      "costUsd": 0.016494
+    },
+    "latencyMs": 129258
+  }
+}

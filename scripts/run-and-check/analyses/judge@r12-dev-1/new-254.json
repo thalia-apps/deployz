@@ -1,0 +1,50 @@
+{
+  "id": "new-254",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Glance is a single Go web server; adding the config file to the image is a contained change.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 3880,
+      "completionTokens": 54,
+      "costUsd": 0.016434
+    },
+    "latencyMs": 2385
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-persistent-volume",
+        "findingEvidence": "Unsupported storage: the image starts with the configuration file /app/config/glance.yml (ENTRYPOINT or CMD in Dockerfile), and no Dockerfile instruction creates that file. Deployz does not mount configuration files.",
+        "verdict": "stands",
+        "reason": "The Dockerfile only copies the binary and starts it with /app/config/glance.yml, and no shown line creates that file or supplies the configuration another way, so the app needs a mounted configuration file.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 2950,
+      "completionTokens": 102,
+      "costUsd": 0.00692
+    },
+    "latencyMs": 131462
+  }
+}

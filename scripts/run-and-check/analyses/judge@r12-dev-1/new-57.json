@@ -1,0 +1,50 @@
+{
+  "id": "new-57",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Coolify is a Laravel web app on PostgreSQL and Redis, and splitting its s6 services into workers is a contained change, so the outcome stands.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6971,
+      "completionTokens": 80,
+      "costUsd": 0.02918916
+    },
+    "latencyMs": 2426
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported container setup: docker/production/Dockerfile runs s6-overlay with 4 long-running services (horizon, reverb, scheduler-worker, terminal-server) in one container. Deployz runs one web process and declared workers as separate services.",
+        "verdict": "stands",
+        "reason": "The shown Dockerfile lines do not disprove that the production image runs several long-running s6-overlay services in one container, so the finding stays for you to confirm.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6036,
+      "completionTokens": 89,
+      "costUsd": 0.012962
+    },
+    "latencyMs": 130005
+  }
+}

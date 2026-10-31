@@ -1,0 +1,70 @@
+{
+  "id": "new-56",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "local_disk_data",
+      "reason": "Paperless-ngx keeps its core data, the scanned document originals, archives and the search index, in local media and data directories, and Deployz has no persistent volumes; the shown lines do not prove whether S3 can replace them.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 20,
+          "quote": "Paperless-ngx is a document management system that transforms your physical documents into a searchable online archive so you can keep, well, _less paper_."
+        },
+        {
+          "path": "Dockerfile",
+          "line": 82,
+          "quote": "COPY ./docker/rootfs /"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6787,
+      "completionTokens": 206,
+      "costUsd": 0.03095532
+    },
+    "latencyMs": 4249
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported container setup: Dockerfile runs s6-overlay with 20 long-running services (init-compile-bytecode, init-complete, init-custom-init, init-env-file) in one container. Deployz runs one web process and declared workers as separate services.",
+        "verdict": "stands",
+        "reason": "The image starts s6-overlay via /init, which supervises several long-running services in one container, and no shown line proves otherwise.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /usr/src/paperless/data (Dockerfile)",
+        "verdict": "stands",
+        "reason": "The data volume holds durable application state such as the search index and documents, and no shown setting moves it to a managed service.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5885,
+      "completionTokens": 140,
+      "costUsd": 0.01317
+    },
+    "latencyMs": 130842
+  }
+}

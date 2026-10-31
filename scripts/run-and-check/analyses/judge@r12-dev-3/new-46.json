@@ -1,0 +1,50 @@
+{
+  "id": "new-46",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Homepage is configured by YAML files that can be baked into the image, so DEPLOYABLE_WITH_CHANGES is a fair outcome.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5607,
+      "completionTokens": 78,
+      "costUsd": 0.02374812
+    },
+    "latencyMs": 2719
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-persistent-volume",
+        "findingEvidence": "Unsupported storage: the app declares durable local state (HOMEPAGE_CONFIG_DIR (runtime source)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory.",
+        "verdict": "stands",
+        "reason": "The shown files do not prove that the production app keeps nothing durable in HOMEPAGE_CONFIG_DIR, and no setting moves that data to a managed database or S3, so the finding stays for you to confirm.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4677,
+      "completionTokens": 109,
+      "costUsd": 0.010444
+    },
+    "latencyMs": 143514
+  }
+}

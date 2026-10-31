@@ -1,0 +1,50 @@
+{
+  "id": "new-272",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r11-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Pretix uses PostgreSQL for core data, and its local data directory, Redis, and its nginx/supervisor setup are contained changes, so DEPLOYABLE_WITH_CHANGES holds.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5143,
+      "completionTokens": 98,
+      "costUsd": 0.02230668
+    },
+    "latencyMs": 3173
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /data (Dockerfile)",
+        "verdict": "stands",
+        "reason": "The Dockerfile declares VOLUME /data, and no shown line proves that pretix's data directory (media uploads, generated files) is moved to S3 or other managed storage, so the local disk state appears to be required.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4222,
+      "completionTokens": 107,
+      "costUsd": 0.009514
+    },
+    "latencyMs": 142656
+  }
+}

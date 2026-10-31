@@ -1,0 +1,50 @@
+{
+  "id": "new-140",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "The outcome DEPLOYABLE_WITH_CHANGES is at least as strict as this single-image PDF web app warrants.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8920,
+      "completionTokens": 72,
+      "costUsd": 0.0367488
+    },
+    "latencyMs": 3361
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported container setup: the start script scripts/init-without-ocr.sh runs 6 long-running servers in the background (), create_office_profile_template, start_unoserver_demand_manager, env -u) in one container. Deployz runs one web process and declared workers as separate services.",
+        "verdict": "stands",
+        "reason": "The shown lines of the start script do not prove that the background servers (such as the unoserver manager) are optional or absent on the production path, so the multi-process finding cannot be dismissed.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7985,
+      "completionTokens": 96,
+      "costUsd": 0.01693
+    },
+    "latencyMs": 142072
+  }
+}

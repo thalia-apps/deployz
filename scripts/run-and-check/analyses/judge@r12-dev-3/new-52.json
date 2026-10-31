@@ -1,0 +1,50 @@
+{
+  "id": "new-52",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Vaultwarden supports PostgreSQL via DATABASE_URL, and attachments can be moved to S3 with a contained change.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6738,
+      "completionTokens": 73,
+      "costUsd": 0.02812788
+    },
+    "latencyMs": 2833
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /data (Dockerfile)",
+        "verdict": "stands",
+        "reason": "The /data volume holds more than the database (RSA key, attachments, sends, config.json), and the shown Dockerfile does not show the S3 feature built in or DATA_FOLDER pointed at S3, so durable local storage is still needed.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7008,
+      "completionTokens": 116,
+      "costUsd": 0.015176
+    },
+    "latencyMs": 143776
+  }
+}

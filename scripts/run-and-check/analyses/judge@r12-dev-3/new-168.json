@@ -1,0 +1,50 @@
+{
+  "id": "new-168",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Rasa is a framework whose Dockerfile needs build arguments and a run command, so the DEPLOYABLE_WITH_CHANGES outcome is already strict enough.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5561,
+      "completionTokens": 87,
+      "costUsd": 0.02374416
+    },
+    "latencyMs": 4362
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker/docker-compose.yml defines 3 application services (rasa, action_server, duckling). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "The compose file defines a separate action server and a Duckling service that use other images, and no shown line proves that the production app does not need them, so the vendor should confirm whether they are optional.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4626,
+      "completionTokens": 94,
+      "costUsd": 0.010192
+    },
+    "latencyMs": 143662
+  }
+}

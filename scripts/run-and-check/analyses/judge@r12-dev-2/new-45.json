@@ -1,0 +1,52 @@
+{
+  "id": "new-45",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "changedetection.io keeps all its watches, history and settings in a local datastore directory with no database option, and Deployz provides no persistent disk.",
+      "evidence": [],
+      "checkReasons": [
+        "no evidence"
+      ]
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6431,
+      "completionTokens": 82,
+      "costUsd": 0.02709036
+    },
+    "latencyMs": 2772
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume changedetection-data:/datastore (docker-compose.yml changedetection)",
+        "verdict": "stands",
+        "reason": "The production start command passes -d /datastore as the data directory, and no shown setting moves the watches and their history to PostgreSQL, MySQL, Redis or S3, so the app needs durable local storage.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6665,
+      "completionTokens": 103,
+      "costUsd": 0.01436
+    },
+    "latencyMs": 147219
+  }
+}

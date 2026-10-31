@@ -1,0 +1,44 @@
+{
+  "id": "new-129",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r11-final",
+  "storedOutcome": "NOT_DEPLOYABLE",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "skipped",
+    "reason": "not_deployable",
+    "promptVersion": 4
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "NOT_DEPLOYABLE",
+    "reviews": [
+      {
+        "findingId": "unsupported-database-sqlite",
+        "findingEvidence": "Unsupported database: SQLite driver better-sqlite3. Deployz hosts PostgreSQL and MySQL only; an embedded file database does not survive in the container model.",
+        "verdict": "stands",
+        "reason": "No shown line selects PostgreSQL or MySQL instead of the SQLite database, which is stored under DATA_DIR.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares meilisearch (getmeili/meilisearch:v1.41.0) in docker/docker-compose.yml. Deployz did not find how the application uses it.",
+        "verdict": "stands",
+        "reason": "The production compose file wires the web app to Meilisearch through MEILI_ADDR for full-text search, and no shown line proves that it is optional or a supported datastore.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6597,
+      "completionTokens": 161,
+      "costUsd": 0.014804
+    },
+    "latencyMs": 146746
+  }
+}

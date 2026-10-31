@@ -1,0 +1,50 @@
+{
+  "id": "new-128",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Changes outcome is acceptable: run the worker separately, move archives to S3, and treat Meilisearch as optional search.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6904,
+      "completionTokens": 69,
+      "costUsd": 0.02870604
+    },
+    "latencyMs": 2552
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares meilisearch (getmeili/meilisearch:v1.13.3) in docker-compose.yml. Deployz did not find how the application uses it.",
+        "verdict": "stands",
+        "reason": "The production compose stack runs Meilisearch alongside the app, and the shown lines do not prove that full-text search works without it, so you need to confirm whether Meilisearch is required or optional.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7999,
+      "completionTokens": 99,
+      "costUsd": 0.016988
+    },
+    "latencyMs": 147272
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "id": "new-258",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "Opengist stores every snippet as a Git repository on local disk, and Deployz provides no persistent volumes to keep that core data.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 5,
+          "quote": "Opengist is a **self-hosted** Pastebin **powered by Git**. All snippets are stored in a Git repository and can be"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 69,
+          "quote": "VOLUME /opengist"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5502,
+      "completionTokens": 173,
+      "costUsd": 0.02521332
+    },
+    "latencyMs": 5583
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares meilisearch (a Helm dependency) in helm/opengist/Chart.yaml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "Meilisearch is an optional Helm chart dependency enabled only by a condition flag, and the production Docker image does not start or require it.",
+        "evidence": [
+          {
+            "path": "helm/opengist/Chart.yaml",
+            "line": 19,
+            "quote": "condition: meilisearch.enabled"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      },
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /opengist (Dockerfile), VOLUME /opengist (Dockerfile)",
+        "verdict": "stands",
+        "reason": "The production image sets OG_OPENGIST_HOME=/opengist and declares it as a volume, and Opengist stores its snippets as Git repositories there, so the app needs durable local storage.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4619,
+      "completionTokens": 219,
+      "costUsd": 0.011428
+    },
+    "latencyMs": 131213
+  }
+}

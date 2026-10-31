@@ -1,0 +1,50 @@
+{
+  "id": "new-100",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r10-final",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Langflow runs as one backend web process with PostgreSQL; the Celery/RabbitMQ stack is an optional deploy setup.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7913,
+      "completionTokens": 74,
+      "costUsd": 0.03280068
+    },
+    "latencyMs": 5197
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares result_backend (redis:6.2.5) in deploy/docker-compose.yml; broker (rabbitmq:3-management) in deploy/docker-compose.yml; BROKER_URL in deploy/.env.example. Deployz did not find how the application uses it.",
+        "verdict": "stands",
+        "reason": "The shown lines do not prove that the RabbitMQ broker and the Redis result backend are optional in production, and the declared Celery workers point to a RabbitMQ broker that Deployz does not provide.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 8405,
+      "completionTokens": 104,
+      "costUsd": 0.01785
+    },
+    "latencyMs": 128176
+  }
+}

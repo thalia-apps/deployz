@@ -1,0 +1,66 @@
+{
+  "id": "new-311",
+  "analyser": "judge@r12-blind-2",
+  "from": "ai@r12-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "The outcome already requires changes, such as building the Rust server image with PostgreSQL and moving ingestion storage off local disk, and the shown lines do not prove the app cannot run.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5578,
+      "completionTokens": 87,
+      "costUsd": 0.012026
+    },
+    "latencyMs": 126470
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume rustrak_data:/data (docker-compose.yml server)",
+        "verdict": "probably_wrong",
+        "reason": "The selected Dockerfile builds only the static nginx dashboard that proxies the API to a separate server, so the server's /data volume from docker-compose.yml is not used by this production image.",
+        "evidence": [
+          {
+            "path": "apps/dashboard/Dockerfile",
+            "line": 1,
+            "quote": "# The standalone dashboard image: the SPA compiled by Vite, served by nginx,"
+          },
+          {
+            "path": "apps/dashboard/Dockerfile",
+            "line": 60,
+            "quote": "COPY --from=builder /app/apps/dashboard/dist /usr/share/nginx/html"
+          },
+          {
+            "path": "apps/dashboard/Dockerfile",
+            "line": 44,
+            "quote": "ENV RUSTRAK_API_URL=http://server:8080"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5844,
+      "completionTokens": 277,
+      "costUsd": 0.014458
+    },
+    "latencyMs": 126468
+  }
+}

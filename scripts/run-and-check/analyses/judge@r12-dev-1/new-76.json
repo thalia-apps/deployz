@@ -1,0 +1,50 @@
+{
+  "id": "new-76",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Mattermost is a single Go web server on PostgreSQL that can store files in S3, so contained changes such as a source-building Dockerfile and S3 file storage make it run.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6445,
+      "completionTokens": 290,
+      "costUsd": 0.0312642
+    },
+    "latencyMs": 6385
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /mattermost/data (server/build/Dockerfile), VOLUME /mattermost/config (server/build/Dockerfile), VOLUME /mattermost/plugins (server/build/Dockerfile), VOLUME /mattermost/client/plugins (server/build/Dockerfile)",
+        "verdict": "stands",
+        "reason": "The Dockerfile declares volumes for data, config and plugins, and no shown setting selects S3 file storage or database-backed config, so the default local file storage and config file need durable disk.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5486,
+      "completionTokens": 97,
+      "costUsd": 0.011942
+    },
+    "latencyMs": 126614
+  }
+}

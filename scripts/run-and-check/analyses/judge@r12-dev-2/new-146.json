@@ -1,0 +1,75 @@
+{
+  "id": "new-146",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "openstatus is a stack of cooperating application services (dashboard, server API, workflows, checker, status page) built from separate images, and it also needs libSQL and Tinybird/ClickHouse, which Deployz does not provide.",
+      "evidence": [
+        {
+          "path": "docker-compose.yaml",
+          "line": 20,
+          "quote": "image: ghcr.io/tursodatabase/libsql-server:latest"
+        },
+        {
+          "path": "docker-compose.yaml",
+          "line": 54,
+          "quote": "image: tinybirdco/tinybird-local:latest"
+        },
+        {
+          "path": "apps/dashboard/Dockerfile",
+          "line": 48,
+          "quote": "DATABASE_URL=\"http://libsql:8080\" \\"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8815,
+      "completionTokens": 255,
+      "costUsd": 0.0399564
+    },
+    "latencyMs": 5275
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker-compose.yaml defines 7 application services (libsql, tinybird-local, workflows, server, private-location, dashboard, status-page). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "The compose stack includes libsql and tinybird-local, which Deployz does not provide, and the shown lines do not prove that the dashboard runs without them or the other app services.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: apps/ holds the Dockerfiles of 9 component images (checker, dashboard, private-location, railway-proxy, screenshot-service, server), so the app is a stack of cooperating services. Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "The repository builds several cooperating component images, and nothing shown proves that the dashboard alone is the production app.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7890,
+      "completionTokens": 155,
+      "costUsd": 0.01733
+    },
+    "latencyMs": 146385
+  }
+}

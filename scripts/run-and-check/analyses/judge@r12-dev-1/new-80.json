@@ -1,0 +1,65 @@
+{
+  "id": "new-80",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "LobeHub is a single Next.js web app on PostgreSQL with S3, so the changes-needed outcome is acceptable.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7785,
+      "completionTokens": 71,
+      "costUsd": 0.0322344
+    },
+    "latencyMs": 9916
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares redis (redis:7-alpine) in docker-compose/deploy/docker-compose.yml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "The declared redis service is Redis, which Deployz provides, and the app reaches it through the REDIS_URL setting.",
+        "evidence": [
+          {
+            "path": "docker-compose/deploy/docker-compose.yml",
+            "line": 34,
+            "quote": "- 'REDIS_URL=redis://redis:6379'"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      },
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume fts-search-reindex-state:/app/.elasticsearch-reindex (docker-compose/deploy/docker-compose.yml lobe)",
+        "verdict": "stands",
+        "reason": "The volume holds Elasticsearch reindex state through ES_REINDEX_STATE_DIR, and no shown line proves that this state is disposable or stored elsewhere.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 9732,
+      "completionTokens": 221,
+      "costUsd": 0.021674
+    },
+    "latencyMs": 126056
+  }
+}

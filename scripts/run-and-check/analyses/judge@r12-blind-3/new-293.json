@@ -1,0 +1,44 @@
+{
+  "id": "new-293",
+  "analyser": "judge@r12-blind-3",
+  "from": "ai@r12-blind",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "GoAccess is a command-line log analyzer whose container only prints help, and its port 7890 is a WebSocket feed for a static HTML report rather than a web application that Deployz can serve over HTTP.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 5,
+          "quote": "GoAccess is an open source, real-time web log analyzer and interactive viewer"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 41,
+          "quote": "CMD [\"--help\"]"
+        },
+        {
+          "path": "README.md",
+          "line": 50,
+          "quote": "That's it. It even features its own Web Socket server — http://gwsocket.io/."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4986,
+      "completionTokens": 226,
+      "costUsd": 0.012232
+    },
+    "latencyMs": 123876
+  },
+  "softReview": null
+}

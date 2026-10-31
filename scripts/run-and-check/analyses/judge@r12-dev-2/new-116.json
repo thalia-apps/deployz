@@ -1,0 +1,50 @@
+{
+  "id": "new-116",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Monica is a Laravel web app on PostgreSQL/MySQL with optional search services, so DEPLOYABLE_WITH_CHANGES is not too lenient.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6859,
+      "completionTokens": 86,
+      "costUsd": 0.02886444
+    },
+    "latencyMs": 2716
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares MEILISEARCH_URL in .env.example; TYPESENSE_HOST in .env.example. Deployz did not find how the application uses it.",
+        "verdict": "stands",
+        "reason": "The shown lines do not include the Meilisearch or Typesense settings or a scout driver setting that makes these search services optional, so the finding cannot be ruled out from the files shown.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7069,
+      "completionTokens": 96,
+      "costUsd": 0.015098
+    },
+    "latencyMs": 146402
+  }
+}

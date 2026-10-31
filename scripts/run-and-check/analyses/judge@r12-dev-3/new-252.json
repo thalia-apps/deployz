@@ -1,0 +1,70 @@
+{
+  "id": "new-252",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "The outcome already requires changes, and the Dockerfile installing a release tarball with an unset build argument is a contained fix, since the repository contains the full application source.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7199,
+      "completionTokens": 79,
+      "costUsd": 0.03007224
+    },
+    "latencyMs": 2732
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported container setup: .docker/Dockerfile runs supervisord with a web server and a worker program (.docker/config/supervisord.conf) in one container. Deployz runs one web process and declared workers as separate services.",
+        "verdict": "stands",
+        "reason": "The production image runs supervisord with php-fpm, nginx and a scheduler worker in one container, so the scheduler has to become a separate worker service.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares leantime_db (mysql:8.4) in .docker/docker-compose.yml; mariadb (a Helm dependency) in helm/Chart.yaml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "The declared services are MySQL (mysql:8.4) and MariaDB, which is MySQL-compatible and enabled only by a Helm setting, so Deployz's managed MySQL can replace both.",
+        "evidence": [
+          {
+            "path": ".docker/docker-compose.yml",
+            "line": 5,
+            "quote": "image: mysql:8.4"
+          },
+          {
+            "path": "helm/Chart.yaml",
+            "line": 30,
+            "quote": "condition: mariadb.enabled"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7745,
+      "completionTokens": 258,
+      "costUsd": 0.01807
+    },
+    "latencyMs": 143437
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "id": "new-217",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "local_disk_data",
+      "reason": "OpenClaw keeps its state, memory and credentials on local hardware, and Deployz offers no persistent disk, so a fresh container may lose the assistant's core data.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 20,
+          "quote": "State, memory, and credentials live on your hardware."
+        },
+        {
+          "path": "README.md",
+          "line": 70,
+          "quote": "The [Gateway](https://docs.openclaw.ai/gateway) is the local control plane for sessions, tools, events, and channel connections."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7086,
+      "completionTokens": 191,
+      "costUsd": 0.03184236
+    },
+    "latencyMs": 4297
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw (docker-compose.yml openclaw-gateway), volume ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw (docker-compose.yml openclaw-cli)",
+        "verdict": "stands",
+        "reason": "The mounted ~/.openclaw directory holds the gateway's state, config, workspace and credentials, and no shown setting moves that data to PostgreSQL, MySQL, Redis or S3, so the app needs durable local storage.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 9080,
+      "completionTokens": 114,
+      "costUsd": 0.0193
+    },
+    "latencyMs": 138944
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "id": "new-273",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r11-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Wakapi is a single Go web app that supports PostgreSQL by setting, so the outcome with changes is acceptable.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5786,
+      "completionTokens": 69,
+      "costUsd": 0.02427876
+    },
+    "latencyMs": 2649
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "localhost-binding",
+        "findingEvidence": "Server binds only to a loopback address: ListenAndServe(\"127.0.0.1:…\") (main.go)",
+        "verdict": "probably_wrong",
+        "reason": "The listen address comes from configuration, and the production Dockerfile sets WAKAPI_LISTEN_IPV4 to 0.0.0.0, so the app listens on all interfaces in the container.",
+        "evidence": [
+          {
+            "path": "Dockerfile",
+            "line": 42,
+            "quote": "WAKAPI_LISTEN_IPV4='0.0.0.0' \\"
+          },
+          {
+            "path": "Dockerfile",
+            "line": 19,
+            "quote": "sed -i 's/listen_ipv6: ::1/listen_ipv6: \"-\"/g' app/config.yml"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6261,
+      "completionTokens": 223,
+      "costUsd": 0.014752
+    },
+    "latencyMs": 143928
+  }
+}

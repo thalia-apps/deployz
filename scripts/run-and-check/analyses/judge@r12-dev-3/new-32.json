@@ -1,0 +1,50 @@
+{
+  "id": "new-32",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Linkding supports PostgreSQL via LD_DB_ENGINE, and moving archived HTML and asset files to S3 is a contained change, so the with-changes outcome is acceptable.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6270,
+      "completionTokens": 92,
+      "costUsd": 0.0266508
+    },
+    "latencyMs": 6744
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume ${LD_HOST_DATA_DIR:-./data}:/etc/linkding/data (docker-compose.yml linkding)",
+        "verdict": "stands",
+        "reason": "Although LD_DB_ENGINE can select PostgreSQL for the database, the data directory may also hold other files such as local HTML archives and favicons, and the shown lines do not prove that nothing durable is stored there.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6546,
+      "completionTokens": 109,
+      "costUsd": 0.014182
+    },
+    "latencyMs": 143745
+  }
+}

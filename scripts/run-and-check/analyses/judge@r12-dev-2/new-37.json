@@ -1,0 +1,61 @@
+{
+  "id": "new-37",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Cal.diy web app builds from the root Dockerfile and runs on PostgreSQL; the separate API v2 and Redis are optional, so DEPLOYABLE_WITH_CHANGES is not too lenient.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8918,
+      "completionTokens": 102,
+      "costUsd": 0.03733488
+    },
+    "latencyMs": 3723
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares redis (redis:latest) in docker-compose.yml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "The declared service is Redis, which Deployz provides as a supported single-node datastore, and the compose web service does not depend on it.",
+        "evidence": [
+          {
+            "path": "docker-compose.yml",
+            "line": 28,
+            "quote": "image: redis:latest"
+          },
+          {
+            "path": "docker-compose.yml",
+            "line": 66,
+            "quote": "- database"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 9189,
+      "completionTokens": 142,
+      "costUsd": 0.019798
+    },
+    "latencyMs": 144855
+  }
+}

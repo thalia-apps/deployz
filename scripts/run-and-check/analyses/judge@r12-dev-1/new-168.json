@@ -1,0 +1,50 @@
+{
+  "id": "new-168",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Rasa Open Source is a framework needing a model and project, but the outcome already requires repository changes such as base build args and a start command, which is stricter than DEPLOYABLE.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5561,
+      "completionTokens": 86,
+      "costUsd": 0.02372436
+    },
+    "latencyMs": 2804
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker/docker-compose.yml defines 3 application services (rasa, action_server, duckling). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "The compose file runs the Rasa server alongside a separate action server and Duckling, and the shown lines do not prove those extra services are optional for production, so please confirm whether your bot needs them.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4626,
+      "completionTokens": 99,
+      "costUsd": 0.010242
+    },
+    "latencyMs": 130744
+  }
+}

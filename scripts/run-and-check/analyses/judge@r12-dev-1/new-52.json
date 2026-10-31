@@ -1,0 +1,50 @@
+{
+  "id": "new-52",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Vaultwarden supports PostgreSQL via DATABASE_URL, and attachments can go to S3 as a contained change, so deployable with changes is reasonable.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6738,
+      "completionTokens": 84,
+      "costUsd": 0.02834568
+    },
+    "latencyMs": 3337
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /data (Dockerfile)",
+        "verdict": "stands",
+        "reason": "The /data volume holds attachments, sends, RSA keys and the admin config.json besides the database, and the shown lines do not prove that a setting moves all of that to PostgreSQL or S3 in this build, so the finding stands.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7008,
+      "completionTokens": 112,
+      "costUsd": 0.015136
+    },
+    "latencyMs": 131070
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "id": "new-255",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "unsupported_service",
+      "reason": "WeKan needs a MongoDB wire-protocol database (external MongoDB, or bundled FerretDB on local-disk SQLite), and Deployz provides neither MongoDB nor persistent disk; FerretDB over managed PostgreSQL may be possible but is not shown to work in this image.",
+      "evidence": [
+        {
+          "path": "releases/ferretdb/wekan-entrypoint.sh",
+          "line": 9,
+          "quote": "#   WEKAN_DB=mongodb   -> never start FerretDB; use external MONGO_URL (a mongod"
+        },
+        {
+          "path": "releases/ferretdb/wekan-entrypoint.sh",
+          "line": 11,
+          "quote": "#   WEKAN_DB=ferretdb  -> start the bundled FerretDB (SQLite) on 127.0.0.1:27017"
+        },
+        {
+          "path": "README.md",
+          "line": 30,
+          "quote": "  - FerretDB v1 with SQLite, the default on every platform - bundle, Docker,"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7956,
+      "completionTokens": 348,
+      "costUsd": 0.03839616
+    },
+    "latencyMs": 6295
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported container setup: the start script releases/ferretdb/wekan-entrypoint.sh runs 2 long-running servers in the background (--log-level=error, node /build/recovery-bridge.mjs) in one container. Deployz runs one web process and declared workers as separate services.",
+        "verdict": "stands",
+        "reason": "The shown entrypoint lines make starting the bundled FerretDB depend on WEKAN_DB and the architecture, but none of them show that the recovery bridge is optional or that production never starts FerretDB in the same container, so the finding is not disproved.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7021,
+      "completionTokens": 120,
+      "costUsd": 0.015242
+    },
+    "latencyMs": 129479
+  }
+}

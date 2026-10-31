@@ -1,0 +1,44 @@
+{
+  "id": "new-201",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "GitLab's core data is Git repositories, which it keeps on local disk (via Gitaly), and Deployz has no persistent volumes. The selected Dockerfile also only builds the QA test runner, not the GitLab app.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 17,
+          "quote": "- Manage Git repositories with fine grained access controls that keep your code secure"
+        },
+        {
+          "path": "qa/Dockerfile",
+          "line": 66,
+          "quote": "ENTRYPOINT [\"bin/test\"]"
+        },
+        {
+          "path": "README.md",
+          "line": 58,
+          "quote": "The recommended way to install GitLab is with the [Omnibus packages](https://docs.gitlab.com/install/package/) on our package server."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6603,
+      "completionTokens": 263,
+      "costUsd": 0.03135528
+    },
+    "latencyMs": 6411
+  },
+  "softReview": null
+}

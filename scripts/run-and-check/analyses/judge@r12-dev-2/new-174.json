@@ -1,0 +1,66 @@
+{
+  "id": "new-174",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "The self-hosted product is a separate Python API server (mem0) plus a Next.js dashboard server built from different images that must run together, which Deployz cannot run as one service.",
+      "evidence": [
+        {
+          "path": "server/docker-compose.yaml",
+          "line": 7,
+          "quote": "dockerfile: server/dev.Dockerfile"
+        },
+        {
+          "path": "server/docker-compose.yaml",
+          "line": 53,
+          "quote": "build: ./dashboard"
+        },
+        {
+          "path": "server/docker-compose.yaml",
+          "line": 60,
+          "quote": "- API_INTERNAL_URL=http://mem0:8000"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6844,
+      "completionTokens": 218,
+      "costUsd": 0.03141864
+    },
+    "latencyMs": 3968
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares mem0 (builds server/dev.Dockerfile) in server/docker-compose.yaml, which mem0-dashboard needs. Deployz did not find how the application uses it.",
+        "verdict": "stands",
+        "reason": "The dashboard is configured to call the mem0 API service at API_INTERNAL_URL, a separate Python service with its own image, and no shown line proves that production does not need it or that it is a supported datastore.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5825,
+      "completionTokens": 104,
+      "costUsd": 0.01269
+    },
+    "latencyMs": 146994
+  }
+}

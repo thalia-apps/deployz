@@ -1,0 +1,86 @@
+{
+  "id": "new-178",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "The production image is a single app; the PostgREST, Redis and multi-service setup can be handled with contained changes and settings, so the outcome is not too lenient.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8514,
+      "completionTokens": 79,
+      "costUsd": 0.03527964
+    },
+    "latencyMs": 2673
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker-compose.yaml defines 3 application services (plugins, client, server). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "probably_wrong",
+        "reason": "The docker-compose.yaml services are a development stack built from .dev Dockerfiles, while production uses the single docker/ce-production.Dockerfile that builds plugins, frontend and server into one image.",
+        "evidence": [
+          {
+            "path": "docker-compose.yaml",
+            "line": 7,
+            "quote": "dockerfile: ./docker/plugins.Dockerfile.dev"
+          },
+          {
+            "path": "docker-compose.yaml",
+            "line": 64,
+            "quote": "command: npm run --prefix server start:dev"
+          },
+          {
+            "path": "docker/ce-production.Dockerfile",
+            "line": 41,
+            "quote": "RUN npm --prefix server run build"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      },
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares redis (redis:7-alpine) in docker-compose.yaml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "The declared service is Redis, which Deployz provides as single-node Redis, and the server selects it through the REDIS_HOST setting.",
+        "evidence": [
+          {
+            "path": "docker-compose.yaml",
+            "line": 68,
+            "quote": "image: redis:7-alpine"
+          },
+          {
+            "path": "docker-compose.yaml",
+            "line": 59,
+            "quote": "- REDIS_HOST=redis"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 8737,
+      "completionTokens": 390,
+      "costUsd": 0.021374
+    },
+    "latencyMs": 126887
+  }
+}

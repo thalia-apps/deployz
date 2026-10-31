@@ -1,0 +1,50 @@
+{
+  "id": "new-33",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Memos supports PostgreSQL via MEMOS_DRIVER and S3 for attachments, so contained changes (VERSION default, frontend build step, local storage) make it run.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5599,
+      "completionTokens": 88,
+      "costUsd": 0.02391444
+    },
+    "latencyMs": 3249
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /var/opt/memos (scripts/Dockerfile)",
+        "verdict": "stands",
+        "reason": "The shown lines do not prove that a setting moves every file in /var/opt/memos, such as uploaded attachments, to PostgreSQL or S3, and the README says everything Memos keeps is in that folder.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4688,
+      "completionTokens": 106,
+      "costUsd": 0.010436
+    },
+    "latencyMs": 130668
+  }
+}

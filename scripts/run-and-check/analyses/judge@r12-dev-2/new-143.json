@@ -1,0 +1,50 @@
+{
+  "id": "new-143",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Focalboard supports PostgreSQL via config and file storage can be moved off local disk with a contained change, so DEPLOYABLE_WITH_CHANGES is appropriate.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5568,
+      "completionTokens": 89,
+      "costUsd": 0.02381148
+    },
+    "latencyMs": 2803
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /opt/focalboard/data (docker/Dockerfile), volume fbdata:/opt/focalboard/data (docker/docker-compose.yml app)",
+        "verdict": "stands",
+        "reason": "The image creates /opt/focalboard/data/files and declares it as a volume, and no shown setting moves uploaded files to S3, so the app likely needs durable local storage that Fargate containers do not keep.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4900,
+      "completionTokens": 105,
+      "costUsd": 0.01085
+    },
+    "latencyMs": 147124
+  }
+}

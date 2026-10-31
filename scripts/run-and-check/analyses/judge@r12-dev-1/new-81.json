@@ -1,0 +1,70 @@
+{
+  "id": "new-81",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "local_disk_data",
+      "reason": "The scanner shows Prisma is set to SQLite with required local storage, and no PostgreSQL option is visible, so core data (database, documents, vector store) may live only on local disk, which Deployz cannot keep; the shown lines do not prove it.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 43,
+          "quote": "runs locally by default with zero setup friction"
+        },
+        {
+          "path": "README.md",
+          "line": 56,
+          "quote": "Out of the box you get built-in agents, multi-user support, vector databases, and document pipelines — no extra configuration required."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7674,
+      "completionTokens": 552,
+      "costUsd": 0.04131864
+    },
+    "latencyMs": 8288
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-database-sqlite",
+        "findingEvidence": "Unsupported database: Prisma configured with the SQLite provider. Deployz hosts PostgreSQL and MySQL only.",
+        "verdict": "stands",
+        "reason": "No shown line proves that the production app selects PostgreSQL instead of the Prisma SQLite provider, so the SQLite requirement remains.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume ../server/storage:/app/server/storage (docker/docker-compose.yml anything-llm), volume ../collector/hotdir/:/app/collector/hotdir (docker/docker-compose.yml anything-llm), volume ../collector/outputs/:/app/collector/outputs (docker/docker-compose.yml anything-llm)",
+        "verdict": "stands",
+        "reason": "The shown lines do not prove that server storage, the collector hotdir and the collector outputs are only a cache or are moved to S3, so durable local disk state remains likely.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7130,
+      "completionTokens": 166,
+      "costUsd": 0.01592
+    },
+    "latencyMs": 130488
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "id": "new-140",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Stirling PDF is a single JVM web app on port 8080; the init script's background helpers are a contained change, so the stricter-than-deployable outcome stands.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8920,
+      "completionTokens": 81,
+      "costUsd": 0.036927
+    },
+    "latencyMs": 3301
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported container setup: the start script scripts/init-without-ocr.sh runs 6 long-running servers in the background (), create_office_profile_template, start_unoserver_demand_manager, env -u) in one container. Deployz runs one web process and declared workers as separate services.",
+        "verdict": "stands",
+        "reason": "The shown lines do not reveal the Dockerfile's start command or prove that the background servers (such as the unoserver manager) are optional, so the finding cannot be ruled out.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7985,
+      "completionTokens": 95,
+      "costUsd": 0.01692
+    },
+    "latencyMs": 144674
+  }
+}

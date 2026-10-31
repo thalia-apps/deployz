@@ -1,0 +1,61 @@
+{
+  "id": "new-127",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "unsupported_service",
+      "reason": "The production compose file makes the app depend on a Meilisearch search server, which Deployz does not provide, and the shown lines do not prove whether a database search driver can replace it.",
+      "evidence": [
+        {
+          "path": "docker-compose.production.yml",
+          "line": 9,
+          "quote": "      - meilisearch"
+        },
+        {
+          "path": "docker-compose.production.yml",
+          "line": 35,
+          "quote": "    image: docker.io/getmeili/meilisearch:v1.16"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7603,
+      "completionTokens": 463,
+      "costUsd": 0.03927528
+    },
+    "latencyMs": 11828
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares db (docker.io/library/mariadb:12.0) in docker-compose.production.yml; meilisearch (docker.io/getmeili/meilisearch:v1.16) in docker-compose.production.yml. Deployz did not find how the application uses it.",
+        "verdict": "stands",
+        "reason": "The production compose file declares a meilisearch search engine that Deployz cannot provide, and no shown line proves that the app treats it as optional, even though the db service is a MySQL-compatible database that Deployz could replace.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6677,
+      "completionTokens": 108,
+      "costUsd": 0.014434
+    },
+    "latencyMs": 143636
+  }
+}

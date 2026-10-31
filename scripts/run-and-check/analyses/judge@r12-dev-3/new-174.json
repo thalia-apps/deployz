@@ -1,0 +1,66 @@
+{
+  "id": "new-174",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "The self-hosted product is a Python FastAPI memory server (server/dev.Dockerfile) plus a separate Next.js dashboard built from a different image, and the dashboard needs the API server running alongside it, so Deployz cannot run them as one web service.",
+      "evidence": [
+        {
+          "path": "server/docker-compose.yaml",
+          "line": 7,
+          "quote": "dockerfile: server/dev.Dockerfile"
+        },
+        {
+          "path": "server/docker-compose.yaml",
+          "line": 53,
+          "quote": "build: ./dashboard"
+        },
+        {
+          "path": "server/docker-compose.yaml",
+          "line": 60,
+          "quote": "- API_INTERNAL_URL=http://mem0:8000"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6844,
+      "completionTokens": 247,
+      "costUsd": 0.03199284
+    },
+    "latencyMs": 4374
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares mem0 (builds server/dev.Dockerfile) in server/docker-compose.yaml, which mem0-dashboard needs. Deployz did not find how the application uses it.",
+        "verdict": "stands",
+        "reason": "The dashboard reaches the mem0 API server through API_INTERNAL_URL, and the API is a separate Python service built from another Dockerfile, so the shown lines do not prove the production app works without it.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5825,
+      "completionTokens": 104,
+      "costUsd": 0.01269
+    },
+    "latencyMs": 143605
+  }
+}

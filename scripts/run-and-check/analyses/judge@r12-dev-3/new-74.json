@@ -1,0 +1,61 @@
+{
+  "id": "new-74",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "several_services",
+      "reason": "Mastodon's real-time timeline relies on a separate Node.js streaming API server on its own port alongside the Rails web server, which Deployz's single web process may not provide.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 53,
+          "quote": "- [Node.js](https://nodejs.org/) powers the streaming API."
+        },
+        {
+          "path": "README.md",
+          "line": 38,
+          "quote": "**Real-time, chronological timeline updates** - updates of people you're following appear in real-time in the UI."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8453,
+      "completionTokens": 185,
+      "costUsd": 0.03713688
+    },
+    "latencyMs": 3368
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker-compose.yml defines 2 application services (web, streaming). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "Mastodon's streaming API is a separate Node.js service that the README describes as powering real-time updates, and no shown line proves production can run without it or that it fits the single web process.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7518,
+      "completionTokens": 94,
+      "costUsd": 0.015976
+    },
+    "latencyMs": 142077
+  }
+}

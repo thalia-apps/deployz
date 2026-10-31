@@ -1,0 +1,50 @@
+{
+  "id": "new-272",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r11-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Pretix is a Django web app with PostgreSQL and S3-capable media storage, so running gunicorn in a single process without supervisor is a contained change.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5143,
+      "completionTokens": 79,
+      "costUsd": 0.02193048
+    },
+    "latencyMs": 2990
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /data (Dockerfile)",
+        "verdict": "stands",
+        "reason": "The shown lines do not prove that /data holds only cache or temporary files, and pretix stores media uploads there by default, so the finding stands until you confirm that a setting moves this data to S3 or a database.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4222,
+      "completionTokens": 103,
+      "costUsd": 0.009474
+    },
+    "latencyMs": 146743
+  }
+}

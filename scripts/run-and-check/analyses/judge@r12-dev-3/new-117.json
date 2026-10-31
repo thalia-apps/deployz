@@ -1,0 +1,50 @@
+{
+  "id": "new-117",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Snipe-IT is a Laravel web app on MySQL whose uploads can move to S3 with a contained change, so the outcome DEPLOYABLE_WITH_CHANGES stands.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7168,
+      "completionTokens": 93,
+      "costUsd": 0.03022668
+    },
+    "latencyMs": 3240
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /var/lib/snipeit (Dockerfile)",
+        "verdict": "stands",
+        "reason": "The Dockerfile symlinks uploads, private uploads, backups and OAuth keys into /var/lib/snipeit, and no shown line in the production configuration selects S3 for that data: the S3 disk settings in .env.example are only commented-out options, so the local state finding is not disproven.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7755,
+      "completionTokens": 133,
+      "costUsd": 0.01684
+    },
+    "latencyMs": 141505
+  }
+}

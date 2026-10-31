@@ -1,0 +1,66 @@
+{
+  "id": "new-255",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "unsupported_service",
+      "reason": "WeKan needs a MongoDB wire-protocol database (external MongoDB, or bundled FerretDB on local SQLite disk), which Deployz does not provide, unless FerretDB can run with the managed PostgreSQL.",
+      "evidence": [
+        {
+          "path": "releases/ferretdb/wekan-entrypoint.sh",
+          "line": 9,
+          "quote": "#   WEKAN_DB=mongodb   -> never start FerretDB; use external MONGO_URL (a mongod"
+        },
+        {
+          "path": "releases/ferretdb/wekan-entrypoint.sh",
+          "line": 11,
+          "quote": "#   WEKAN_DB=ferretdb  -> start the bundled FerretDB (SQLite) on 127.0.0.1:27017"
+        },
+        {
+          "path": "README.md",
+          "line": 32,
+          "quote": "  - FerretDB v1 with PostgreSQL works; with MySQL, MariaDB or SAP HANA it is"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7956,
+      "completionTokens": 335,
+      "costUsd": 0.03813876
+    },
+    "latencyMs": 5449
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported container setup: the start script releases/ferretdb/wekan-entrypoint.sh runs 2 long-running servers in the background (--log-level=error, node /build/recovery-bridge.mjs) in one container. Deployz runs one web process and declared workers as separate services.",
+        "verdict": "stands",
+        "reason": "The shown entrypoint lines only describe backend selection and do not prove that the bundled FerretDB server and the recovery bridge stay off in production, so running several processes in one container is not disproven.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7021,
+      "completionTokens": 100,
+      "costUsd": 0.015042
+    },
+    "latencyMs": 145629
+  }
+}

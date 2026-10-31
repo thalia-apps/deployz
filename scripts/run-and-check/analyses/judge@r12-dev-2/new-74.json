@@ -1,0 +1,61 @@
+{
+  "id": "new-74",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Mastodon's real-time UI requires a separate Node.js streaming API server running alongside the Rails web server, so it is two application services that Deployz cannot run together.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 53,
+          "quote": "- [Node.js](https://nodejs.org/) powers the streaming API."
+        },
+        {
+          "path": "README.md",
+          "line": 38,
+          "quote": "**Real-time, chronological timeline updates** - updates of people you're following appear in real-time in the UI."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8453,
+      "completionTokens": 184,
+      "costUsd": 0.03711708
+    },
+    "latencyMs": 3438
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker-compose.yml defines 2 application services (web, streaming). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "The production compose file runs a separate Node.js streaming service beside the Rails web process, and no shown line proves that the streaming API is optional for production.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7518,
+      "completionTokens": 85,
+      "costUsd": 0.015886
+    },
+    "latencyMs": 144352
+  }
+}

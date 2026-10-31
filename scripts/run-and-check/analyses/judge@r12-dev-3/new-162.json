@@ -1,0 +1,66 @@
+{
+  "id": "new-162",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "AgentGPT is a separate Next.js frontend server and a FastAPI backend server built from different images that must run together, and Deployz runs only one web service.",
+      "evidence": [
+        {
+          "path": "docker-compose.yml",
+          "line": 7,
+          "quote": "      context: ./next"
+        },
+        {
+          "path": "docker-compose.yml",
+          "line": 20,
+          "quote": "      context: ./platform"
+        },
+        {
+          "path": "README.md",
+          "line": 43,
+          "quote": "- 🎨 [Frontend](https://github.com/reworkd/AgentGPT/tree/main/next) (Nextjs)"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6082,
+      "completionTokens": 210,
+      "costUsd": 0.02824272
+    },
+    "latencyMs": 5047
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker-compose.yml defines 2 application services (frontend, platform). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "The app is a Next.js frontend plus a separate FastAPI backend, and the README says users reach the app on the frontend at port 3000, so the second application service is needed and is not an optional component or a supported datastore.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6122,
+      "completionTokens": 106,
+      "costUsd": 0.013304
+    },
+    "latencyMs": 143991
+  }
+}

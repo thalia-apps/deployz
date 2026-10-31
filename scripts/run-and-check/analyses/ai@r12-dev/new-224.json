@@ -1,0 +1,270 @@
+{
+  "id": "new-224",
+  "commit": "dd987095cd9b8f07097e978fdeec1b55f2e06a9e",
+  "analyser": "ai@r12-dev",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "elixir",
+      "framework": null,
+      "dockerfilePath": "packaging/docker-image/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "package-generic-unix.tar.xz"
+      ]
+    },
+    "web": {
+      "command": "CMD: [\"rabbitmq-server\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in selenium/fakeportal/app.js",
+            "read in selenium/fakeportal/proxy.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in selenium/fakeportal/app.js",
+            "read in selenium/fakeportal/proxy.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "DEPS_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deps/rabbitmq_cli/mix.exs",
+            "read in deps/rabbitmq_cli/lib/rabbit_common/records.ex",
+            "read in deps/rabbitmq_cli/lib/rabbitmq/cli/formatters/pretty_table.ex"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IDP_TOKEN_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in selenium/fakeportal/app.js",
+            "read in selenium/fakeportal/proxy.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAKE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deps/rabbitmq_cli/mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in selenium/fakeportal/app.js",
+            "read in selenium/fakeportal/proxy.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PROXIED_RABBITMQ_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in selenium/fakeportal/app.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_CLI_ALIASES_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deps/rabbitmq_cli/lib/rabbitmq/cli/core/config.ex"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_CTL_UNIQUE_NODE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deps/rabbitmq_cli/lib/rabbitmq/cli/core/distribution.ex"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_ERLANG_COOKIE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deps/rabbitmq_cli/lib/rabbitmq/cli/core/config.ex"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in selenium/fakeportal/app.js",
+            "read in selenium/fakeportal/proxy.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: Every Dockerfile with a start command copies files the repository does not contain (packaging/docker-image/Dockerfile copies package-generic-unix.tar.xz). Deployz builds the app from a Dockerfile in the repository.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: Every Dockerfile with a start command copies files the repository does not contain (packaging/docker-image/Dockerfile copies package-generic-unix.tar.xz). Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies package-generic-unix.tar.xz, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07931088,
+        "promptTokens": 18413,
+        "completionTokens": 323
+      },
+      "latencyMs": 5583
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": "datastore",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 5584,
+    "questions": 2,
+    "generatedAt": "2026-10-31T07:29:22.395Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "reason": "not_deployable",
+    "status": "skipped",
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "unsupported-datastore-server",
+      "title": "Is a database or message broker, not an application",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Unsupported repository: it is a datastore server that other applications connect to (README.md:6), not a web application.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "local-file-storage",
+      "title": "Files stored on local disk",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Durable local filesystem state declared: VOLUME /var/lib/rabbitmq (packaging/docker-image/Dockerfile)",
+      "confidence": "confirmed"
+    }
+  ]
+}

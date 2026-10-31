@@ -1,0 +1,50 @@
+{
+  "id": "new-57",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "The DEPLOYABLE_WITH_CHANGES outcome is not too lenient based on the shown lines.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6971,
+      "completionTokens": 66,
+      "costUsd": 0.02891196
+    },
+    "latencyMs": 2438
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported container setup: docker/production/Dockerfile runs s6-overlay with 4 long-running services (horizon, reverb, scheduler-worker, terminal-server) in one container. Deployz runs one web process and declared workers as separate services.",
+        "verdict": "stands",
+        "reason": "The shown Dockerfile lines are based on serversideup/php fpm-nginx with s6-overlay, and they include a terminal server build, so nothing shown proves that the extra long-running services are optional in production.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6036,
+      "completionTokens": 106,
+      "costUsd": 0.013132
+    },
+    "latencyMs": 142763
+  }
+}

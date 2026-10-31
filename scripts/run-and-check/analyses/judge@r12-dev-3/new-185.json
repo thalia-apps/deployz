@@ -1,0 +1,44 @@
+{
+  "id": "new-185",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "change",
+      "verdict": "needs_changes",
+      "category": null,
+      "reason": "The Dockerfile build fails without a COMMIT_SHA build argument, which has no default and is never passed by Deployz.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 42,
+          "quote": "ARG COMMIT_SHA"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 74,
+          "quote": "echo \"Error: the required build argument \\$COMMIT_SHA is missing.\"; \\"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 75,
+          "quote": "exit 1; \\"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6824,
+      "completionTokens": 193,
+      "costUsd": 0.03084444
+    },
+    "latencyMs": 5574
+  },
+  "softReview": null
+}

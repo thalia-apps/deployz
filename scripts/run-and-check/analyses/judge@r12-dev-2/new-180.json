@@ -1,0 +1,77 @@
+{
+  "id": "new-180",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "The repository builds the AppFlowy Flutter desktop application, a GTK Linux GUI binary rather than an HTTP web server, so Deployz has nothing to serve.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 55,
+          "quote": "- [Download AppFlowy Desktop (macOS, Windows, and Linux)](https://github.com/AppFlowy-IO/AppFlowy/releases)"
+        },
+        {
+          "path": "frontend/scripts/docker-buildfiles/Dockerfile",
+          "line": 35,
+          "quote": "RUN flutter config --enable-linux-desktop"
+        },
+        {
+          "path": "frontend/scripts/docker-buildfiles/Dockerfile",
+          "line": 85,
+          "quote": "CMD [\"./AppFlowy\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6381,
+      "completionTokens": 279,
+      "costUsd": 0.03079296
+    },
+    "latencyMs": 5423
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume $HOME/.Xauthority:/root/.Xauthority:rw (frontend/scripts/docker-buildfiles/docker-compose.yml app), volume /dev/dri:/dev/dri (frontend/scripts/docker-buildfiles/docker-compose.yml app)",
+        "verdict": "probably_wrong",
+        "reason": "The volumes are host X11 auth and GPU device mounts for running a desktop GUI app, not durable app data storage (though the app itself is a desktop GTK app that cannot serve HTTP, which the vendor should confirm separately).",
+        "evidence": [
+          {
+            "path": "frontend/scripts/docker-buildfiles/docker-compose.yml",
+            "line": 23,
+            "quote": "- $HOME/.Xauthority:/root/.Xauthority:rw"
+          },
+          {
+            "path": "frontend/scripts/docker-buildfiles/docker-compose.yml",
+            "line": 25,
+            "quote": "- /dev/dri:/dev/dri"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6070,
+      "completionTokens": 241,
+      "costUsd": 0.01455
+    },
+    "latencyMs": 145810
+  }
+}

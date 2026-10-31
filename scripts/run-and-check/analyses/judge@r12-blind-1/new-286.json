@@ -1,0 +1,66 @@
+{
+  "id": "new-286",
+  "analyser": "judge@r12-blind-1",
+  "from": "ai@r12-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "Tuwunel stores all homeserver data in an embedded RocksDB database on local disk, with no PostgreSQL or MySQL option, and Deployz provides no persistent volume to hold it.",
+      "evidence": [
+        {
+          "path": "docker/Dockerfile.mas",
+          "line": 20,
+          "quote": "database_path = \"/database\""
+        },
+        {
+          "path": "docker/Dockerfile.mas",
+          "line": 31,
+          "quote": "rocksdb_parallelism_threads = 2"
+        },
+        {
+          "path": "nix/pkgs/complement/config.toml",
+          "line": 9,
+          "quote": "database_path = \"/database\""
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6537,
+      "completionTokens": 225,
+      "costUsd": 0.015324
+    },
+    "latencyMs": 138652
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-persistent-volume",
+        "findingEvidence": "Unsupported storage: the app declares durable local state (database_path = /database (nix/pkgs/complement/config.toml)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory.",
+        "verdict": "stands",
+        "reason": "The selected Dockerfile also sets database_path to /database for its RocksDB store, and no shown setting moves that durable data to a supported managed database, so a persistent disk is still needed.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5633,
+      "completionTokens": 98,
+      "costUsd": 0.012246
+    },
+    "latencyMs": 138651
+  }
+}

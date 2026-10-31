@@ -1,0 +1,50 @@
+{
+  "id": "new-132",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Mealie supports PostgreSQL and its local file storage for recipe images is a contained change, so DEPLOYABLE_WITH_CHANGES is appropriate.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6420,
+      "completionTokens": 85,
+      "costUsd": 0.0271062
+    },
+    "latencyMs": 3535
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME $MEALIE_HOME/data/ (docker/Dockerfile), volume mealie-data:/app/data/ (docker/docker-compose.yml mealie)",
+        "verdict": "stands",
+        "reason": "Although DB_ENGINE can select PostgreSQL, Mealie's data directory also holds uploaded recipe images, backups and other user files, and no shown line moves them to S3 or another store.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6109,
+      "completionTokens": 103,
+      "costUsd": 0.013248
+    },
+    "latencyMs": 146980
+  }
+}

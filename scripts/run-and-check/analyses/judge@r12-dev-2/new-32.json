@@ -1,0 +1,50 @@
+{
+  "id": "new-32",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Linkding supports PostgreSQL via LD_DB_ENGINE, so local SQLite and archive files are a contained change, not core data locked to disk.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6270,
+      "completionTokens": 80,
+      "costUsd": 0.0264132
+    },
+    "latencyMs": 2934
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume ${LD_HOST_DATA_DIR:-./data}:/etc/linkding/data (docker-compose.yml linkding)",
+        "verdict": "stands",
+        "reason": "Although LD_DB_ENGINE can move the database to PostgreSQL, the data directory may also hold other durable files such as local HTML archives, favicons or previews, and no shown line moves those files off local disk.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6546,
+      "completionTokens": 107,
+      "costUsd": 0.014162
+    },
+    "latencyMs": 147678
+  }
+}
