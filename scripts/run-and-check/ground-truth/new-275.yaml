@@ -1,0 +1,141 @@
+id: new-275
+repository: yangzongzhuan/RuoYi
+commit: 9cd770d2ac839999d6a425f70f3bd2cf3a0ee5cd
+summary: >
+  RuoYi is a Chinese-language admin framework (Spring Boot 4.1, Java 17, Shiro, Thymeleaf, MyBatis, Druid) that ships as a
+  Maven multi-module build; the web application is the ruoyi-admin jar. It needs MySQL (the Druid master datasource URL
+  is jdbc:mysql://localhost:3306/ry in application-druid.yml) and has no Redis (EhCache for caches, in-process Quartz
+  scheduler). The schema is created by importing the SQL file sql/ry_20260319.sql by hand; nothing in the application
+  creates tables. Uploaded files, avatars and downloads go to a local directory (ruoyi.profile, D:/ruoyi/uploadPath by
+  default) with no S3 option. The repository has no Dockerfile and no docker-compose; ry.sh and ry.bat start the jar on a
+  host. The server port is 80.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The architecture is close to the MVP (one Spring Boot web process, RDS MySQL by Spring env values, no Redis, no
+    worker). But the repository has no Dockerfile, so a multi-stage Dockerfile (mvn package, java -jar ruoyi-admin.jar) is
+    a repository change, and the MySQL schema has no migration command: the SQL file must be imported by hand (and it
+    starts with drop table statements, so it cannot run again on live data). The upload directory (ruoyi.profile)
+    holds user files on local disk with no S3 option. DEPLOYABLE_WITH_CHANGES fits when the uploads are a minor feature;
+    NOT_DEPLOYABLE fits when the uploads count as durable local disk state. Both are defensible.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: ruoyi-admin/pom.xml, line: 11, quote: "<packaging>jar</packaging>"}
+    - {path: ry.sh, line: 3, quote: "AppName=ruoyi-admin.jar"}
+runtime: {accept: [java]}
+port:
+  accept: [80]
+  # The default is 80 and Spring Boot reads SERVER_PORT, so a vendor can move it above 1024 for a non-root container.
+  evidence:
+    - {path: ruoyi-admin/src/main/resources/application.yml, line: 19, quote: "port: 80"}
+bindAllInterfaces:
+  value: true
+  # Spring Boot binds all interfaces by default and the configuration sets no server.address.
+  evidence:
+    - {path: ruoyi-admin/src/main/resources/application.yml, line: 17, quote: "server:"}
+startCommand:
+  source: explicit
+  accept: ["java -jar ruoyi-admin.jar", "java -jar /app/ruoyi-admin.jar", "java -jar app.jar"]
+  # No start command exists in a container; ry.sh starts the jar on a host. The jar name comes from the finalName.
+  evidence:
+    - {path: ruoyi-admin/pom.xml, line: 117, quote: "<finalName>${project.artifactId}</finalName>"}
+    - {path: ry.sh, line: 3, quote: "AppName=ruoyi-admin.jar"}
+healthPath:
+  accept: ["/login", "/"]
+  # No actuator and no health route. Shiro redirects anonymous requests to /login, which renders without a session.
+  evidence:
+    - {path: ruoyi-admin/src/main/resources/application.yml, line: 90, quote: "loginUrl: /login"}
+    - {path: ruoyi-admin/src/main/resources/application.yml, line: 94, quote: "indexUrl: /index"}
+database:
+  status: required
+  engines: [mysql]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {SPRING_DATASOURCE_DRUID_MASTER_URL: "jdbc:mysql://<host>:3306/<db>", SPRING_DATASOURCE_DRUID_MASTER_USERNAME: "<user>", SPRING_DATASOURCE_DRUID_MASTER_PASSWORD: "<password>"}
+  connectionVars: [SPRING_DATASOURCE_DRUID_MASTER_URL, SPRING_DATASOURCE_DRUID_MASTER_USERNAME, SPRING_DATASOURCE_DRUID_MASTER_PASSWORD]
+  # The URL, user and password are literal values in application-druid.yml (localhost, root, password). Spring relaxed
+  # binding lets env values replace them. The URL also sets useSSL=true and serverTimezone=GMT+8.
+  evidence:
+    - {path: ruoyi-admin/src/main/resources/application-druid.yml, line: 5, quote: "driverClassName: com.mysql.cj.jdbc.Driver"}
+    - {path: ruoyi-admin/src/main/resources/application-druid.yml, line: 9, quote: "url: jdbc:mysql://localhost:3306/ry?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8"}
+    - {path: ruoyi-admin/src/main/resources/application-druid.yml, line: 10, quote: "username: root"}
+    - {path: ruoyi-admin/src/main/resources/application-druid.yml, line: 11, quote: "password: password"}
+    - {path: ruoyi-admin/src/main/resources/application.yml, line: 62, quote: "active: druid"}
+migrations:
+  mode: none
+  accept: []
+  # The schema and the seed data (admin user, menus, dictionaries) are in a SQL file that a person imports. No tool in the
+  # application or the build applies it. The file starts with `drop table if exists`, so a second run erases data.
+  evidence:
+    - {path: sql/ry_20260319.sql, line: 4, quote: "drop table if exists sys_dept;"}
+    - {path: sql/ry_20260319.sql, line: 5, quote: "create table sys_dept ("}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # The ruoyi-quartz module schedules jobs inside the web process; ScheduleConfig is commented out.
+  evidence:
+    - {path: ruoyi-admin/pom.xml, line: 47, quote: "<artifactId>ruoyi-quartz</artifactId>"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [D:/ruoyi/uploadPath]
+  s3: none
+  s3SelectBy: {}
+  # Uploads, avatars and downloads use RuoYiConfig.getProfile() as a local directory. No object-store option exists.
+  evidence:
+    - {path: ruoyi-admin/src/main/resources/application.yml, line: 12, quote: "profile: D:/ruoyi/uploadPath"}
+    - {path: ruoyi-common/src/main/java/com/ruoyi/common/config/RuoYiConfig.java, line: 106, quote: "return getProfile() + \"/avatar\";"}
+    - {path: ruoyi-admin/src/main/java/com/ruoyi/web/controller/common/CommonController.java, line: 82, quote: "String filePath = RuoYiConfig.getUploadPath();"}
+env:
+  required:
+    - {name: SPRING_DATASOURCE_DRUID_MASTER_URL, secret: false, buildTime: false, note: "JDBC URL of the MySQL database; the file default points to localhost"}
+    - {name: SPRING_DATASOURCE_DRUID_MASTER_USERNAME, secret: false, buildTime: false, note: "the file default is root"}
+    - {name: SPRING_DATASOURCE_DRUID_MASTER_PASSWORD, secret: true, buildTime: false, note: "the file default is the literal password"}
+  optional: [RUOYI_PROFILE, RUOYI_DEMOENABLED, SERVER_PORT, SHIRO_COOKIE_CIPHERKEY, SPRING_PROFILES_ACTIVE]
+  buildTime: []
+  evidence:
+    - {path: ruoyi-admin/src/main/resources/application.yml, line: 10, quote: "demoEnabled: true"}
+    - {path: ruoyi-admin/src/main/resources/application.yml, line: 109, quote: "cipherKey:"}
+blockers:
+  expected:
+    - "No Dockerfile: the repository has a Maven build and ry.sh/ry.bat host scripts only"
+    - "The MySQL schema and the admin user come from a SQL file that a person imports; there is no migration command"
+    - "Uploaded files, avatars and downloads go to a local directory with no object-store option"
+  mustNot:
+    - "EhCache must not be read as Redis or as a block: it is an in-process cache"
+    - "Quartz in ruoyi-quartz must not be read as a queue or a separate worker: it runs in the web process"
+    - "Druid monitor pages (/druid) must not be read as a second service"
+    - "The module split (ruoyi-admin, -framework, -system, -common, -generator, -quartz) must not be read as several services: ruoyi-admin is the only runnable module"
+vendorQuestions:
+  legitimate:
+    - "How is the MySQL schema created? (import sql/ry_20260319.sql once; it drops tables first)"
+    - "Which directory holds uploads? (RUOYI_PROFILE; local disk is lost at a task restart)"
+  unnecessary:
+    - "Which database? (MySQL through the Spring datasource env values)"
+    - "Is Redis or a worker needed? (no)"
+traps:
+  - "sql/ry_20260319.sql starts every table with `drop table if exists`; running it again on a live database erases data (sql/ry_20260319.sql:4)"
+  - "Datasource URL, user and password are literal in application-druid.yml (localhost, root, password); the URL has useSSL=true (ruoyi-admin/src/main/resources/application-druid.yml:9-11)"
+  - "The default upload path is a Windows path (D:/ruoyi/uploadPath) (ruoyi-admin/src/main/resources/application.yml:12)"
+  - "demoEnabled is true by default, which shows the demo menu entries in the UI templates (ruoyi-admin/src/main/resources/application.yml:10)"
+  - "The default server port is 80 (ruoyi-admin/src/main/resources/application.yml:19)"
+  - "The README names Gitee as the main host and describes the Spring Boot 2.x and 3.x branches; the default branch is Spring Boot 4.x with Java 17 (README.md:26-32)"
+  - "The shiro cipherKey is empty, so a random key is made at each start and remember-me cookies break across restarts and tasks (ruoyi-admin/src/main/resources/application.yml:109)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: no Dockerfile or compose file exists in the repository; the build is Maven and the runnable module is the ruoyi-admin jar', evidence: 'ruoyi-admin/pom.xml:11,117; ry.sh:3'}
+  - {field: migrations, change: 'none: the schema is only in sql/ry_20260319.sql, which starts with drop table statements', evidence: 'sql/ry_20260319.sql:4-5'}
+  - {field: storage, change: 'none: uploads, avatars and downloads use the local ruoyi.profile directory, with no object-store option', evidence: 'ruoyi-admin/src/main/resources/application.yml:12; ruoyi-common/src/main/java/com/ruoyi/common/config/RuoYiConfig.java:106'}
+  - {field: outcome, change: 'both DEPLOYABLE_WITH_CHANGES and NOT_DEPLOYABLE accepted: the missing Dockerfile and schema import are repository changes, while the upload directory is durable local disk', evidence: 'ruoyi-admin/src/main/resources/application.yml:12; docs/product/mvp-scope.md non-goals'}
+  - {field: all, change: verified, evidence: 21 citations checked}

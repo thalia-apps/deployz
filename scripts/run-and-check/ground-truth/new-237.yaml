@@ -1,0 +1,166 @@
+id: new-237
+repository: getredash/redash
+commit: eb44e6207d7b3d924ea7fd962fd2284f637cf8b8
+summary: >
+  Redash is a Python (Flask, Python 3.13) and React BI tool that queries user data sources and shows dashboards. The root
+  Dockerfile builds the frontend (pnpm) and the backend (uv sync with all data source drivers) from source. One image has
+  several roles through bin/docker-entrypoint: `server` (gunicorn on [::]:5000, the default CMD), `worker` (supervisord
+  with WORKERS_COUNT RQ worker processes) and `scheduler` (RQ scheduler with the periodic jobs). Its own metadata and
+  query results are in PostgreSQL (REDASH_DATABASE_URL); Redis is required for RQ, locks and rate limits. The schema is
+  created with `manage.py database create_tables` and upgraded with `manage.py db upgrade`. compose.yaml is the
+  development setup; the production setup lives in another repository.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One web image from the root Dockerfile (builds from source), port 5000, /ping without login, PostgreSQL through
+    REDASH_DATABASE_URL, Redis through REDASH_REDIS_URL, and two workers from the same image (`worker` and `scheduler`
+    roles of the entrypoint). A migration command (create_tables, then db upgrade) and the cookie and secret keys are
+    settings. No durable local disk. As new-1 (one web process, PostgreSQL, settings only); the web plus workers from one image with Redis is the same topology as new-74.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 29, quote: "pnpm run build"}
+    - {path: Dockerfile, line: 112, quote: "uv sync $UV_OPTIONS $group_flags"}
+    - {path: Dockerfile, line: 115, quote: "COPY --chown=redash . /app"}
+    - {path: Dockerfile, line: 120, quote: "ENTRYPOINT [\"/app/bin/docker-entrypoint\"]"}
+    - {path: Dockerfile, line: 121, quote: "CMD [\"server\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [5000]
+  evidence:
+    - {path: Dockerfile, line: 39, quote: "EXPOSE 5000"}
+    - {path: bin/docker-entrypoint, line: 49, quote: "BIND_ADDRESS=${REDASH_GUNICORN_BIND:-[::]:5000}"}
+bindAllInterfaces:
+  value: true
+  # [::] is the IPv6 wildcard; on Linux it also accepts IPv4 connections.
+  evidence:
+    - {path: bin/docker-entrypoint, line: 49, quote: "BIND_ADDRESS=${REDASH_GUNICORN_BIND:-[::]:5000}"}
+startCommand:
+  source: image
+  accept: ["server", "/usr/local/bin/gunicorn -b", "gunicorn"]
+  evidence:
+    - {path: Dockerfile, line: 121, quote: "CMD [\"server\"]"}
+    - {path: bin/docker-entrypoint, line: 50, quote: "exec /usr/local/bin/gunicorn -b \"$BIND_ADDRESS\" --name redash -w${REDASH_WEB_WORKERS:-4} redash.wsgi:app --max-requests $MAX_REQUESTS --max-requests-jitter $MAX_REQUESTS_JITTER --timeout $TIMEOUT --limit-request-line ${REDASH_GUNICORN_LIMIT_REQUEST_LINE:-0}"}
+healthPath:
+  accept: ["/ping"]
+  # /ping returns "PONG." with no login and no HTTPS redirect; /status.json needs a super admin.
+  evidence:
+    - {path: redash/handlers/__init__.py, line: 11, quote: "@routes.route(\"/ping\", methods=[\"GET\"])"}
+    - {path: redash/handlers/__init__.py, line: 12, quote: "@talisman(force_https=False)"}
+    - {path: redash/handlers/__init__.py, line: 14, quote: "return \"PONG.\""}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [REDASH_DATABASE_URL, DATABASE_URL]
+  evidence:
+    - {path: redash/settings/__init__.py, line: 32, quote: "SQLALCHEMY_DATABASE_URI = os.environ.get("}
+    - {path: redash/settings/__init__.py, line: 33, quote: "\"REDASH_DATABASE_URL\", os.environ.get(\"DATABASE_URL\", \"postgresql:///postgres\")"}
+    - {path: compose.yaml, line: 16, quote: "REDASH_DATABASE_URL: \"postgresql://postgres@postgres/postgres\""}
+migrations:
+  mode: command
+  accept:
+    - "/app/manage.py database create_tables"
+    - "./manage.py database create_tables"
+    - "manage.py database create_tables"
+    - "create_db"
+    - "manage database create_tables"
+    - "/app/manage.py db upgrade"
+    - "./manage.py db upgrade"
+    - "manage.py db upgrade"
+    - "manage db upgrade"
+    - "/app/manage.py database create_tables && /app/manage.py db upgrade"
+    - "./manage.py database create_tables && ./manage.py db upgrade"
+  # create_tables only acts on an empty database (create_all, then stamp the Alembic head); later releases need db upgrade.
+  # Running both in order is safe on every release.
+  evidence:
+    - {path: bin/docker-entrypoint, line: 54, quote: "exec /app/manage.py database create_tables"}
+    - {path: redash/cli/database.py, line: 57, quote: "if is_db_empty():"}
+    - {path: redash/cli/database.py, line: 65, quote: "stamp()"}
+    - {path: migrations/alembic.ini, line: 1, quote: "# A generic, single database configuration."}
+redis:
+  status: required
+  selectBy: {REDASH_REDIS_URL: "redis://<host>:6379/0"}
+  # RQ queues, the scheduler, locks and the login rate limiter all use Redis.
+  evidence:
+    - {path: redash/settings/__init__.py, line: 21, quote: "_REDIS_URL = os.environ.get(\"REDASH_REDIS_URL\", os.environ.get(\"REDIS_URL\", \"redis://localhost:6379/0\"))"}
+    - {path: redash/settings/__init__.py, line: 42, quote: "RQ_REDIS_URL = os.environ.get(\"RQ_REDIS_URL\", _REDIS_URL)"}
+    - {path: redash/settings/__init__.py, line: 289, quote: "LIMITER_STORAGE = os.environ.get(\"REDASH_LIMITER_STORAGE\", REDIS_URL)"}
+workers:
+  status: independent
+  commands: ["worker", "scheduler", "./manage.py rq worker", "./manage.py rq scheduler"]
+  # Queries run in RQ workers, so without a worker no query executes. The scheduler enqueues periodic jobs.
+  # The `worker` role runs supervisord with WORKERS_COUNT (default 2) RQ processes; `./manage.py rq worker` runs one.
+  evidence:
+    - {path: bin/docker-entrypoint, line: 7, quote: "exec /app/manage.py rq scheduler"}
+    - {path: bin/docker-entrypoint, line: 22, quote: "exec supervisord -c worker.conf"}
+    - {path: worker.conf, line: 13, quote: "command=./manage.py rq worker %(ENV_QUEUES)s"}
+    - {path: compose.yaml, line: 39, quote: "command: dev_scheduler"}
+    - {path: compose.yaml, line: 46, quote: "command: dev_worker"}
+scheduledJobs:
+  status: embedded
+  items: [refresh_queries, remove_ghost_locks, empty_schedules, refresh_schemas, sync_user_details, send_aggregated_errors, version_check, cleanup_query_results]
+  # The RQ scheduler worker runs these periodic jobs; no external schedule is needed.
+  evidence:
+    - {path: redash/tasks/schedule.py, line: 59, quote: "{\"func\": refresh_queries, \"timeout\": 600, \"interval\": 30, \"result_ttl\": 600},"}
+    - {path: redash/cli/rq.py, line: 26, quote: "jobs = periodic_job_definitions()"}
+    - {path: redash/cli/rq.py, line: 28, quote: "rq_scheduler.run()"}
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  # Query results and metadata are stored in PostgreSQL.
+  evidence:
+    - {path: redash/settings/__init__.py, line: 45, quote: "QUERY_RESULTS_CLEANUP_ENABLED = parse_boolean(os.environ.get(\"REDASH_QUERY_RESULTS_CLEANUP_ENABLED\", \"true\"))"}
+env:
+  required:
+    - {name: REDASH_DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL; DATABASE_URL is the fallback name"}
+    - {name: REDASH_REDIS_URL, secret: false, buildTime: false, note: "Redis URL; REDIS_URL is the fallback name"}
+    - {name: REDASH_COOKIE_SECRET, secret: true, buildTime: false, note: "the app raises at import when it is missing"}
+    - {name: REDASH_SECRET_KEY, secret: true, buildTime: false, note: "encrypts data source credentials; falls back to the cookie secret. Must stay stable"}
+    - {name: REDASH_HOST, secret: false, buildTime: false, note: "public HTTPS URL used in emails and alerts; default empty"}
+  optional: [REDASH_ENFORCE_HTTPS, REDASH_COOKIES_SECURE, REDASH_PROXIES_COUNT, REDASH_WEB_WORKERS, REDASH_GUNICORN_BIND, REDASH_GUNICORN_TIMEOUT, WORKERS_COUNT, QUEUES, REDASH_MAIL_SERVER, REDASH_MAIL_PORT, REDASH_MAIL_USE_TLS, REDASH_MAIL_USERNAME, REDASH_MAIL_PASSWORD, REDASH_MAIL_DEFAULT_SENDER, REDASH_LOG_LEVEL, REDASH_LOG_STDOUT, REDASH_MULTI_ORG, REDASH_RATELIMIT_ENABLED, REDASH_LDAP_LOGIN_ENABLED, REDASH_REMOTE_USER_LOGIN_ENABLED, REDASH_QUERY_RESULTS_CLEANUP_ENABLED, REDASH_QUERY_RESULTS_CLEANUP_MAX_AGE, SQLALCHEMY_POOL_SIZE, SQLALCHEMY_ENABLE_POOL_PRE_PING, RQ_REDIS_URL, REDASH_LIMITER_STORAGE]
+  buildTime: []
+  evidence:
+    - {path: redash/settings/__init__.py, line: 60, quote: "SECRET_KEY = os.environ.get(\"REDASH_COOKIE_SECRET\")"}
+    - {path: redash/settings/__init__.py, line: 64, quote: "\"You must set the REDASH_COOKIE_SECRET environment variable. Visit http://redash.io/help/open-source/admin-guide/secrets for more information.\""}
+    - {path: redash/settings/__init__.py, line: 68, quote: "DATASOURCE_SECRET_KEY = os.environ.get(\"REDASH_SECRET_KEY\", SECRET_KEY)"}
+    - {path: redash/settings/__init__.py, line: 270, quote: "HOST = os.environ.get(\"REDASH_HOST\", \"\")"}
+blockers:
+  expected: []
+  mustNot:
+    - "The worker and scheduler must not be raised as a second image: both are roles of the same image's entrypoint"
+    - "supervisord in the worker role must not block the web service: the web CMD runs gunicorn alone, and a worker can run `./manage.py rq worker` directly"
+    - "compose.yaml must not be read as the production topology: it is the development setup (dev_server, mounted source, maildev)"
+    - "The PostgreSQL 18 image in compose.yaml must not block: RDS PostgreSQL 16 works for the metadata database"
+    - "User data sources (MySQL, MSSQL, BigQuery and others) must not be read as Deployz requirements: they are external systems that users connect to"
+vendorQuestions:
+  legitimate:
+    - "Which SMTP server sends alerts and invitations? (REDASH_MAIL_*)"
+  unnecessary:
+    - "Which database? (PostgreSQL)"
+    - "Is Redis needed? (yes, for RQ)"
+    - "Which port? (5000)"
+    - "Health path? (/ping)"
+    - "Which worker commands? (worker and scheduler roles of the entrypoint)"
+traps:
+  - "The image ENTRYPOINT is a role dispatcher; the CMD `server` is a role name, not a binary (Dockerfile:120-121, bin/docker-entrypoint:97-100)"
+  - "The first install needs `database create_tables`; it stamps the Alembic head, so later releases need `db upgrade`, and create_tables alone does nothing on a non-empty database (redash/cli/database.py:55-65)"
+  - "The first admin is created in the browser at /setup; until then anyone who reaches the URL can create the admin (redash/handlers/setup.py:54)"
+  - "The worker role starts supervisord with WORKERS_COUNT RQ processes and a health-check event listener (bin/docker-entrypoint:19-22, worker.conf:12-33)"
+  - "compose.yaml builds with skip_frontend_build=true and mounts the source; a production build must leave that argument empty (compose.yaml:7, :9, Dockerfile:28-34)"
+  - "REDASH_SECRET_KEY encrypts data source credentials; changing it makes saved data sources unreadable (redash/settings/__init__.py:68)"
+  - "The image installs the dev dependency group by default (install_groups main,all_ds,dev), so it is large (Dockerfile:101)"
+  - "The Dockerfile uses BuildKit features (RUN --mount=type=cache and heredocs), so the builder must use BuildKit (Dockerfile:19, :27)"
+openQuestions: []
+crossReview:
+  - {field: "outcome.reason", change: "analog wording: new-74 accepts DEPLOYABLE_WITH_CHANGES and NOT_DEPLOYABLE, so new-1 (DEPLOYABLE) is the outcome analog and new-74 only the topology", evidence: "reasons.txt new-1, new-74"}
+  - {field: "dockerfile.accept", change: "none: package.json, pnpm-lock.yaml, pnpm-workspace.yaml, .npmrc, viz-lib/, scripts/, client/, webpack.config.js, pyproject.toml and uv.lock are in git; skip_frontend_build is empty by default, so the frontend is built", evidence: "Dockerfile:6,14-16,21,96; trees/new-237.txt"}
+  - {field: "blockers (supervisord)", change: "none: supervisord runs only in the worker role, with several RQ worker processes of one kind, not several servers; the web CMD runs gunicorn alone", evidence: "bin/docker-entrypoint:16-22; worker.conf:12-15; Dockerfile:121"}
+  - {field: "all", change: "verified", evidence: "36 citations checked"}

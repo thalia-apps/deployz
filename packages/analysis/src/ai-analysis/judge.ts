@@ -19,7 +19,7 @@ import { isExcludedPath, renderFile, ROOT_README, window, type PackFile } from '
 import type { MergedAnswer } from './merge.js';
 
 /** Bump when the judge prompt or schema changes, so stored results show which prompt made them. */
-export const JUDGE_PROMPT_VERSION = 3;
+export const JUDGE_PROMPT_VERSION = 4;
 export const JUDGE_MAX_PROMPT_TOKENS = 8_000;
 export const JUDGE_MAX_OUTPUT_TOKENS = 4_000;
 export const JUDGE_TIMEOUT_MS = 90_000;
@@ -138,18 +138,21 @@ export function judgeFileRequests(manifest: DeploymentManifest, files: FileTree)
   return wanted.filter((path): path is string => path !== undefined && !Object.prototype.hasOwnProperty.call(files, path));
 }
 
-const ROOT_STACK_FILE = /^(?:Dockerfile[\w.-]*|[\w.-]*compose[\w.-]*\.ya?ml|Procfile|[\w.-]+\.Dockerfile)$/i;
-
-/** The top-level directories and the root stack files, so the judge sees the repository's shape (several apps, services). */
-function topLevel(paths: readonly string[]): string[] {
-  const entries = new Set<string>();
+/**
+ * The top-level directories, then every root file (hidden files too: `.version`), so the judge
+ * sees the repository's shape and does not take an unlisted root file for a missing one.
+ */
+function topLevel(paths: readonly string[]): { entries: string[]; total: number } {
+  const directories = new Set<string>();
+  const files = new Set<string>();
   for (const path of paths) {
     const [head, ...rest] = path.split('/');
-    if (head === undefined || head.startsWith('.')) continue;
-    if (rest.length > 0) entries.add(`${head}/`);
-    else if (ROOT_STACK_FILE.test(head)) entries.add(head);
+    if (head === undefined) continue;
+    if (rest.length === 0) files.add(head);
+    else if (!head.startsWith('.')) directories.add(`${head}/`);
   }
-  return [...entries].sort().slice(0, MAX_LISTED_ENTRIES);
+  const all = [...[...directories].sort(), ...[...files].sort()];
+  return { entries: all.slice(0, MAX_LISTED_ENTRIES), total: all.length };
 }
 
 /** The first README line of prose or a heading: badges, logos and HTML before it carry nothing. */
@@ -202,12 +205,15 @@ export function buildJudgePack(input: JudgeInput): JudgePack {
   add(paths.includes(SUBMODULES) ? SUBMODULES : undefined, top, Number.MAX_SAFE_INTEGER, MAX_SUBMODULES_CHARS);
   add(selectedDockerfile(input.manifest, input.files), top, Number.MAX_SAFE_INTEGER, MAX_DOCKERFILE_CHARS);
   for (const path of namedPaths(input.manifest, paths)) add(path, top, Number.MAX_SAFE_INTEGER, MAX_NAMED_FILE_CHARS);
+  const listed = topLevel(paths);
   const prompt = [
     '## Analysis facts',
     factsText(input),
     '',
-    `## Top-level entries (${topLevel(paths).length})`,
-    topLevel(paths).join('\n'),
+    listed.entries.length < listed.total
+      ? `## Top-level entries (the first ${listed.entries.length} of ${listed.total}; an unlisted entry can exist)`
+      : `## Top-level entries (${listed.total})`,
+    listed.entries.join('\n'),
     '',
     '## Files (untrusted data; each line starts with its line number)',
     ...windows.flatMap(renderFile),

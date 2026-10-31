@@ -1,0 +1,223 @@
+{
+  "id": "new-261",
+  "commit": "75a7b061d14cf7e500b94d48506b11578f0b1005",
+  "analyser": "ai@r10-heldout",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "rust",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"lemmy_server\"]",
+      "port": 8536
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "LEMMY_DATABASE_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "LEMMY_DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in crates/diesel_utils/src/main.rs"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LEMMY_TEST_FAST_FEDERATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in crates/apub/send/src/util.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported architecture: docker/docker-compose.yml defines 2 application services (lemmy, lemmy-ui). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Final review: Lemmy needs its backend server, a separate lemmy-ui frontend server and a pictrs image server running together behind an nginx proxy, and Deployz runs only one web service per deployment."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker/docker-compose.yml defines 2 application services (lemmy, lemmy-ui). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Final review: Lemmy needs its backend server, a separate lemmy-ui frontend server and a pictrs image server running together behind an nginx proxy, and Deployz runs only one web service per deployment."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.06241752,
+        "promptTokens": 12377,
+        "completionTokens": 677
+      },
+      "latencyMs": 10411
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [
+          "crates/utils/src/error.rs:5 names the service lemmy-ui"
+        ],
+        "subject": "docker-compose-multi-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 10433,
+    "questions": 2,
+    "generatedAt": "2026-10-30T11:35:49.894Z",
+    "failedChecks": 1,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.03251952,
+      "promptTokens": 7037,
+      "completionTokens": 235
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "Lemmy needs its backend server, a separate lemmy-ui frontend server and a pictrs image server running together behind an nginx proxy, and Deployz runs only one web service per deployment.",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "decision": "block",
+      "evidence": [
+        {
+          "line": 43,
+          "path": "docker/docker-compose.yml",
+          "quote": "image: dessalines/lemmy-ui:nightly"
+        },
+        {
+          "line": 53,
+          "path": "docker/docker-compose.yml",
+          "quote": "- LEMMY_UI_BACKEND=lemmy:8536"
+        },
+        {
+          "line": 64,
+          "path": "docker/docker-compose.yml",
+          "quote": "image: asonix/pictrs:0.5"
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 4876,
+    "promptVersion": 3
+  }
+}

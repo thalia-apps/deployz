@@ -1,0 +1,240 @@
+{
+  "id": "new-277",
+  "commit": "dcaa93b3150352e5044708d7211b5bed0af4509f",
+  "analyser": "ai@r11-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "document/sh",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": "document/sh/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "mall-admin-1.0-SNAPSHOT.jar"
+      ]
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"java\", \"-jar\",\"/mall-admin-1.0-SNAPSHOT.jar\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/actuator/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "SPRING_DATASOURCE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "SPRING_DATASOURCE_URL",
+          "kind": "jdbc_url"
+        },
+        {
+          "name": "SPRING_DATASOURCE_USERNAME",
+          "kind": "username"
+        }
+      ],
+      "engine": "mysql"
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "SPRING_DATASOURCE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mall-admin/src/main/resources/application-prod.yml",
+            "read in mall-demo/src/main/resources/application.yml",
+            "read in mall-portal/src/main/resources/application-prod.yml",
+            "read in mall-search/src/main/resources/application-prod.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SPRING_DATASOURCE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mall-admin/src/main/resources/application-prod.yml",
+            "read in mall-demo/src/main/resources/application.yml",
+            "read in mall-portal/src/main/resources/application-prod.yml",
+            "read in mall-search/src/main/resources/application-prod.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SPRING_DATASOURCE_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mall-admin/src/main/resources/application-prod.yml",
+            "read in mall-demo/src/main/resources/application.yml",
+            "read in mall-portal/src/main/resources/application-prod.yml",
+            "read in mall-search/src/main/resources/application-prod.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: The only Dockerfile (document/sh/Dockerfile) copies mall-admin-1.0-SNAPSHOT.jar, which the repository does not contain. Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: The only Dockerfile (document/sh/Dockerfile) copies mall-admin-1.0-SNAPSHOT.jar, which the repository does not contain. Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies mall-admin-1.0-SNAPSHOT.jar, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05738436,
+        "promptTokens": 12116,
+        "completionTokens": 475
+      },
+      "latencyMs": 7468
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 7469,
+    "questions": 2,
+    "generatedAt": "2026-10-30T12:42:06.355Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02330064,
+      "promptTokens": 5494,
+      "completionTokens": 78
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "The mall-admin backend can run on MySQL behind a rewritten multi-stage Dockerfile, which is a contained change, so the outcome stands.",
+      "verdict": "keep",
+      "category": null,
+      "decision": "none",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "latencyMs": 3663,
+    "promptVersion": 4
+  }
+}

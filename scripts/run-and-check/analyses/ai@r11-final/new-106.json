@@ -1,0 +1,349 @@
+{
+  "id": "new-106",
+  "commit": "b8c2225f8eb0bb302b363e54d6c6458f0ed796bd",
+  "analyser": "ai@r11-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "backend",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "backend/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"tail\", \"-f\", \"/dev/null\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ANTHROPIC_GATEWAY_PASSTHROUGH_ENABLED",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/onyx/server/gateway/configs.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CUSTOM_ANALYTICS_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/ee/onyx/server/seeding.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EXPO_PUBLIC_API_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mobile/src/api/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXPO_PUBLIC_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mobile/src/api/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOSTNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/onyx/sandbox_proxy/server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "IMAP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/onyx/connectors/imap/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_TENANTS_PER_POD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/onyx/onyxbot/slack/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_GATEWAY_PASSTHROUGH_ENABLED",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/onyx/server/gateway/configs.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SANDBOX_PROXY_MITM_CONFDIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/onyx/sandbox_proxy/server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "XDG_CONFIG_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "sendgrid",
+      "sentry",
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported search engine: opensearch-py, and a opensearch service is defined in deployment/docker_compose/docker-compose.prod.yml. Deployz does not support Elasticsearch/OpenSearch.",
+      "Unsupported architecture: deployment/docker_compose/docker-compose.prod.yml defines 3 application services (api_server, web_server, inference_model_server). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Unconfirmed service: the repository declares cache (${BASE_IMAGE_REGISTRY:-docker.io}/library/redis:7.4-alpine) in deployment/docker_compose/docker-compose.prod.yml; minio (${BASE_IMAGE_REGISTRY:-docker.io}/onyxdotapp/minio:RELEASE.2025-07-23T15-54-02Z-cpuv1@sha256:7330be2e7320a7a699b36f72bd06a94d8a21ec9f6f397345d9c38fc6751141f5) in deployment/docker_compose/docker-compose.prod.yml. Deployz did not find how the application uses it.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported search engine: opensearch-py, and a opensearch service is defined in deployment/docker_compose/docker-compose.prod.yml. Deployz does not support Elasticsearch/OpenSearch."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: deployment/docker_compose/docker-compose.prod.yml defines 3 application services (api_server, web_server, inference_model_server). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares cache (${BASE_IMAGE_REGISTRY:-docker.io}/library/redis:7.4-alpine) in deployment/docker_compose/docker-compose.prod.yml; minio (${BASE_IMAGE_REGISTRY:-docker.io}/onyxdotapp/minio:RELEASE.2025-07-23T15-54-02Z-cpuv1@sha256:7330be2e7320a7a699b36f72bd06a94d8a21ec9f6f397345d9c38fc6751141f5) in deployment/docker_compose/docker-compose.prod.yml. Deployz did not find how the application uses it."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "buildTarget": "runtime",
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.15369948,
+        "promptTokens": 30833,
+        "completionTokens": 1596
+      },
+      "latencyMs": 20509
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "opensearch-py",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "docker-compose-multi-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": null,
+        "answer": "required",
+        "reasons": [
+          "low confidence",
+          "no cited production source line uses the service"
+        ],
+        "subject": "unexplained-declared-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q4",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q5",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      },
+      {
+        "id": "q6",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      },
+      {
+        "id": "q7",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 20511,
+    "questions": 7,
+    "generatedAt": "2026-10-30T12:40:51.494Z",
+    "failedChecks": 1,
+    "promptVersion": 20
+  },
+  "judge": {
+    "reason": "not_deployable",
+    "status": "skipped",
+    "promptVersion": 4
+  }
+}

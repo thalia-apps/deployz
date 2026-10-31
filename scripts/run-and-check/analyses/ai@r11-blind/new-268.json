@@ -1,0 +1,184 @@
+{
+  "id": "new-268",
+  "commit": "88932ba8e32b403fe3e8069b36f42751fb078264",
+  "analyser": "ai@r11-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [ \"./scripts/entrypoint.sh\" ]",
+      "port": 5000
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "LT_DAILY_REQ_LIMIT_MULTIPLIER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LT_HOURLY_REQ_LIMIT_MULTIPLIER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LT_LOCALE_LINK_TEMPLATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/locales.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LT_POWERCYCLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LT_WEB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROMETHEUS_MULTIPROC_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_SOFTWARE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VUE_ENV",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in libretranslate/static/js/vue@2.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: VUE_ENV. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": null,
+    "answers": [],
+    "settings": [],
+    "latencyMs": 4,
+    "questions": 0,
+    "generatedAt": "2026-10-30T12:40:43.837Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.01814868,
+      "promptTokens": 4298,
+      "completionTokens": 57
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "reason": "The self-contained Dockerfile builds a single HTTP translation API from the repository source.",
+      "verdict": "keep",
+      "category": null,
+      "decision": "none",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "latencyMs": 2381,
+    "promptVersion": 4
+  }
+}

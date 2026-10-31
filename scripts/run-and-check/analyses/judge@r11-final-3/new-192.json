@@ -1,0 +1,38 @@
+{
+  "id": "new-192",
+  "analyser": "judge@r11-final-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "no_application",
+      "reason": "The production Dockerfile defaults to installing the released apache-airflow 3.3.2 package rather than building this source, and Airflow 3 needs a separate scheduler, dag processor and api-server, so the shown lines do not prove the DEPLOYABLE outcome.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 50,
+          "quote": "# latest released version here"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 51,
+          "quote": "ARG AIRFLOW_VERSION=\"3.3.2\""
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6071,
+      "completionTokens": 197,
+      "costUsd": 0.02794176
+    },
+    "latencyMs": 3991
+  }
+}

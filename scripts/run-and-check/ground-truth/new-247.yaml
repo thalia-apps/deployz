@@ -1,0 +1,133 @@
+id: new-247
+repository: spring-projects/spring-petclinic
+commit: 500158f732419217507c7656904b8e6aa1bcc0d6
+summary: >
+  Spring PetClinic is a Spring Boot 4 sample app (Java 17, Maven and Gradle builds, Thymeleaf, JPA, Actuator) on port
+  8080. The default profile uses an in-memory H2 database that schema.sql and data.sql fill at each start. The `postgres`
+  and `mysql` Spring profiles switch to PostgreSQL (POSTGRES_URL, POSTGRES_USER, POSTGRES_PASS) or MySQL (MYSQL_URL,
+  MYSQL_USER, MYSQL_PASS) and run the idempotent SQL init scripts at start. The README says there is no Dockerfile;
+  images come from `./mvnw spring-boot:build-image` (Cloud Native Buildpacks). The only Dockerfile is a gitpod dev image.
+  docker-compose.yml starts only the databases. No Redis, no worker, no file storage.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The architecture fits Deployz (one Spring Boot web process on 8080, PostgreSQL or MySQL selected by a Spring profile
+    and env values, schema at start, no Redis, no worker, no local data). But the repository has no production
+    Dockerfile (the README says so, and .devcontainer/Dockerfile is a gitpod dev image with no app build), and Deployz
+    does not run buildpacks. A small multi-stage Dockerfile (./mvnw package, java -jar) is needed. This is the "no
+    Dockerfile or only a development Dockerfile" case, as new-130.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .devcontainer/Dockerfile, reason: "gitpod development image (vscode devcontainer Java base, sdkman); it copies and builds no application code"}
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 45, quote: "There is no `Dockerfile` in this project. You can build a container image (if you have a docker daemon) using the Spring Boot build plugin:"}
+    - {path: README.md, line: 48, quote: "./mvnw spring-boot:build-image"}
+    - {path: .devcontainer/Dockerfile, line: 1, quote: "# Not actually used by the devcontainer, but it is used by gitpod"}
+    - {path: .devcontainer/Dockerfile, line: 3, quote: "FROM mcr.microsoft.com/vscode/devcontainers/java:0-${VARIANT}"}
+runtime: {accept: [java]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: README.md, line: 36, quote: "You can then access the Petclinic at <http://localhost:8080/>."}
+    - {path: k8s/petclinic.yml, line: 46, quote: "containerPort: 8080"}
+bindAllInterfaces:
+  value: true
+  # Spring Boot binds all interfaces by default.
+  evidence:
+    - {path: README.md, line: 55, quote: "docker run -p 8080:8080 docker.io/library/spring-petclinic:latest"}
+startCommand:
+  source: explicit
+  accept: ["java -jar target/spring-petclinic-4.0.0-SNAPSHOT.jar", "java -jar /app/app.jar", "java -jar app.jar"]
+  # No start command is in the repo; it comes from the vendor-written image (java -jar on the Maven jar).
+  evidence:
+    - {path: pom.xml, line: 12, quote: "<artifactId>spring-petclinic</artifactId>"}
+    - {path: pom.xml, line: 13, quote: "<version>4.0.0-SNAPSHOT</version>"}
+healthPath:
+  accept: ["/actuator/health", "/livez", "/readyz", "/"]
+  # /livez and /readyz exist only with management.endpoint.health.probes.add-additional-paths=true (set in k8s/petclinic.yml).
+  evidence:
+    - {path: pom.xml, line: 44, quote: "<artifactId>spring-boot-starter-actuator</artifactId>"}
+    - {path: src/main/resources/application.properties, line: 21, quote: "management.endpoints.web.exposure.include=*"}
+    - {path: k8s/petclinic.yml, line: 49, quote: "path: /livez"}
+database:
+  status: optional
+  engines: [h2, postgres, mysql]
+  default: h2
+  deployzEngine: postgres
+  selectBy: {SPRING_PROFILES_ACTIVE: postgres, POSTGRES_URL: "jdbc:postgresql://<host>:5432/<db>", POSTGRES_USER: "<user>", POSTGRES_PASS: "<password>"}
+  connectionVars: [SPRING_PROFILES_ACTIVE, POSTGRES_URL, POSTGRES_USER, POSTGRES_PASS]
+  # H2 is in memory: the sample data is loaded again at each start and changes are lost. A real deploy selects postgres or mysql.
+  evidence:
+    - {path: src/main/resources/application.properties, line: 2, quote: "database=h2"}
+    - {path: src/main/resources/application-postgres.properties, line: 3, quote: "spring.datasource.url=${POSTGRES_URL:jdbc:postgresql://localhost/petclinic}"}
+    - {path: src/main/resources/application-postgres.properties, line: 4, quote: "spring.datasource.username=${POSTGRES_USER:petclinic}"}
+    - {path: src/main/resources/application-postgres.properties, line: 5, quote: "spring.datasource.password=${POSTGRES_PASS:petclinic}"}
+    - {path: src/main/resources/application-mysql.properties, line: 3, quote: "spring.datasource.url=${MYSQL_URL:jdbc:mysql://localhost/petclinic}"}
+    - {path: k8s/petclinic.yml, line: 36, quote: "value: postgres"}
+migrations:
+  mode: startup
+  accept: []
+  # spring.sql.init runs db/<database>/schema.sql and data.sql at each start; the scripts are idempotent.
+  evidence:
+    - {path: src/main/resources/application.properties, line: 3, quote: "spring.sql.init.schema-locations=classpath*:db/${database}/schema.sql"}
+    - {path: src/main/resources/application-postgres.properties, line: 7, quote: "spring.sql.init.mode=always"}
+    - {path: src/main/resources/application-postgres.properties, line: 6, quote: "# SQL is written to be idempotent so this is safe"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required:
+    - {name: SPRING_PROFILES_ACTIVE, secret: false, buildTime: false, note: "postgres (or mysql); without it the app uses in-memory H2 and loses every change at restart"}
+    - {name: POSTGRES_URL, secret: false, buildTime: false, note: "JDBC URL jdbc:postgresql://host:5432/db; the default is localhost"}
+    - {name: POSTGRES_USER, secret: false, buildTime: false, note: "default petclinic"}
+    - {name: POSTGRES_PASS, secret: true, buildTime: false, note: "default petclinic"}
+  optional: [MYSQL_URL, MYSQL_USER, MYSQL_PASS, SPRING_APPLICATION_JSON, SERVER_PORT, MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE]
+  buildTime: []
+  evidence:
+    - {path: src/main/resources/application-postgres.properties, line: 3, quote: "spring.datasource.url=${POSTGRES_URL:jdbc:postgresql://localhost/petclinic}"}
+    - {path: README.md, line: 68, quote: "`spring.profiles.active=mysql` for MySQL or `spring.profiles.active=postgres` for PostgreSQL"}
+blockers:
+  expected:
+    - "No production Dockerfile: the README says there is none (images come from buildpacks), and .devcontainer/Dockerfile is a gitpod dev image"
+  mustNot:
+    - "H2 must not block: it is the default demo database and the postgres or mysql profile replaces it"
+    - "docker-compose.yml must not be read as app services: it starts only MySQL and PostgreSQL for local use"
+    - "k8s/ manifests must not block: they are an example, not a requirement"
+vendorQuestions:
+  legitimate:
+    - "Which production image should Deployz use? (no Dockerfile; buildpacks are not used by Deployz)"
+  unnecessary:
+    - "Which database? (SPRING_PROFILES_ACTIVE=postgres with POSTGRES_URL)"
+    - "Is a migration command needed? (no, the SQL init runs at start)"
+    - "Is Redis or a worker needed? (no)"
+traps:
+  - "POSTGRES_URL here is a JDBC URL (jdbc:postgresql://...), not a postgres:// URL (src/main/resources/application-postgres.properties:3)"
+  - "All actuator endpoints are exposed (env, heapdump, and so on); the comment says not to do this in production (src/main/resources/application.properties:21)"
+  - "The H2 console is exposed in the default profile (README.md:65)"
+  - "k8s/petclinic.yml uses a prebuilt image (dsyer/petclinic) and service bindings from a secret; it is not a build recipe (k8s/petclinic.yml:33, :37)"
+  - "Both Maven (pom.xml, mvnw) and Gradle (build.gradle, gradlew) builds exist; the jar names differ"
+  - "The data.sql files load sample owners and pets into the real database at each start"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: only .devcontainer/Dockerfile exists, a gitpod dev image with no app build; the README says there is no Dockerfile', evidence: 'README.md:45; .devcontainer/Dockerfile:1,3'}
+  - {field: runtime, change: 'none: pom.xml sets java.version 17 on spring-boot-starter-parent 4.1.0', evidence: 'pom.xml:7-8,19'}
+  - {field: outcome, change: 'none: only a dev Dockerfile for a fitting app; analog new-130 (DWC only)', evidence: 'src/main/resources/application-postgres.properties:3-7'}
+  - {field: all, change: verified, evidence: 23 citations checked}

@@ -1,0 +1,38 @@
+{
+  "id": "new-135",
+  "analyser": "judge@r11-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "change",
+      "verdict": "needs_changes",
+      "category": null,
+      "reason": "The selected Dockerfile copies a prebuilt ntfy binary that only the goreleaser/CI step produces, so the image cannot build from the source archive without switching to a build Dockerfile, and the ENTRYPOINT has no serve command.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 16,
+          "quote": "COPY ntfy /usr/bin"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 19,
+          "quote": "ENTRYPOINT [\"ntfy\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5190,
+      "completionTokens": 190,
+      "costUsd": 0.0243144
+    },
+    "latencyMs": 3898
+  }
+}

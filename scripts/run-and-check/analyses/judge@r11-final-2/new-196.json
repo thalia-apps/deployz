@@ -1,0 +1,43 @@
+{
+  "id": "new-196",
+  "analyser": "judge@r11-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "This is code-server, a browser IDE whose core data (the user's workspace files and git repositories in /home/coder) lives only on local disk, and its image installs a prebuilt .deb release package rather than building this source, with VS Code source living only in a submodule.",
+      "evidence": [
+        {
+          "path": "ci/release-image/Dockerfile",
+          "line": 5,
+          "quote": "COPY release-packages/code-server*.deb /tmp/"
+        },
+        {
+          "path": ".gitmodules",
+          "line": 2,
+          "quote": "path = lib/vscode"
+        },
+        {
+          "path": "ci/release-image/Dockerfile",
+          "line": 60,
+          "quote": "WORKDIR /home/coder"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 3878,
+      "completionTokens": 239,
+      "costUsd": 0.02008908
+    },
+    "latencyMs": 4497
+  }
+}

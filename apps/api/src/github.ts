@@ -1002,6 +1002,10 @@ const SUPERVISORD_CONFIG_REGEX = /(?:^|\/)supervisord?[\w.-]*\.conf$/;
 // reads them for a migration the image runs before the app (paperless-ngx).
 const S6_SCRIPT_REGEX = /(?:^|\/)s6-rc\.d\/[^/]+\/(?:run|up)$|(?:^|\/)cont-init\.d\/[^/]+$/;
 
+// An extension-less boot script that a Dockerfile CMD/ENTRYPOINT can name (Rails
+// `bin/docker-entrypoint`); detectStartupMigrationEvidence follows it.
+const BOOT_SCRIPT_REGEX = /(?:^|\/)(?:docker-entrypoint|entrypoint|docker-start|start|init|boot|startup)$/;
+
 function isIgnoredPath(path: string): boolean {
   return path.split('/').some((segment) => IGNORED_DIR_SEGMENTS.has(segment));
 }
@@ -1025,6 +1029,7 @@ function isRelevantPath(path: string): boolean {
   if (PROCFILE_REGEX.test(path)) return true;
   if (SUPERVISORD_CONFIG_REGEX.test(path)) return true;
   if (S6_SCRIPT_REGEX.test(path)) return true;
+  if (BOOT_SCRIPT_REGEX.test(path)) return true;
   const isRoot = !path.includes('/');
   if (isRoot) {
     if (/^\.env(\.\w+)?$/i.test(path)) return true;

@@ -1,0 +1,156 @@
+id: new-252
+repository: Leantime/leantime
+commit: d6efd6b054e515e6cdd41da64feb0d9673013e29
+summary: >
+  Leantime is a PHP 8.4 (Laravel components) project management app with document root public/. The production image
+  .docker/Dockerfile does not build the repository: it downloads a release tarball (Leantime-v${LEAN_VERSION}.tar.gz)
+  from GitHub, and LEAN_VERSION has no default. Its start script runs supervisord with three long-running programs:
+  php-fpm, nginx on port 8080 and the scheduler (`php bin/leantime schedule:work`). .dev/dockerfile is a development
+  Apache image. MySQL is the default database and PostgreSQL is selectable (LEAN_DB_DEFAULT_CONNECTION=pgsql). Uploads
+  go to local userfiles/ or to S3 with LEAN_USE_S3=true. Redis is optional. All settings come from LEAN_* environment
+  variables. The schema is created by the web installer (/install) or `php bin/leantime db:migrate`.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The only production Dockerfile does not build from the repository source (it downloads a release tarball and its
+    LEAN_VERSION build arg has no default), and the image runs php-fpm, nginx and the scheduler under supervisord. The
+    MVP rejects an image that supervises several long-running processes, so NOT_DEPLOYABLE is the plain answer.
+    DEPLOYABLE_WITH_CHANGES is also fair, as new-159 and new-127: the rest fits Deployz (MySQL or PostgreSQL by env, S3
+    by env, optional Redis, /health without login, the scheduler as a worker from the same image) once the vendor writes a
+    single-process source-build Dockerfile (composer install, npx mix --production, one PHP web server).
+dockerfile:
+  accept: []
+  reject:
+    - {path: .docker/Dockerfile, reason: "downloads a release tarball from GitHub instead of copying the repo source; ARG LEAN_VERSION has no default; starts supervisord with php-fpm, nginx and the scheduler"}
+    - {path: .dev/dockerfile, reason: "development Apache image for the .dev compose files (xdebug, test env), not the production image"}
+  target: null
+  context: .docker
+  evidence:
+    - {path: .docker/Dockerfile, line: 85, quote: "ARG LEAN_VERSION"}
+    - {path: .docker/Dockerfile, line: 87, quote: "curl -fsSL --retry 3 https://github.com/Leantime/leantime/releases/download/v${LEAN_VERSION}/Leantime-v${LEAN_VERSION}.tar.gz -o leantime.tar.gz && \\"}
+    - {path: .docker/start.sh, line: 51, quote: "/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"}
+    - {path: .docker/config/supervisord.conf, line: 26, quote: "command=php /var/www/html/bin/leantime schedule:work"}
+    - {path: .dev/dockerfile, line: 36, quote: "RUN pecl install xdebug redis || echo \"pecl unavailable — building without xdebug/redis\""}
+runtime: {accept: [php]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: .docker/Dockerfile, line: 132, quote: "EXPOSE 8080"}
+    - {path: .docker/config/nginx.conf, line: 37, quote: "listen 8080;"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: .docker/config/nginx.conf, line: 37, quote: "listen 8080;"}
+startCommand:
+  source: image
+  accept: ["/start.sh"]
+  evidence:
+    - {path: .docker/Dockerfile, line: 133, quote: "ENTRYPOINT [\"/sbin/tini\", \"--\", \"/start.sh\"]"}
+healthPath:
+  accept: ["/health", "/healthCheck.php"]
+  # /health is dispatched without the middleware pipeline (no install redirect) and checks the database.
+  evidence:
+    - {path: app/Domain/Status/Controllers/Health.php, line: 10, quote: "* Public, unauthenticated liveness/readiness probe — GET /health."}
+    - {path: app/Core/Http/HttpKernel.php, line: 199, quote: "return $request->getPathInfo() === '/health'"}
+    - {path: public/healthCheck.php, line: 3, quote: "echo 'Ok';"}
+database:
+  status: required
+  engines: [mysql, postgres]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {LEAN_DB_HOST: "<host>", LEAN_DB_USER: "<user>", LEAN_DB_PASSWORD: "<password>", LEAN_DB_DATABASE: "<db>"}
+  connectionVars: [LEAN_DB_HOST, LEAN_DB_PORT, LEAN_DB_USER, LEAN_DB_PASSWORD, LEAN_DB_DATABASE, LEAN_DB_DEFAULT_CONNECTION]
+  # PostgreSQL also works with LEAN_DB_DEFAULT_CONNECTION=pgsql and port 5432.
+  evidence:
+    - {path: app/Core/Configuration/laravelConfig.php, line: 554, quote: "'default' => env('LEAN_DB_DEFAULT_CONNECTION', 'mysql'),"}
+    - {path: config/sample.env, line: 17, quote: "LEAN_DB_HOST = 'localhost'                         # Database host"}
+    - {path: config/sample.env, line: 24, quote: "# LEAN_DB_DEFAULT_CONNECTION = 'mysql'             # Options: 'mysql', 'pgsql'. Default: mysql"}
+    - {path: README.md, line: 68, quote: "* MySQL 8.0+ or MariaDB 10.6+"}
+migrations:
+  mode: command
+  accept: ["php bin/leantime db:migrate", "php /var/www/html/bin/leantime db:migrate", "php bin/leantime db:install", "php bin/leantime db:update"]
+  # db:install asks for the admin email and password unless --email and --password are passed (or --silent=true).
+  # The documented path is the web installer at /install, which a first visitor could claim.
+  evidence:
+    - {path: app/Command/MigrateCommand.php, line: 21, quote: "name: 'db:migrate',"}
+    - {path: app/Command/MigrateCommand.php, line: 30, quote: "$this->setAliases(['db:install', 'db:update']);"}
+    - {path: README.md, line: 145, quote: "Once started you can go to `<yourdomain.com>/install` and run the installation script."}
+redis:
+  status: optional
+  selectBy: {LEAN_USE_REDIS: "true", LEAN_REDIS_URL: "tcp://<host>:6379"}
+  evidence:
+    - {path: config/sample.env, line: 229, quote: "LEAN_USE_REDIS = false                             # Set to true to use redis as session cache"}
+    - {path: config/sample.env, line: 230, quote: "LEAN_REDIS_URL = ''                                # Add URL path such as tcp://1.2.3.4:6379. If you are using a password, add ?auth=yourverycomplexpasswordhere to your URL"}
+workers:
+  status: optional-independent
+  commands: ["php bin/leantime schedule:work", "php /var/www/html/bin/leantime schedule:work"]
+  # The scheduler runs inside the image under supervisord; split out, it is a worker from the same image.
+  evidence:
+    - {path: .docker/config/supervisord.conf, line: 25, quote: "[program:scheduler]"}
+    - {path: .docker/config/supervisord.conf, line: 26, quote: "command=php /var/www/html/bin/leantime schedule:work"}
+scheduledJobs:
+  status: embedded
+  items: [Laravel scheduler (schedule:work) for email notifications and periodic tasks]
+  evidence:
+    - {path: .docker/config/supervisord.conf, line: 26, quote: "command=php /var/www/html/bin/leantime schedule:work"}
+storage:
+  local: conditional
+  paths: [/var/www/html/userfiles, /var/www/html/public/userfiles, /var/www/html/app/Plugins, /var/www/html/storage]
+  s3: native
+  s3SelectBy: {LEAN_USE_S3: "true", LEAN_S3_BUCKET: "<bucket>", LEAN_S3_REGION: "<region>"}
+  # LEAN_S3_KEY and LEAN_S3_SECRET may stay empty: the Laravel s3 driver then uses the default AWS credential chain (task role).
+  # Installed plugins live in app/Plugins on local disk; the README says to mount it.
+  evidence:
+    - {path: app/Core/Configuration/laravelConfig.php, line: 151, quote: "'default' => env('LEAN_USE_S3', false) ? 's3' : 'local',"}
+    - {path: config/sample.env, line: 74, quote: "LEAN_USER_FILE_PATH = 'userfiles/'                 # Local relative path to store uploaded files (if not using S3)"}
+    - {path: .docker/docker-compose.yml, line: 40, quote: "- plugins:/var/www/html/app/Plugins                   # Plugin storage"}
+    - {path: README.md, line: 147, quote: "**Important: If you are planning to use plugins you need to mount the plugin folder `plugins:/var/www/html/app/Plugins` and ensure the www-data user has access to it. Otherwise installation may fail or plugins will be removed after a restart**"}
+env:
+  required:
+    - {name: LEAN_DB_HOST, secret: false, buildTime: false, note: "database host; default localhost"}
+    - {name: LEAN_DB_USER, secret: false, buildTime: false, note: "database user"}
+    - {name: LEAN_DB_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: LEAN_DB_DATABASE, secret: false, buildTime: false, note: "database name"}
+    - {name: LEAN_SESSION_PASSWORD, secret: true, buildTime: false, note: "session and encryption key; the code default is '123' and the sample file has a public value"}
+    - {name: LEAN_APP_URL, secret: false, buildTime: false, note: "public HTTPS URL; without it password reset and invitation emails are not sent"}
+    - {name: LEAN_VERSION, secret: false, buildTime: true, note: "build arg of .docker/Dockerfile with no default; selects the release tarball to download"}
+  optional: [LEAN_DB_PORT, LEAN_DB_DEFAULT_CONNECTION, LEAN_USE_S3, LEAN_S3_BUCKET, LEAN_S3_REGION, LEAN_S3_KEY, LEAN_S3_SECRET, LEAN_S3_FOLDER_NAME, LEAN_USE_REDIS, LEAN_REDIS_URL, LEAN_REDIS_HOST, LEAN_REDIS_PORT, LEAN_REDIS_PASSWORD, LEAN_EMAIL_USE_SMTP, LEAN_EMAIL_SMTP_HOSTS, LEAN_EMAIL_SMTP_USERNAME, LEAN_EMAIL_SMTP_PASSWORD, LEAN_EMAIL_SMTP_PORT, LEAN_EMAIL_RETURN, LEAN_TRUSTED_PROXIES, LEAN_LOG_CHANNELS, LEAN_DEFAULT_TIMEZONE, LEAN_ALLOW_TELEMETRY]
+  buildTime: [LEAN_VERSION]
+  evidence:
+    - {path: app/Core/Configuration/laravelConfig.php, line: 67, quote: "'key' => env('LEAN_SESSION_PASSWORD', '123'),"}
+    - {path: config/sample.env, line: 6, quote: "LEAN_APP_URL = ''                                  # Public base URL (e.g. https://pm.example.com). Strongly recommended. Links in emails only use a trusted URL:"}
+    - {path: config/sample.env, line: 38, quote: "LEAN_SESSION_PASSWORD = '3evBlq9zdUEuzKvVJHWWx3QzsQhturBApxwcws2m'  # Salting sessions, replace with a strong password"}
+    - {path: .docker/Dockerfile, line: 85, quote: "ARG LEAN_VERSION"}
+blockers:
+  expected:
+    - "The image supervises several long-running processes: supervisord starts php-fpm, nginx and the scheduler (.docker/config/supervisord.conf:8, :19, :25)"
+    - "No Dockerfile builds the app from the repository source: .docker/Dockerfile downloads a release tarball and LEAN_VERSION has no default (.docker/Dockerfile:85, :87)"
+  mustNot:
+    - "MySQL must not be called unsupported because the README also names MariaDB: MySQL 8 (and PostgreSQL) work"
+    - "Redis must not be required: LEAN_USE_REDIS is false by default"
+    - "Local userfiles must not block by themselves: LEAN_USE_S3=true moves uploads to S3"
+    - "The mysql service in the compose files must not count as an app service"
+    - ".dev/dockerfile must not be chosen as the production image"
+vendorQuestions:
+  legitimate:
+    - "Which image should Deployz build? The production Dockerfile downloads a release and runs three supervised processes (a vendor single-process Dockerfile is needed)"
+    - "How is the schema and first admin created? (the web /install page or db:migrate with --email and --password)"
+    - "Are plugins used? They are installed into app/Plugins on local disk"
+  unnecessary:
+    - "Which port? (8080)"
+    - "Health path? (/health)"
+    - "Is Redis needed? (no)"
+traps:
+  - "COPY lines in .docker/Dockerfile use the .docker directory as build context (config/..., start.sh), not the repo root (.docker/Dockerfile:119-123)"
+  - "The builder stage also copies QEMU from tonistiigi/binfmt:latest; this is for cross-platform builds only (.docker/Dockerfile:5)"
+  - "The web installer /install lets the first visitor create the owner account; run db:migrate with credentials before the URL is public (README.md:145)"
+  - "LEAN_SESSION_PASSWORD falls back to '123' in code; the sample.env value is public (laravelConfig.php:67, config/sample.env:38)"
+  - "public/dist assets and vendor/ are not in git; a source build needs composer install and npx mix --production (makefile:16, :19)"
+  - "helm/ and .docker/docker-compose.yml use the published leantime/leantime image and mount volumes; they are not a source build"
+openQuestions:
+  - "Whether a vendor-written single-process image (for example Apache with mod_php, or FrankenPHP) is a small catalogue change for this app"
+crossReview:
+  - {field: dockerfile.reject, change: 'none: .docker/Dockerfile downloads a release tarball with ARG LEAN_VERSION (no default) and copies only .docker/ config files', evidence: '.docker/Dockerfile:85-90,119-123'}
+  - {field: workers / blockers, change: 'none: supervisord runs php-fpm, nginx and the scheduler as three long-running programs', evidence: '.docker/config/supervisord.conf:8-9,19-20,25-26'}
+  - {field: outcome, change: 'none: supervised multi-process image and no source build; the pair NOT + DWC matches new-159 and new-127 (supervisord PHP images)', evidence: '.docker/start.sh:51'}
+  - {field: all, change: verified, evidence: 32 citations checked}

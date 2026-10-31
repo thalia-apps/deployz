@@ -1,0 +1,38 @@
+{
+  "id": "new-253",
+  "analyser": "judge@r10-heldout-3",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 3,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "change",
+      "verdict": "needs_changes",
+      "category": null,
+      "reason": "The Dockerfile copies root files (package.json, pnpm-workspace.yaml, pnpm-lock.yaml, .version) that the top-level listing does not show, so the build would fail from the source archive.",
+      "evidence": [
+        {
+          "path": "docker/Dockerfile",
+          "line": 13,
+          "quote": "COPY --chown=vp:vp package.json pnpm-workspace.yaml pnpm-lock.yaml .node-version ./"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 34,
+          "quote": "COPY .version .version"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 4869,
+      "completionTokens": 493,
+      "costUsd": 0.02904264
+    },
+    "latencyMs": 7237
+  }
+}

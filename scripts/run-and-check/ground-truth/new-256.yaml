@@ -1,0 +1,131 @@
+id: new-256
+repository: openreplay/openreplay
+commit: 330a36360cf9f6910d6a99fa920e1eba76b65a4a
+summary: >
+  OpenReplay is a session replay and product analytics platform. The repository is a monorepo of many services: a Python
+  API (api/, "chalice"), an alerts service, Go backend services built from one backend/Dockerfile with a SERVICE_NAME
+  build arg (http, sink, storage, ender, db, assets, canvases, images, spot), a Node assist server, a sourcemap reader and
+  an nginx frontend. The root has no Dockerfile. The self-hosted install (scripts/docker-compose/docker-compose.yaml)
+  runs more than 15 application containers from published images, plus PostgreSQL, ClickHouse, Valkey (Redis), an
+  S3-compatible object store, nginx and Caddy. Session events go to ClickHouse; the backend services pass messages
+  through Redis streams or Kafka.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The product needs many distinct application images that run together (API, alerts, the Go ingest and processing
+    services, assist, frontend), and ClickHouse as a required analytics store. Deployz runs one image per deployment and
+    does not provide ClickHouse. Same case as new-68 (PostHog: ClickHouse plus several service images).
+dockerfile:
+  accept: []
+  reject:
+    - {path: api/Dockerfile, reason: "only the Python API service; the product needs the other services and the frontend"}
+    - {path: backend/Dockerfile, reason: "builds one Go service selected by the SERVICE_NAME build arg; there are about ten such services"}
+    - {path: frontend/Dockerfile, reason: "nginx static frontend only; it proxies to the other services"}
+    - {path: assist/Dockerfile, reason: "assist (live session) service only"}
+    - {path: api/Dockerfile_alerts, reason: "alerts service only"}
+    - {path: ee/api/Dockerfile, reason: "enterprise edition API only"}
+    - {path: backend/Dockerfile.bundle, reason: "builds seven Go services into one image whose entrypoint.sh starts them all in the background; a multi-process image, and the API, frontend and ClickHouse are still needed"}
+  target: null
+  context: .
+  evidence:
+    - {path: backend/Dockerfile, line: 18, quote: "ARG SERVICE_NAME"}
+    - {path: backend/Dockerfile, line: 21, quote: "CGO_ENABLED=1 GOOS=linux GOARCH=$ARCH go build -o service -tags dynamic openreplay/backend/cmd/$SERVICE_NAME"}
+    - {path: scripts/docker-compose/docker-compose.yaml, line: 221, quote: "image: public.ecr.aws/p1t3u8a3/api:${API_VERSION}"}
+    - {path: scripts/docker-compose/docker-compose.yaml, line: 533, quote: "image: public.ecr.aws/p1t3u8a3/frontend:${FRONTEND_VERSION}"}
+runtime: {accept: [python, go, node]}
+port:
+  accept: []
+  # Each service has its own port (frontend nginx 8080, Go services HTTP_PORT 8080, API LISTEN_PORT); Caddy is the public entry.
+  evidence:
+    - {path: frontend/Dockerfile, line: 31, quote: "EXPOSE 8080"}
+    - {path: scripts/docker-compose/Caddyfile, line: 2, quote: "reverse_proxy nginx-openreplay:80"}
+bindAllInterfaces:
+  value: null
+  evidence: []
+startCommand:
+  source: image
+  accept: []
+  evidence:
+    - {path: api/entrypoint.sh, line: 7, quote: "uvicorn app:app --host 0.0.0.0 --port $LISTEN_PORT --proxy-headers --log-level ${S_LOGLEVEL:-warning}"}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: required
+  engines: [postgres, clickhouse]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {pg_host: "<host>", pg_port: "5432", pg_dbname: "<db>", pg_user: "<user>", pg_password: "<password>"}
+  connectionVars: [pg_host, pg_port, pg_dbname, pg_user, pg_password, ch_host, ch_port, ch_user, ch_password]
+  # PostgreSQL alone fits, but ClickHouse is also required and is outside the MVP. The compose PostgreSQL is a custom image.
+  evidence:
+    - {path: scripts/docker-compose/docker-compose.yaml, line: 6, quote: "image: ghcr.io/openreplay/postgres:${POSTGRES_VERSION}"}
+    - {path: scripts/docker-compose/docker-compose.yaml, line: 23, quote: "image: clickhouse/clickhouse-server:${CLICKHOUSE_VERSION}"}
+    - {path: scripts/docker-compose/docker-envs/chalice.env, line: 5, quote: "ch_host=\"clickhouse-openreplay-clickhouse.db.svc.cluster.local\""}
+    - {path: scripts/docker-compose/docker-envs/chalice.env, line: 18, quote: "pg_host=\"postgresql.db.svc.cluster.local\""}
+migrations:
+  mode: unknown
+  accept: []
+  # The compose file runs init jobs that load the PostgreSQL and ClickHouse schemas.
+  evidence:
+    - {path: scripts/docker-compose/docker-compose.yaml, line: 192, quote: "clickhouse-client -h clickhouse-openreplay-clickhouse.db.svc.cluster.local --user default --port 9000 --multiquery < /tmp/init_schema.sql || true"}
+redis:
+  status: required
+  selectBy: {REDIS_STRING: "redis://<host>:6379"}
+  evidence:
+    - {path: scripts/docker-compose/docker-envs/chalice.env, line: 1, quote: "REDIS_STRING=\"redis://redis-master.db.svc.cluster.local:6379\""}
+    - {path: scripts/docker-compose/docker-compose.yaml, line: 42, quote: "image: ghcr.io/openreplay/valkey:${REDIS_VERSION}"}
+workers:
+  status: independent
+  commands: []
+  # The Go services (sink, storage, ender, db, assets, canvases, images) are separate images, not commands of one image.
+  evidence:
+    - {path: scripts/docker-compose/docker-compose.yaml, line: 273, quote: "image: public.ecr.aws/p1t3u8a3/sink:${SINK_VERSION}"}
+    - {path: scripts/docker-compose/docker-compose.yaml, line: 507, quote: "image: public.ecr.aws/p1t3u8a3/ender:${ENDER_VERSION}"}
+    - {path: scripts/docker-compose/docker-compose.yaml, line: 195, quote: "image: public.ecr.aws/p1t3u8a3/alerts:${ALERTS_VERSION}"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/mnt/efs]
+  s3: native
+  s3SelectBy: {S3_HOST: "<endpoint>", S3_KEY: "<key>", S3_SECRET: "<secret>"}
+  # Recordings go to an S3-compatible store; the Go services also use a shared FS_DIR (/mnt/efs) between services.
+  evidence:
+    - {path: scripts/docker-compose/docker-envs/chalice.env, line: 24, quote: "S3_HOST=\"${COMMON_PROTOCOL}://${COMMON_DOMAIN_NAME}\""}
+    - {path: backend/Dockerfile, line: 37, quote: "FS_DIR=/mnt/efs \\"}
+env:
+  required:
+    - {name: JWT_SECRET, secret: true, buildTime: false, note: "API session secret (COMMON_JWT_SECRET in the compose env)"}
+    - {name: pg_password, secret: true, buildTime: false, note: "PostgreSQL password"}
+    - {name: ch_host, secret: false, buildTime: false, note: "ClickHouse host; Deployz cannot provide ClickHouse"}
+    - {name: SITE_URL, secret: false, buildTime: false, note: "public URL of the install"}
+  optional: []
+  buildTime: [SERVICE_NAME]
+  evidence:
+    - {path: scripts/docker-compose/docker-envs/chalice.env, line: 13, quote: "JWT_SECRET=\"${COMMON_JWT_SECRET}\""}
+    - {path: scripts/docker-compose/docker-envs/chalice.env, line: 23, quote: "SITE_URL=\"${COMMON_PROTOCOL}://${COMMON_DOMAIN_NAME}\""}
+blockers:
+  expected:
+    - "The product is many application services with distinct images (API, alerts, http, sink, storage, ender, db, assets, canvases, images, spot, assist, sourcemapreader, frontend); Deployz runs one image"
+    - "ClickHouse is a required analytics store and is outside the MVP"
+  mustNot:
+    - "The api/Dockerfile must not be chosen as the whole product: the API alone cannot ingest or replay sessions"
+    - "PostgreSQL support must not hide the ClickHouse requirement"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port or health path? (not useful: the product is not one service)"
+traps:
+  - "The root has no Dockerfile; there are many service Dockerfiles in subfolders (api/, backend/, frontend/, assist/, ee/)"
+  - "backend/Dockerfile builds a different service for each SERVICE_NAME build arg (backend/Dockerfile:18)"
+  - "The compose file uses published images from public.ecr.aws, not build contexts (scripts/docker-compose/docker-compose.yaml:221)"
+  - "The tracker/, sourcemap-uploader/ and snippet/ folders are client libraries, not services to deploy"
+  - "The env names use Kubernetes service hosts (*.svc.cluster.local), from the Helm install"
+openQuestions: []
+crossReview:
+  - {field: dockerfile.reject, change: "added backend/Dockerfile.bundle: it builds seven Go services into one image and its entrypoint starts all of them in the background, so it must not be read as a single-image option", evidence: "backend/Dockerfile.bundle:17,79; backend/entrypoint.sh:3"}
+  - {field: outcome.accept, change: "none: many service images plus ClickHouse; same case as new-68", evidence: "scripts/docker-compose/docker-compose.yaml:23,221,273,533; reasons.txt new-68"}
+  - {field: all, change: verified, evidence: "21 citations checked"}

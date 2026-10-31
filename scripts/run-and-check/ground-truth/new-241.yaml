@@ -1,0 +1,106 @@
+id: new-241
+repository: satnaing/astro-paper
+commit: 74edd257819b2f09778012dff8d8bd745b5e3de2
+summary: >
+  AstroPaper is an Astro blog theme with sample posts. `pnpm run build` runs astro check, astro build (static output to
+  dist/) and Pagefind indexing. The root Dockerfile is multi-stage: node:lts installs with pnpm and builds, and
+  nginx:mainline-alpine-slim serves dist/ on port 80 with the nginx image default CMD. compose.yaml runs only the Astro
+  dev server on 4321 with the source mounted. There is no server code, database, cache, worker or storage.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    A static site built from the repo source and served by nginx is a deployable web app, as new-141 and new-142. The
+    multi-stage Dockerfile builds with pnpm, the nginx stage listens on 80, and / returns the generated index.html with 200.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: compose.yaml, reason: "development: runs `pnpm run dev --host 0.0.0.0` on 4321 with the source bind-mounted"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 9, quote: "RUN pnpm install --frozen-lockfile"}
+    - {path: Dockerfile, line: 12, quote: "RUN pnpm run build"}
+    - {path: Dockerfile, line: 16, quote: "COPY --from=base /app/dist /usr/share/nginx/html"}
+    - {path: compose.yaml, line: 12, quote: "&& pnpm run dev --host 0.0.0.0\""}
+runtime: {accept: [node, static]}
+port:
+  accept: [80]
+  evidence:
+    - {path: Dockerfile, line: 17, quote: "EXPOSE 80"}
+bindAllInterfaces:
+  value: true
+  # The nginx image default server listens on port 80 on all interfaces.
+  evidence:
+    - {path: Dockerfile, line: 15, quote: "FROM nginx:mainline-alpine-slim AS runtime"}
+startCommand:
+  source: image
+  accept: ["nginx -g daemon off;"]
+  # The Dockerfile sets no CMD; the nginx base image CMD starts nginx.
+  evidence:
+    - {path: Dockerfile, line: 15, quote: "FROM nginx:mainline-alpine-slim AS runtime"}
+healthPath:
+  accept: ["/", "/index.html"]
+  evidence:
+    - {path: src/pages/index.astro, line: 1, quote: "---"}
+    - {path: Dockerfile, line: 16, quote: "COPY --from=base /app/dist /usr/share/nginx/html"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: [PUBLIC_GOOGLE_SITE_VERIFICATION]
+  buildTime: [PUBLIC_GOOGLE_SITE_VERIFICATION]
+  evidence:
+    - {path: astro.config.ts, line: 74, quote: "PUBLIC_GOOGLE_SITE_VERIFICATION: envField.string({"}
+    - {path: astro.config.ts, line: 77, quote: "optional: true,"}
+blockers:
+  expected: []
+  mustNot:
+    - "A static site must not be rejected as having no server: nginx serves it"
+    - "Missing database, Redis, workers or S3 must not be reported: the site is static"
+    - "compose.yaml (dev server on 4321) must not set the port or the start command"
+    - "The .dockerignore line *.astro must not be read as excluding the source: a Docker pattern without **/ matches only the context root, and no .astro file is at the root"
+vendorQuestions:
+  legitimate:
+    - "The site URL is fixed in astro-paper.config.ts (https://astro-paper.pages.dev/) and goes into the sitemap, RSS and canonical links; should it be changed to the deployment URL? (a repository edit, not a runtime setting)"
+  unnecessary:
+    - "Which port? (80)"
+    - "Health path? (/)"
+    - "Database, Redis, worker or storage? (none)"
+traps:
+  - "package.json has dev and preview scripts on 4321 and no start script, so a detector may label it a Node server; the image is nginx on 80 (package.json:9, Dockerfile:15)"
+  - ".dockerignore has *.astro, which looks like it removes all pages; in Docker it only matches the root (.dockerignore:2)"
+  - "The site URL is compiled in at build time from astro-paper.config.ts:5, not read from the environment"
+  - "The build fetches Google fonts and installs pnpm@latest through corepack, so it needs network access and may drift (astro.config.ts:65, Dockerfile:6)"
+openQuestions: []
+crossReview:
+  - {field: "outcome.accept", change: "none: a static site built by a multi-stage Dockerfile and served by nginx, as new-141 and new-142", evidence: "Dockerfile:2-17; reasons.txt new-141, new-142"}
+  - {field: "dockerfile.accept", change: "none: .dockerignore *.astro matches only the context root; node:lts is Node 26 since 2026-10-28, and the build depends on corepack in that image (still bundled in Node 25.6), so this is not a clear build failure", evidence: "Dockerfile:2,6; .dockerignore:2"}
+  - {field: "all", change: "verified", evidence: "11 citations checked"}

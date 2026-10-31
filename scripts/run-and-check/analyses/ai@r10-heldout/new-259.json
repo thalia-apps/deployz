@@ -1,0 +1,268 @@
+{
+  "id": "new-259",
+  "commit": "6e840acbda8d62fdd159bf3855c01872d629a914",
+  "analyser": "ai@r10-heldout",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 5000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "APP_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cps/constants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cps/constants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_DIRECTORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cps/constants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CALIBRE_DBPATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cps/constants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CALIBRE_LOCALHOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cps/cli.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CALIBRE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cps/constants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CALIBRE_RECONNECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cps/cli.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CALIBRE_UNIX_SOCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cps/server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COOKIE_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cps/__init__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FLASK_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cps/__init__.py",
+            "read in cps/config_sql.py",
+            "read in cps/logger.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_SITE_VERIFICATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cps/admin.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LISTEN_FDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cps/server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in cps/__init__.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp"
+    ],
+    "unsupported": [
+      "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (pyproject.toml), and no Dockerfile builds an application."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (pyproject.toml), and no Dockerfile builds an application."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.041382,
+        "promptTokens": 9180,
+        "completionTokens": 254
+      },
+      "latencyMs": 5800
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 5801,
+    "questions": 2,
+    "generatedAt": "2026-10-30T11:35:34.986Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "reason": "not_deployable",
+    "status": "skipped",
+    "promptVersion": 3
+  }
+}

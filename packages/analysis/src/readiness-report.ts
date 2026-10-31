@@ -554,7 +554,7 @@ const FIX_CLASSES: Record<string, FixClass> = {
   'unsupported-persistent-volume': 'CODE_CHANGE',
   'unsupported-multi-service': 'CODE_CHANGE',
   'unconfirmed-declared-service': 'CODE_CHANGE',
-  'worker-command': 'CODE_CHANGE',
+  'worker-command': 'SETTING',
   'unsupported-database-mariadb': 'CODE_CHANGE',
   'unsupported-database-sqlite': 'CAPABILITY_GAP',
   'unsupported-database-mongo': 'CAPABILITY_GAP',

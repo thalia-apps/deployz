@@ -1,0 +1,149 @@
+id: new-243
+repository: wagtail/bakerydemo
+commit: c9b38d7a7170dba8bb84254beb7e5dc5a955e024
+summary: >
+  The Wagtail Bakery is a demo site for the Wagtail CMS (Django 6, Python 3.12). The root Dockerfile builds a production
+  image from the repository: it installs requirements/production.txt with uv, copies the source, runs collectstatic and
+  starts uWSGI on $PORT (8000) through docker-entrypoint.sh. The production settings read DATABASE_URL (PostgreSQL;
+  SQLite only when DATABASE_URL is not set), DJANGO_SECRET_KEY, an optional REDIS_URL cache, an optional S3 media bucket
+  (AWS_STORAGE_BUCKET_NAME) and an optional Elasticsearch endpoint. Procfile and heroku.yml run `manage.py migrate` as a
+  release step. No worker and no scheduler.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    The root Dockerfile builds the app from source and runs one uWSGI web process on port 8000. PostgreSQL comes from
+    DATABASE_URL, the migration is a separate command (`python manage.py migrate --noinput`, the heroku.yml release step),
+    media can go to S3 with AWS_STORAGE_BUCKET_NAME, and Redis and Elasticsearch are optional. Only Deployz settings are
+    needed, as new-1 (Django, one web process, PostgreSQL, optional Redis and S3).
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 48, quote: "&& uv pip install --no-cache -r /requirements/production.txt \\"}
+    - {path: Dockerfile, line: 54, quote: "ADD . /code/"}
+    - {path: Dockerfile, line: 62, quote: "RUN DATABASE_URL=postgres://none REDIS_URL=none python manage.py collectstatic --noinput"}
+    - {path: Dockerfile, line: 74, quote: "CMD [\"uwsgi\", \"/code/etc/uwsgi.ini\"]"}
+    - {path: heroku.yml, line: 4, quote: "dockerfile: Dockerfile"}
+runtime: {accept: [python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: Dockerfile, line: 55, quote: "ENV PORT=8000"}
+    - {path: Dockerfile, line: 56, quote: "EXPOSE 8000"}
+    - {path: etc/uwsgi.ini, line: 2, quote: "http-socket=:$(PORT)"}
+bindAllInterfaces:
+  value: true
+  # uWSGI `http-socket=:PORT` with no host binds all interfaces.
+  evidence:
+    - {path: etc/uwsgi.ini, line: 2, quote: "http-socket=:$(PORT)"}
+startCommand:
+  source: image
+  accept: ["uwsgi /code/etc/uwsgi.ini", "/code/docker-entrypoint.sh uwsgi /code/etc/uwsgi.ini"]
+  evidence:
+    - {path: Dockerfile, line: 71, quote: "ENTRYPOINT [\"/code/docker-entrypoint.sh\"]"}
+    - {path: Dockerfile, line: 74, quote: "CMD [\"uwsgi\", \"/code/etc/uwsgi.ini\"]"}
+    - {path: Procfile, line: 2, quote: "web: uwsgi ./etc/uwsgi.ini"}
+healthPath:
+  accept: ["/", "/admin/login/"]
+  # No health route exists. `/` is the Wagtail site root (Wagtail creates a default page in its migrations).
+  # SECURE_SSL_REDIRECT is on by default, so a plain-HTTP probe without X-Forwarded-Proto gets a 301 (accepted 200-399).
+  evidence:
+    - {path: bakerydemo/urls.py, line: 56, quote: "path(\"\", include(wagtail_urls)),"}
+    - {path: bakerydemo/urls.py, line: 18, quote: "path(\"admin/\", include(wagtailadmin_urls)),"}
+    - {path: bakerydemo/settings/production.py, line: 253, quote: "SECURE_SSL_REDIRECT = os.environ.get(\"SECURE_SSL_REDIRECT\", \"True\").lower() == \"true\""}
+database:
+  status: required
+  engines: [postgres, sqlite]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: "postgres://<user>:<password>@<host>:5432/<db>"}
+  connectionVars: [DATABASE_URL]
+  # The entrypoint loops on `psql $DATABASE_URL` until PostgreSQL answers, so the image needs a PostgreSQL DATABASE_URL.
+  evidence:
+    - {path: bakerydemo/settings/base.py, line: 129, quote: "if \"DATABASE_URL\" in os.environ:"}
+    - {path: bakerydemo/settings/base.py, line: 130, quote: "DATABASES = {\"default\": dj_database_url.config(conn_max_age=500)}"}
+    - {path: bakerydemo/settings/base.py, line: 136, quote: "\"ENGINE\": \"django.db.backends.sqlite3\","}
+    - {path: docker-entrypoint.sh, line: 4, quote: "until psql $DATABASE_URL -c '\\q'; do"}
+    - {path: requirements/production.txt, line: 5, quote: "psycopg[binary]>=3.3.3,<3.4"}
+migrations:
+  mode: command
+  accept: ["python manage.py migrate --noinput", "/venv/bin/python manage.py migrate --noinput"]
+  # The entrypoint runs migrate only when the first argument is '/venv/bin/uwsgi'; the CMD passes 'uwsgi', so the
+  # image does not migrate at start. heroku.yml and Procfile run migrate as a release step.
+  evidence:
+    - {path: heroku.yml, line: 11, quote: "- /venv/bin/python manage.py migrate --noinput"}
+    - {path: Procfile, line: 1, quote: "release: yes \"yes\" | python manage.py migrate"}
+    - {path: docker-entrypoint.sh, line: 11, quote: "if [ \"$1\" = '/venv/bin/uwsgi' ]; then"}
+redis:
+  status: optional
+  selectBy: {REDIS_URL: "redis://<host>:6379"}
+  # Redis is only a Django cache; without REDIS_URL the settings use the local-memory cache.
+  evidence:
+    - {path: bakerydemo/settings/production.py, line: 53, quote: "REDIS_URL = os.environ.get(\"REDIS_TLS_URL\", os.environ.get(\"REDIS_URL\"))"}
+    - {path: bakerydemo/settings/production.py, line: 86, quote: "\"BACKEND\": \"django.core.cache.backends.locmem.LocMemCache\","}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: Procfile, line: 2, quote: "web: uwsgi ./etc/uwsgi.ini"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: Procfile, line: 1, quote: "release: yes \"yes\" | python manage.py migrate"}
+storage:
+  local: conditional
+  paths: [/code/bakerydemo/media]
+  s3: native
+  s3SelectBy: {AWS_STORAGE_BUCKET_NAME: "<bucket>"}
+  # Uploaded images and documents use FileSystemStorage under MEDIA_ROOT unless AWS_STORAGE_BUCKET_NAME is set.
+  # django-storages uses the default boto3 credential chain (the task role) when no access keys are set.
+  evidence:
+    - {path: bakerydemo/settings/base.py, line: 190, quote: "MEDIA_ROOT = os.path.join(PROJECT_DIR, \"media\")"}
+    - {path: bakerydemo/settings/production.py, line: 147, quote: "if \"AWS_STORAGE_BUCKET_NAME\" in os.environ:"}
+    - {path: bakerydemo/settings/production.py, line: 151, quote: "STORAGES[\"default\"][\"BACKEND\"] = \"storages.backends.s3boto3.S3Boto3Storage\""}
+    - {path: Dockerfile, line: 68, quote: "VOLUME [\"/code/bakerydemo/media/images/\"]"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "postgres://user:pass@host:5432/db; without it the settings use SQLite and the entrypoint waits forever for psql"}
+    - {name: DJANGO_SECRET_KEY, secret: true, buildTime: false, note: "without it each process generates an ephemeral key, so sessions break across restarts and tasks"}
+    - {name: AWS_STORAGE_BUCKET_NAME, secret: false, buildTime: false, note: "Deployz bucket for uploaded images and documents; without it media is on ephemeral local disk"}
+  optional: [DJANGO_ALLOWED_HOSTS, PRIMARY_HOST, SECURE_SSL_REDIRECT, SECURE_HSTS_SECONDS, REDIS_URL, AWS_S3_REGION_NAME, AWS_S3_CUSTOM_DOMAIN, ELASTICSEARCH_ENDPOINT, DJANGO_LOAD_INITIAL_DATA, ADMIN_PASSWORD, BASIC_AUTH_ENABLED, DJANGO_LOG_LEVEL, FRONTEND_CACHE_CLOUDFLARE_BEARER_TOKEN, CSP_DEFAULT_SRC]
+  buildTime: []
+  evidence:
+    - {path: bakerydemo/settings/production.py, line: 11, quote: "if \"DJANGO_SECRET_KEY\" in os.environ:"}
+    - {path: bakerydemo/settings/production.py, line: 28, quote: "ALLOWED_HOSTS = os.getenv(\"DJANGO_ALLOWED_HOSTS\", \"*\").split(\",\")"}
+    - {path: bakerydemo/settings/production.py, line: 34, quote: "if \"PRIMARY_HOST\" in os.environ:"}
+    - {path: docker-entrypoint.sh, line: 15, quote: "if [ \"x$DJANGO_LOAD_INITIAL_DATA\" = 'xon' ]; then"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite fallback must not block: DATABASE_URL selects PostgreSQL"
+    - "Elasticsearch must not block: it is used only when ELASTICSEARCH_ENDPOINT is set; the default search backend is the database"
+    - "Redis must not be required: without REDIS_URL the cache is local memory"
+    - "The VOLUME for media images must not block: media goes to S3 with AWS_STORAGE_BUCKET_NAME"
+    - "docker-compose.yml (db, redis, app with a source bind mount) must not be read as a multi-service app: it is for local testing only"
+    - "GS_BUCKET_NAME (Google Cloud Storage) must not be read as a GCP requirement: it is an alternative to S3"
+vendorQuestions:
+  legitimate:
+    - "Load the demo content? (DJANGO_LOAD_INITIAL_DATA=on runs load_initial_data at each start and creates the admin / changeme user)"
+  unnecessary:
+    - "Which database? (DATABASE_URL, PostgreSQL)"
+    - "Is a worker needed? (no)"
+    - "Is Elasticsearch needed? (no, database search is the default)"
+traps:
+  - "The entrypoint migrates only when the first argument is '/venv/bin/uwsgi', but the CMD is 'uwsgi', so no migration runs at start; a migration command is needed (docker-entrypoint.sh:11, Dockerfile:74)"
+  - "SECURE_SSL_REDIRECT defaults to True; a plain-HTTP health probe gets a 301 unless redirects are accepted or SECURE_SSL_REDIRECT=false (bakerydemo/settings/production.py:253)"
+  - "load_initial_data creates demo users with the password changeme; a public instance with demo data is open to anyone who reads the README (readme.md:64)"
+  - "base.py holds a committed SECRET_KEY and a Google Maps key; production.py replaces the secret only from DJANGO_SECRET_KEY (bakerydemo/settings/base.py:25, :262)"
+  - "django.contrib.postgres is added only when DATABASE_URL starts with postgres:// (not postgresql://) (bakerydemo/settings/base.py:131)"
+  - "Vagrantfile and vagrant/provision.sh are a local development path, not the deploy path"
+openQuestions: []
+crossReview:
+  - {field: dockerfile.accept, change: 'none: the root Dockerfile installs requirements, ADDs the repo source and runs collectstatic with dummy env; static CSS and JS are committed under bakerydemo/static, so no npm build is needed', evidence: 'Dockerfile:48,54,62; .gitignore has no static path'}
+  - {field: migrations, change: 'none: the entrypoint migrates only for ''/venv/bin/uwsgi'', and the CMD passes ''uwsgi'', so a separate migrate command is needed', evidence: 'docker-entrypoint.sh:11-13; Dockerfile:74; heroku.yml:11'}
+  - {field: database / redis / storage, change: 'none: DATABASE_URL selects PostgreSQL, REDIS_URL is an optional cache, AWS_STORAGE_BUCKET_NAME switches media to S3, ELASTICSEARCH_ENDPOINT is opt-in', evidence: 'bakerydemo/settings/base.py:129-130; bakerydemo/settings/production.py:53,92-94,147-151'}
+  - {field: outcome, change: 'none: one uWSGI process on 8000 built from source, settings only; analog new-1 fits', evidence: 'etc/uwsgi.ini:2; Dockerfile:55-56'}
+  - {field: all, change: verified, evidence: 35 citations checked}

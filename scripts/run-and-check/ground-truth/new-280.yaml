@@ -1,0 +1,145 @@
+id: new-280
+repository: cachethq/cachet
+commit: 40bd0819ee46ee7094c336a1240a2a7a1291ccb8
+summary: >
+  Cachet 3.x is a self-hosted status page. The repository is the Laravel 13 application skeleton (PHP 8.3 or later):
+  the status page, the admin panel (Filament) and the API come from the Composer package cachethq/core (dev-main,
+  pinned in composer.lock). The skeleton holds config, a users table migration and the session, cache, jobs and
+  token tables. The database is SQLite by default; MySQL, MariaDB and PostgreSQL are configured in config/database.php.
+  Sessions, cache and the queue default to the database. The repository has no Dockerfile, no Procfile and no compose
+  file. The public assets (Filament and Cachet) are git-ignored and are published by composer scripts and
+  `php artisan vendor:publish --tag=cachet-assets` at install time. Health route /up is set in bootstrap/app.php.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    A normal PHP and database web app that fits the architecture (one web process, PostgreSQL or MySQL through DB_*
+    variables, session, cache and queue in the database, no Redis needed, no local disk state that must persist). But
+    the full file list has no Dockerfile, so a repository change is needed: a Dockerfile that installs PHP 8.3 with the
+    PDO driver for the chosen database, runs composer install and the asset publish commands (vendor:publish for
+    cachet-assets and filament:assets, which write the git-ignored public assets), and serves public/ with a web server.
+    The migration (`php artisan migrate --force`) and a queue worker (`php artisan queue:work`) are Deployz settings.
+    As new-235 (no Dockerfile for an app that otherwise fits).
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: composer.json, line: 40, quote: "\"@php artisan vendor:publish --tag=cachet-assets --ansi --force\","}
+    - {path: .gitignore, line: 9, quote: "/public/vendor/cachethq/cachet"}
+    - {path: .github/workflows/run-tests.yml, line: 51, quote: "php artisan vendor:publish --tag=cachet-assets --ansi --force"}
+runtime: {accept: [php]}
+port:
+  accept: [80, 8080, 8000]
+  # No image exists. A php:apache image listens on 80, FrankenPHP images on 8080, `php artisan serve` on 8000.
+  evidence:
+    - {path: composer.json, line: 57, quote: "php artisan serve"}
+bindAllInterfaces:
+  value: true
+  evidence: []
+startCommand:
+  # No image exists; a php:apache Dockerfile uses its default apache2-foreground.
+  source: explicit
+  accept: ["apache2-foreground", "php artisan serve --host=0.0.0.0 --port=8000", "frankenphp run"]
+  evidence:
+    - {path: composer.json, line: 57, quote: "php artisan serve"}
+healthPath:
+  accept: ["/up"]
+  evidence:
+    - {path: bootstrap/app.php, line: 24, quote: "health: '/up',"}
+database:
+  status: required
+  engines: [sqlite, mysql, mariadb, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DB_CONNECTION: "pgsql"}
+  connectionVars: [DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD, DB_URL]
+  # DB_CONNECTION=mysql with the same DB_* variables selects RDS MySQL; PostgreSQL is the simplest choice.
+  evidence:
+    - {path: config/database.php, line: 29, quote: "'default' => env('DB_CONNECTION', 'sqlite'),"}
+    - {path: config/database.php, line: 56, quote: "'driver' => 'mysql',"}
+    - {path: config/database.php, line: 96, quote: "'driver' => 'pgsql',"}
+    - {path: .env.example, line: 22, quote: "DB_CONNECTION=sqlite"}
+migrations:
+  mode: command
+  accept: ["php artisan migrate --force", "php artisan migrate --graceful"]
+  # The cachethq/core package loads its own migrations; the skeleton migrations add users, sessions, cache and jobs tables.
+  evidence:
+    - {path: composer.json, line: 49, quote: "\"@php artisan migrate --graceful --ansi\","}
+    - {path: database/migrations/2026_08_10_092944_create_jobs_table.php, line: 14, quote: "Schema::create('jobs', function (Blueprint $table) {"}
+redis:
+  status: none
+  selectBy: {}
+  # Redis config blocks exist (Laravel default) but .env.example sets cache, session and queue to the database.
+  evidence:
+    - {path: .env.example, line: 29, quote: "SESSION_DRIVER=database"}
+    - {path: .env.example, line: 37, quote: "QUEUE_CONNECTION=database"}
+    - {path: .env.example, line: 39, quote: "CACHE_STORE=database"}
+workers:
+  status: optional-independent
+  commands: ["php artisan queue:work"]
+  # Notifications and webhooks of cachethq/core are queued jobs; with QUEUE_CONNECTION=database they need a worker.
+  # QUEUE_CONNECTION=sync runs them inside the web request instead.
+  evidence:
+    - {path: composer.json, line: 57, quote: "php artisan queue:listen --tries=1"}
+    - {path: .env.example, line: 37, quote: "QUEUE_CONNECTION=database"}
+    - {path: config/cachet.php, line: 135, quote: "'queue_connection' => env('CACHET_WEBHOOK_QUEUE_CONNECTION', 'default'),"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: [storage/app, storage/logs, storage/framework]
+  s3: native
+  s3SelectBy: {FILESYSTEM_DISK: "s3"}
+  # Laravel framework cache and logs are rebuilt on restart; uploads (theme and logo) use the default disk, which can be s3.
+  evidence:
+    - {path: config/filesystems.php, line: 25, quote: "'default' => env('FILESYSTEM_DISK', 'local'),"}
+    - {path: config/filesystems.php, line: 57, quote: "'driver' => 's3',"}
+    - {path: composer.json, line: 19, quote: "\"league/flysystem-aws-s3-v3\": \"^3.32\""}
+env:
+  required:
+    - {name: APP_KEY, secret: true, buildTime: false, note: "Laravel encryption key; empty in .env.example, generated with php artisan key:generate"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "public URL of the status page"}
+    - {name: DB_CONNECTION, secret: false, buildTime: false, note: "pgsql or mysql; the default sqlite is a file on disk"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "database host"}
+    - {name: DB_DATABASE, secret: false, buildTime: false, note: "database name"}
+    - {name: DB_USERNAME, secret: false, buildTime: false, note: "database user"}
+    - {name: DB_PASSWORD, secret: true, buildTime: false, note: "database password"}
+  optional: [APP_ENV, APP_DEBUG, DB_PORT, DB_URL, FILESYSTEM_DISK, AWS_BUCKET, AWS_DEFAULT_REGION, MAIL_MAILER, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS, CACHET_TRUSTED_PROXIES, CACHET_PATH, CACHET_BEACON, CACHET_TITLE, NIGHTWATCH_ENABLED]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 3, quote: "APP_KEY="}
+    - {path: .env.example, line: 6, quote: "APP_URL=http://cachet.test"}
+    - {path: config/database.php, line: 98, quote: "'host' => env('DB_HOST', '127.0.0.1'),"}
+    - {path: config/cachet.php, line: 90, quote: "'trusted_proxies' => env('CACHET_TRUSTED_PROXIES', ''),"}
+blockers:
+  expected:
+    - "No Dockerfile in the repository: a production Dockerfile (PHP 8.3, composer install, asset publish, web server) is a repository change"
+  mustNot:
+    - "SQLite default must not block: DB_CONNECTION selects PostgreSQL or MySQL"
+    - "Redis must not be required: session, cache and queue default to the database"
+    - "The git-ignored public/vendor and public/build folders must not be read as a local disk state; they are build outputs"
+    - "The status page itself comes from the cachethq/core Composer package, so a missing app/ controller or route in the skeleton must not be reported as missing code"
+vendorQuestions:
+  legitimate:
+    - "Which database? (PostgreSQL or MySQL; the default is SQLite)"
+    - "Does the status page send notification email or webhooks? (they need a queue worker and a mail server)"
+  unnecessary:
+    - "Is Redis needed? (no, cache, session and queue use the database)"
+    - "Health path? (/up)"
+traps:
+  - "The skeleton routes/web.php and app/ hold almost no code; the application is the Composer package cachethq/core pinned in composer.lock (composer.json:13)"
+  - "The assets under public/vendor/cachethq/cachet and public/*/filament are git-ignored and exist only after vendor:publish and filament:assets (.gitignore:6-9, composer.json:40-41); a Dockerfile that only runs composer install --no-scripts serves an unstyled page"
+  - "composer.json requires cachethq/core at dev-main, so a composer update changes the code; the lock file pins it (composer.lock)"
+  - "CACHET_TRUSTED_PROXIES is empty by default; behind a load balancer set it, or the status page builds http:// asset URLs (config/cachet.php:90)"
+  - "APP_ENV=local and APP_DEBUG=true in .env.example; a production deployment must set APP_ENV=production and APP_DEBUG=false (.env.example:2)"
+  - "The first admin user is created with the cachet:make:user command or the Filament sign-up flow, not by a seeder"
+openQuestions:
+  - "Whether the cachethq/core package needs the scheduler (schedule:work) for scheduled maintenance publishing; the package is outside this repository"
+crossReview:
+  - {field: outcome.accept, change: "none: [DEPLOYABLE_WITH_CHANGES] confirmed against docs/product/mvp-scope.md (a repository with no Dockerfile needs a repository change when the full file list proves it); DEPLOYABLE alone is wrong", evidence: "file list of the pinned commit has no Dockerfile, Procfile or compose file"}
+  - {field: database, change: "none: sqlite is only the default; DB_CONNECTION=pgsql or mysql selects a Deployz database", evidence: "config/database.php:29,56,96"}
+  - {field: workers, change: "none: optional-independent; the queue defaults to the database and the worker command is a Deployz setting", evidence: ".env.example:37; composer.json:57"}
+  - {field: all, change: verified, evidence: "25 citations checked against the pinned commit by script (path, line, quote)"}

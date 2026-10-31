@@ -1,0 +1,143 @@
+id: new-268
+repository: LibreTranslate/LibreTranslate
+commit: 88932ba8e32b403fe3e8069b36f42751fb078264
+summary: >
+  LibreTranslate is a self-hosted machine translation API with a web UI (Flask, Argos Translate, Python 3.11). The only
+  application Dockerfile is docker/Dockerfile (the repository root has none; the arm, cuda, root-with-sshd and
+  user-with-api-key files are variants). It installs the package from the repository with pip and starts
+  scripts/entrypoint.sh, which first boots the app once to download the language models into the user's home, then runs
+  gunicorn on LT_PORT (5000). There is no database by default: API keys are off, and an optional SQLite file
+  (db/api_keys.db) holds them when LT_API_KEYS is on. Rate-limit and shared state default to memory and can use Redis.
+  No worker and no scheduler process; the file-cleanup job runs inside the web process.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One web process built from docker/Dockerfile, no database, Redis or S3 needed. The language models are downloaded at
+    each start into the home directory of the container (a re-creatable cache, not durable state), so the start is slow
+    but needs no repository change. Port and health path are known (5000, /health). The optional API-key SQLite file is
+    off by default. Only Deployz settings are needed (docker/Dockerfile as the Dockerfile path, a model list through
+    LT_LOAD_ONLY, a size large enough for the models).
+dockerfile:
+  accept: [docker/Dockerfile]
+  reject:
+    - {path: docker/arm.Dockerfile, reason: "ARM64 variant; the default build is amd64"}
+    - {path: docker/cuda.Dockerfile, reason: "GPU variant; GPUs are outside the MVP"}
+    - {path: docker/root-with-sshd.Dockerfile, reason: "runs sshd as root; not a production web image"}
+    - {path: docker/user-with-api-key.Dockerfile, reason: "variant that pre-creates an API key"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 14, quote: "COPY . ."}
+    - {path: docker/Dockerfile, line: 20, quote: "&& ./venv/bin/pip install . \\"}
+    - {path: docker/Dockerfile, line: 47, quote: "ENTRYPOINT [ \"./scripts/entrypoint.sh\" ]"}
+    - {path: docker-compose.yml, line: 4, quote: "image: libretranslate/libretranslate:latest"}
+runtime: {accept: [python]}
+port:
+  accept: [5000]
+  evidence:
+    - {path: docker/Dockerfile, line: 46, quote: "EXPOSE 5000"}
+    - {path: libretranslate/default_values.py, line: 46, quote: "'default_value': 5000,"}
+bindAllInterfaces:
+  value: true
+  # The default host 127.0.0.1 makes the entrypoint bind 0.0.0.0 (or [::] when IPv6 is on).
+  evidence:
+    - {path: scripts/entrypoint.sh, line: 26, quote: "if [[ $LT_HOST == \"127.0.0.1\" ]]; then"}
+    - {path: scripts/entrypoint.sh, line: 28, quote: "BIND_ADDR=\"0.0.0.0\""}
+startCommand:
+  source: image
+  accept: ["./scripts/entrypoint.sh"]
+  evidence:
+    - {path: docker/Dockerfile, line: 47, quote: "ENTRYPOINT [ \"./scripts/entrypoint.sh\" ]"}
+    - {path: scripts/entrypoint.sh, line: 57, quote: "./venv/bin/gunicorn -c scripts/gunicorn_conf.py --workers $LT_THREADS --max-requests 250 --timeout ${LT_TIMEOUT:-2400} --bind $BIND_ADDR:$LT_PORT 'wsgi:app()'"}
+healthPath:
+  accept: ["/health"]
+  # /health is exempt from the rate limiter. The entrypoint first runs a full boot (model download) before gunicorn
+  # listens, so the port stays closed for the download time.
+  evidence:
+    - {path: libretranslate/app.py, line: 540, quote: "@bp.get(\"/health\")"}
+    - {path: libretranslate/app.py, line: 541, quote: "@limiter.exempt"}
+    - {path: scripts/healthcheck.py, line: 10, quote: "url=f'http://localhost:{port}/health',"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # API keys are off by default; when LT_API_KEYS is on they use a local SQLite file.
+  evidence:
+    - {path: libretranslate/default_values.py, line: 130, quote: "'name': 'API_KEYS',"}
+    - {path: libretranslate/default_values.py, line: 131, quote: "'default_value': False,"}
+    - {path: libretranslate/default_values.py, line: 136, quote: "'default_value': 'db/api_keys.db',"}
+migrations:
+  mode: none
+  accept: []
+  evidence:
+    - {path: libretranslate/default_values.py, line: 131, quote: "'default_value': False,"}
+redis:
+  status: optional
+  selectBy: {LT_SHARED_STORAGE: "redis://<host>:6379"}
+  # Shared state and rate-limit storage default to memory; Redis is only for several processes or tasks.
+  evidence:
+    - {path: libretranslate/default_values.py, line: 176, quote: "'default_value': 'memory://',"}
+    - {path: libretranslate/storage.py, line: 1, quote: "import redis"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: scripts/entrypoint.sh, line: 57, quote: "./venv/bin/gunicorn -c scripts/gunicorn_conf.py --workers $LT_THREADS --max-requests 250 --timeout ${LT_TIMEOUT:-2400} --bind $BIND_ADDR:$LT_PORT 'wsgi:app()'"}
+scheduledJobs:
+  status: none
+  items: []
+  # APScheduler jobs (flood-ban reset, translated-file cleanup) run inside the web process.
+  evidence:
+    - {path: libretranslate/scheduler.py, line: 14, quote: "scheduler = BackgroundScheduler(timezone='UTC')"}
+storage:
+  local: ephemeral
+  paths: [/home/libretranslate/.local, /app/db]
+  s3: none
+  s3SelectBy: {}
+  # Models are downloaded again at every start when the home directory is empty; this is a cache. /app/db holds the
+  # optional API-key SQLite file and Prometheus files that the entrypoint deletes at start.
+  evidence:
+    - {path: libretranslate/init.py, line: 19, quote: "if len(package.get_installed_packages()) < 2 or force or update:"}
+    - {path: docker/Dockerfile, line: 29, quote: "RUN addgroup --system --gid 1032 libretranslate && adduser --system --uid 1032 libretranslate && mkdir -p /home/libretranslate/.local && chown -R libretranslate:libretranslate /home/libretranslate/"}
+    - {path: scripts/entrypoint.sh, line: 44, quote: "export PROMETHEUS_MULTIPROC_DIR=$(realpath \"${__dirname}/../db/prometheus\")"}
+env:
+  required: []
+  optional: [LT_LOAD_ONLY, LT_UPDATE_MODELS, LT_THREADS, LT_HOST, LT_PORT, LT_REQ_LIMIT, LT_CHAR_LIMIT, LT_API_KEYS, LT_API_KEYS_DB_PATH, LT_SHARED_STORAGE, LT_REQ_LIMIT_STORAGE, LT_URL_PREFIX, LT_DISABLE_WEB_UI, LT_TIMEOUT]
+  buildTime: []
+  evidence:
+    - {path: libretranslate/default_values.py, line: 3, quote: "_prefix = 'LT_'"}
+    - {path: libretranslate/default_values.py, line: 185, quote: "'name': 'LOAD_ONLY',"}
+    - {path: libretranslate/default_values.py, line: 220, quote: "'name': 'UPDATE_MODELS',"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite must not block: the API-key database is off by default (LT_API_KEYS=False)"
+    - "Redis must not be required: shared storage defaults to memory://"
+    - "The model download must not be read as durable local disk state: it is a cache that is filled again at start"
+    - "The cuda, arm and sshd Dockerfiles must not be selected as the application image"
+    - "docker-compose.yml uses the published image libretranslate/libretranslate; it must not be read as proof of a missing Dockerfile"
+vendorQuestions:
+  legitimate:
+    - "Which languages are needed? (LT_LOAD_ONLY limits the model download and the memory use)"
+    - "Do clients need API keys and limits? (LT_API_KEYS uses a local SQLite file that is lost with the task)"
+  unnecessary:
+    - "Which port? (5000)"
+    - "Which health path? (/health)"
+    - "Which database? (none)"
+    - "Is a worker needed? (no)"
+traps:
+  - "The entrypoint runs `libretranslate` once with LT_POWERCYCLE to download the models and exits, then starts gunicorn; the port is closed for the whole download (scripts/entrypoint.sh:17, libretranslate/app.py:1360)"
+  - "All language models need several GiB of memory and disk; the Small size (512 MiB) is too small unless LT_LOAD_ONLY limits the languages (docker/Dockerfile:25)"
+  - "The default LT_HOST is 127.0.0.1, but the entrypoint rewrites it to 0.0.0.0 for gunicorn (scripts/entrypoint.sh:26-28)"
+  - "The default rate-limit and shared storage are memory only, so limits are per process and per task (libretranslate/default_values.py:176)"
+  - "The Docker build installs the models only when the build argument with_models is true (docker/Dockerfile:25, :37)"
+openQuestions:
+  - "Model download time against the health-check grace time of the deployment was not measured"
+crossReview:
+  - {field: dockerfile, change: 'none: the root has no Dockerfile; docker/Dockerfile is the default image, the other four are variants', evidence: 'docker/ listing; docker/Dockerfile:14,20,47'}
+  - {field: database / redis / storage, change: 'none: API keys and SHARED_STORAGE are opt-in; models are a cache because check_and_install_models runs when fewer than 2 packages are installed', evidence: 'libretranslate/default_values.py:130-136,176; libretranslate/init.py:19'}
+  - {field: outcome, change: 'none: one stateless web process, no database, no repository change; settings only', evidence: 'scripts/entrypoint.sh:57; docker/Dockerfile:46-47'}
+  - {field: all, change: verified, evidence: 27 citations checked}

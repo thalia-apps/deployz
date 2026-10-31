@@ -1,0 +1,135 @@
+id: new-245
+repository: hedgedoc/hedgedoc
+commit: 3e60fa14883333510292fe5553ff4adcf924259e
+summary: >
+  HedgeDoc 2 (2.0.0-alpha.3) is a pnpm and turbo monorepo for a collaborative Markdown editor. It has two application
+  images: backend/docker/Dockerfile builds the NestJS (Fastify) API and realtime server on port 3000, and
+  frontend/docker/Dockerfile builds a separate Next.js standalone server on port 3001. docker/docker-compose.yml runs
+  both with PostgreSQL and a Caddy proxy that sends /api, /realtime, /public, /uploads and /apidoc to the backend and
+  everything else to the frontend. The backend supports SQLite, PostgreSQL and MariaDB (HD_DATABASE_TYPE), runs Knex
+  migrations at start and stores uploads on the filesystem by default (S3, Azure, imgur and WebDAV are options).
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The product needs two application images built from this repository (backend and frontend) and a path-routing
+    proxy that puts both behind one origin. Deployz runs one image per deployment with one ALB port, and a worker
+    cannot have a different Dockerfile or a URL. Neither image alone is the product: the backend serves no UI and the
+    frontend has no API. This is the several-application-images case, as new-82.
+dockerfile:
+  accept: []
+  reject:
+    - {path: backend/docker/Dockerfile, reason: "builds only the backend API and realtime server; the UI is in a second image"}
+    - {path: frontend/docker/Dockerfile, reason: "builds only the Next.js frontend; it needs the backend at /api and /realtime on the same origin"}
+  target: null
+  context: .
+  evidence:
+    - {path: backend/docker/Dockerfile, line: 44, quote: "RUN pnpm run build --filter=@hedgedoc/backend --cache=local:,remote: --no-daemon"}
+    - {path: frontend/docker/Dockerfile, line: 29, quote: "RUN pnpm run build --filter=@hedgedoc/frontend --no-cache --no-daemon"}
+    - {path: docker/docker-compose.yml, line: 6, quote: "image: ghcr.io/hedgedoc/hedgedoc/backend:develop"}
+    - {path: docker/docker-compose.yml, line: 12, quote: "image: ghcr.io/hedgedoc/hedgedoc/frontend:develop"}
+runtime: {accept: [node]}
+port:
+  accept: [3000, 3001]
+  # 3000 is the backend, 3001 is the frontend; the product needs both behind one proxy.
+  evidence:
+    - {path: backend/docker/Dockerfile, line: 94, quote: "EXPOSE 3000/tcp"}
+    - {path: frontend/docker/Dockerfile, line: 49, quote: "EXPOSE 3001/tcp"}
+    - {path: docker/Caddyfile, line: 16, quote: "reverse_proxy /api/* http://backend:3000"}
+    - {path: docker/Caddyfile, line: 20, quote: "reverse_proxy /* http://frontend:3001"}
+bindAllInterfaces:
+  value: false
+  # The backend binds 127.0.0.1 unless HD_BACKEND_BIND_IP is set.
+  evidence:
+    - {path: backend/src/config/app.config.ts, line: 66, quote: ".default('127.0.0.1')"}
+startCommand:
+  source: image
+  accept: ["node dist/main.js", "node server.js"]
+  evidence:
+    - {path: backend/docker/Dockerfile, line: 95, quote: "CMD  [\"node\", \"dist/main.js\"]"}
+    - {path: frontend/docker/Dockerfile, line: 52, quote: "CMD [\"node\", \"server.js\"]"}
+healthPath:
+  accept: ["/api/v2/monitoring/health"]
+  # Backend only; it answers 204.
+  evidence:
+    - {path: backend/src/app.module.ts, line: 49, quote: "export const PUBLIC_API_PREFIX = '/api/v2';"}
+    - {path: backend/src/api/public/monitoring/monitoring.controller.ts, line: 16, quote: "@Controller('monitoring')"}
+    - {path: backend/src/api/public/monitoring/monitoring.controller.ts, line: 46, quote: "@Get('health')"}
+database:
+  status: required
+  engines: [sqlite, postgres, mariadb]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {HD_DATABASE_TYPE: postgres, HD_DATABASE_HOST: "<host>", HD_DATABASE_PORT: "5432", HD_DATABASE_NAME: "<db>", HD_DATABASE_USERNAME: "<user>", HD_DATABASE_PASSWORD: "<password>"}
+  connectionVars: [HD_DATABASE_TYPE, HD_DATABASE_HOST, HD_DATABASE_PORT, HD_DATABASE_NAME, HD_DATABASE_USERNAME, HD_DATABASE_PASSWORD]
+  evidence:
+    - {path: backend/src/config/database-type.enum.ts, line: 8, quote: "POSTGRES = 'postgres',"}
+    - {path: backend/src/config/database.config.ts, line: 64, quote: "type: z.literal(DatabaseType.POSTGRES).describe('HD_DATABASE_TYPE'),"}
+    - {path: .env.example, line: 78, quote: "HD_DATABASE_TYPE=sqlite"}
+    - {path: docker/.env, line: 6, quote: "HD_DATABASE_TYPE=\"postgres\""}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: backend/src/app-init.ts, line: 19, quote: "import { runMigrations } from './migrate';"}
+    - {path: backend/src/app-init.ts, line: 69, quote: "await runMigrations(app as INestApplication, logger);"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: docker/docker-compose.yml, line: 16, quote: "db:"}
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/usr/src/app/backend/uploads]
+  s3: none
+  s3SelectBy: {}
+  # The S3 media backend needs a static access key, secret key and endpoint (no task-role credentials), so it is not native.
+  evidence:
+    - {path: docker/docker-compose.yml, line: 9, quote: "- hedgedoc_uploads:/usr/src/app/backend/uploads"}
+    - {path: backend/src/config/media.config.ts, line: 40, quote: "accessKeyId: z.string().describe('HD_MEDIA_BACKEND_S3_ACCESS_KEY'),"}
+    - {path: backend/src/config/media.config.ts, line: 43, quote: "endpoint: z.string().url().describe('HD_MEDIA_BACKEND_S3_ENDPOINT'),"}
+env:
+  required:
+    - {name: HD_BASE_URL, secret: false, buildTime: false, note: "public URL; used by the backend, the frontend and the proxy"}
+    - {name: HD_AUTH_SESSION_SECRET, secret: true, buildTime: false, note: "at least 32 characters"}
+    - {name: HD_DATABASE_TYPE, secret: false, buildTime: false, note: "postgres for RDS; the example uses sqlite"}
+    - {name: HD_DATABASE_PASSWORD, secret: true, buildTime: false, note: "with HD_DATABASE_HOST, _PORT, _NAME and _USERNAME"}
+    - {name: HD_BACKEND_BIND_IP, secret: false, buildTime: false, note: "0.0.0.0; the default 127.0.0.1 is not reachable from the load balancer"}
+  optional: [HD_RENDERER_BASE_URL, HD_MEDIA_BACKEND_TYPE, HD_MEDIA_BACKEND_S3_BUCKET, HD_AUTH_LOCAL_ENABLE_REGISTER, HD_AUTH_OIDC_PROVIDERS, HD_AUTH_LDAP_SERVERS, HD_LOG_LEVEL]
+  buildTime: []
+  evidence:
+    - {path: docker/.env, line: 2, quote: "HD_BASE_URL=\"https://hedgedoc2.localhost\""}
+    - {path: backend/src/config/auth.config.ts, line: 113, quote: "secret: z.string().describe('HD_AUTH_SESSION_SECRET').min(32),"}
+    - {path: backend/src/config/app.config.ts, line: 67, quote: ".describe('HD_BACKEND_BIND_IP'),"}
+blockers:
+  expected:
+    - "Two application images from this repo (backend/docker/Dockerfile and frontend/docker/Dockerfile) behind a path-routing proxy (docker/Caddyfile); Deployz runs one image with one port"
+  mustNot:
+    - "PostgreSQL must not be reported as missing: HD_DATABASE_TYPE=postgres is supported"
+    - "Redis must not be required"
+    - "The Caddy proxy is not a third app image to build, but it shows the path routing that one Deployz service cannot give"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (postgres is supported)"
+    - "Which Dockerfile? (both are needed, which is the blocker)"
+traps:
+  - "Each Dockerfile builds a complete-looking production image from the repo root; picking one gives a half product (backend/docker/Dockerfile:44, frontend/docker/Dockerfile:29)"
+  - "docker/.env is mounted into the backend as a file in compose (docker/docker-compose.yml:8); the same values can be environment variables"
+  - "backend/.env and frontend/.env are development files, not production configuration"
+  - "The S3 media backend needs static access keys and an endpoint URL, so task-role S3 does not work without keys (backend/src/config/media.config.ts:40)"
+  - "The backend binds 127.0.0.1 by default (backend/src/config/app.config.ts:66)"
+  - "The version is 2.0.0-alpha.3 (package.json:3); the docs/ folder is a documentation site, not the app"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: only backend/docker/Dockerfile and frontend/docker/Dockerfile exist; no root image serves both, and docker/Caddyfile splits paths between them', evidence: 'docker/Caddyfile:16,20; trees/new-245.txt'}
+  - {field: bindAllInterfaces, change: 'none: the backend default bind address is 127.0.0.1', evidence: 'backend/src/config/app.config.ts:66'}
+  - {field: outcome, change: 'none: two application images from this repo behind a path-routing proxy is the several-images case; analog new-82', evidence: 'docker/docker-compose.yml:6,12'}
+  - {field: all, change: verified, evidence: 27 citations checked}

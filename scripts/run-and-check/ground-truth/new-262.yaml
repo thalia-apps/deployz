@@ -1,0 +1,133 @@
+id: new-262
+repository: fastapi/full-stack-fastapi-template
+commit: f4bcfaba7c85be3c6332cc74a20819f586dcdbc6
+summary: >
+  The Full Stack FastAPI Template is a FastAPI back end (SQLModel, Alembic, PostgreSQL) with a React and Vite front end.
+  The only production image is backend/Dockerfile, built with the repository root as context: its first stage builds the
+  front end with Bun into backend/app/frontend, and the Python stage serves both the API (/api/v1) and the static front
+  end from one FastAPI process (`fastapi run --workers 4`) on port 8000. PostgreSQL is required through DATABASE_URL.
+  Migrations and the first superuser come from backend/scripts/prestart.sh, which the compose and CI flows run as a
+  one-off step. Traefik, Adminer and Mailcatcher in compose are helpers, not part of the app.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One image from backend/Dockerfile (context is the repository root) builds the front end and back end from source and
+    serves both on one HTTP port, 8000, with /api/v1/utils/health-check/. Only settings are needed: DATABASE_URL to RDS
+    PostgreSQL, SECRET_KEY, PROJECT_NAME, FIRST_SUPERUSER, FIRST_SUPERUSER_PASSWORD, FRONTEND_HOST, and the migration
+    command `bash scripts/prestart.sh`. No Redis, no worker, no local disk state (as new-1).
+dockerfile:
+  accept: [backend/Dockerfile]
+  reject:
+    - {path: frontend/Dockerfile.playwright, reason: "end-to-end test runner image for Playwright, not the app"}
+  target: null
+  context: .
+  evidence:
+    - {path: backend/Dockerfile, line: 16, quote: "RUN bun run build"}
+    - {path: backend/Dockerfile, line: 54, quote: "COPY --from=frontend-build /app/backend/app/frontend /app/backend/app/frontend"}
+    - {path: backend/Dockerfile, line: 65, quote: "CMD [\"fastapi\", \"run\", \"--workers\", \"4\"]"}
+    - {path: compose.yml, line: 74, quote: "context: ."}
+    - {path: compose.yml, line: 75, quote: "dockerfile: backend/Dockerfile"}
+runtime: {accept: [python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: compose.yml, line: 81, quote: "- traefik.http.services.backend.loadbalancer.server.port=8000"}
+    - {path: compose.yml, line: 68, quote: "test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:8000/api/v1/utils/health-check/\"]"}
+bindAllInterfaces:
+  value: true
+  # `fastapi run` is the production mode of the FastAPI CLI and listens on 0.0.0.0:8000 by default.
+  evidence:
+    - {path: backend/Dockerfile, line: 65, quote: "CMD [\"fastapi\", \"run\", \"--workers\", \"4\"]"}
+startCommand:
+  source: image
+  accept: ["fastapi run --workers 4", "fastapi run"]
+  evidence:
+    - {path: backend/Dockerfile, line: 65, quote: "CMD [\"fastapi\", \"run\", \"--workers\", \"4\"]"}
+healthPath:
+  accept: ["/api/v1/utils/health-check/", "/api/v1/utils/health-check"]
+  evidence:
+    - {path: backend/app/api/routes/utils.py, line: 29, quote: "@router.get(\"/health-check/\")"}
+    - {path: backend/app/core/config.py, line: 22, quote: "API_V1_STR: str = \"/api/v1\""}
+    - {path: compose.yml, line: 68, quote: "test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:8000/api/v1/utils/health-check/\"]"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: backend/app/core/config.py, line: 31, quote: "DATABASE_URL: PostgresDsn"}
+    - {path: backend/app/core/db.py, line: 7, quote: "engine = create_engine(str(settings.DATABASE_URL), pool_pre_ping=True)"}
+migrations:
+  mode: command
+  accept: ["bash scripts/prestart.sh", "alembic upgrade head", "bash backend/scripts/prestart.sh"]
+  # prestart.sh runs alembic upgrade head and creates the first superuser; nothing runs it at container start.
+  evidence:
+    - {path: backend/scripts/prestart.sh, line: 7, quote: "alembic upgrade head"}
+    - {path: backend/scripts/prestart.sh, line: 10, quote: "python app/initial_data.py"}
+    - {path: deployment-docker-compose.md, line: 55, quote: "docker compose -f compose.yml -f compose.deploy.yml run --rm backend bash scripts/prestart.sh"}
+    - {path: .github/workflows/deploy.yml, line: 42, quote: "run: uv run bash scripts/prestart.sh"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL; the password must not be changethis"}
+    - {name: SECRET_KEY, secret: true, buildTime: false, note: "JWT signing key; the app refuses the value changethis outside development"}
+    - {name: PROJECT_NAME, secret: false, buildTime: false, note: "required setting with no default"}
+    - {name: FIRST_SUPERUSER, secret: false, buildTime: false, note: "e-mail of the first admin, created by prestart.sh"}
+    - {name: FIRST_SUPERUSER_PASSWORD, secret: true, buildTime: false, note: "password of the first admin; changethis is refused"}
+    - {name: FRONTEND_HOST, secret: false, buildTime: false, note: "public HTTPS URL; used for CORS and e-mail links; the default is http://localhost:5173"}
+  optional: [SMTP_HOST, SMTP_USER, SMTP_PASSWORD, SMTP_PORT, SMTP_TLS, SMTP_SSL, EMAILS_FROM_EMAIL, EMAILS_FROM_NAME, SENTRY_DSN, ACCESS_TOKEN_EXPIRE_MINUTES]
+  buildTime: [VITE_API_URL]
+  evidence:
+    - {path: backend/app/core/config.py, line: 23, quote: "SECRET_KEY: str"}
+    - {path: backend/app/core/config.py, line: 26, quote: "FRONTEND_HOST: str = \"http://localhost:5173\""}
+    - {path: backend/app/core/config.py, line: 29, quote: "PROJECT_NAME: str"}
+    - {path: backend/app/core/config.py, line: 65, quote: "FIRST_SUPERUSER: EmailStr"}
+    - {path: backend/app/core/config.py, line: 77, quote: "raise ValueError(message)"}
+    - {path: backend/Dockerfile, line: 14, quote: "ARG VITE_API_URL="}
+blockers:
+  expected: []
+  mustNot:
+    - "Two images must not be reported: the front end is built into backend/Dockerfile and served by FastAPI"
+    - "The missing root Dockerfile must not block: backend/Dockerfile with the root context is the production image"
+    - "Traefik, Adminer, Mailcatcher and the Docker socket mount in compose must not block: they are helpers, not the app"
+    - "Redis, a worker or S3 must not be required"
+vendorQuestions:
+  legitimate:
+    - "Which SMTP server sends password-reset e-mails? (optional; e-mail is off without SMTP_HOST and EMAILS_FROM_EMAIL)"
+  unnecessary:
+    - "Which port? (8000)"
+    - "Health path? (/api/v1/utils/health-check/)"
+    - "Which database? (PostgreSQL through DATABASE_URL)"
+    - "Where is the front end? (built into the same image)"
+traps:
+  - "The Dockerfile is in backend/ but its context is the repository root; building it with backend/ as context fails (compose.yml:74-75, backend/Dockerfile:5)"
+  - "Migrations are not run at start; prestart.sh must run as a one-off command before the first start (backend/scripts/prestart.sh:7)"
+  - "The committed .env sets FASTAPI_ENV=development and changethis secrets; outside development the app raises an error on changethis (.env:2, backend/app/core/config.py:69-77)"
+  - "frontend/.env sets VITE_API_URL=http://localhost:8000; the Dockerfile ARG VITE_API_URL= overrides it with an empty value so the front end uses the same origin (frontend/.env:1, backend/Dockerfile:14)"
+  - "CMD starts four worker processes, which is heavy for the Small size (backend/Dockerfile:65)"
+  - "compose.yml mounts the Docker socket only for Traefik, which is not part of the app (compose.yml:7)"
+  - "deploy.yml deploys to FastAPI Cloud and is skipped in the template repository itself (.github/workflows/deploy.yml:17, :51)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile.accept, change: "none: the root context has uv.lock, pyproject.toml, bun.lock and package.json; vite outDir is ../backend/app/frontend, which the Python stage copies; .dockerignore excludes no needed path", evidence: "backend/Dockerfile:5,44-46,54; frontend/vite.config.ts:10; .dockerignore:1-10"}
+  - {field: migrations.accept, change: "none: WORKDIR is /app/backend, so bash scripts/prestart.sh runs alembic upgrade head and initial_data.py; nothing runs it at start", evidence: "backend/Dockerfile:63-65; backend/scripts/prestart.sh:7,10"}
+  - {field: all, change: verified, evidence: "24 citations checked"}

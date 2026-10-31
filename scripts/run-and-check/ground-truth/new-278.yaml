@@ -1,0 +1,160 @@
+id: new-278
+repository: pixelfed/pixelfed
+commit: 99462454d0ccecbf2e27dc8a07e56981b329daa6
+summary: >
+  Pixelfed is a federated photo-sharing platform (Laravel, PHP 8.5, ActivityPub). The root Dockerfile builds a production
+  image on serversideup/php:8.5-frankenphp: it compiles ffmpeg and libvips, installs the PHP extensions (pdo_mysql, redis,
+  gd, imagick, ffi), copies the source and runs composer install. The compiled front end assets are committed under
+  public/ (mix-manifest.json), so no npm build runs. docker-compose.yml starts four services from this one image: the web
+  app on port 8080 (health path /up, migrations through AUTORUN_LARAVEL_MIGRATION), a Horizon queue worker
+  (`php artisan horizon`), a scheduler (`php artisan schedule:work`), plus MySQL and Redis. The database is MySQL
+  (PostgreSQL is configured in config/database.php, but the image installs pdo_mysql only). Redis holds the queue, cache and
+  Horizon. Media goes to storage/app/public on local disk unless PF_ENABLE_CLOUD=true selects an S3 disk.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    One production Dockerfile, one web process on 8080, RDS MySQL through DB_* variables, Valkey through REDIS_*, two
+    worker commands from the same image (Horizon and the scheduler), migrations through a Deployz migration command
+    (`php artisan migrate --force`) and S3 media through PF_ENABLE_CLOUD and AWS_BUCKET. Every item is a Deployz setting, so
+    DEPLOYABLE fits. DEPLOYABLE_WITH_CHANGES is also defensible: the S3 disk defaults to public-read visibility and
+    needs AWS_URL for media links, the Passport keys must come from PASSPORT_PRIVATE_KEY and PASSPORT_PUBLIC_KEY (the
+    guide generates them with `docker compose exec` into storage/), and first-run commands (instance:actor, passport:client)
+    have no Deployz step, so a vendor may need a small entrypoint or command change.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: .ddev/web-build/Dockerfile, reason: "local development container (DDEV)"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 170, quote: "FROM serversideup/php:8.5-frankenphp"}
+    - {path: Dockerfile, line: 250, quote: "COPY --chown=www-data:www-data . /var/www/html"}
+    - {path: Dockerfile, line: 257, quote: "RUN composer install --no-ansi --no-interaction --optimize-autoloader"}
+    - {path: docker-compose.yml, line: 45, quote: "dockerfile: Dockerfile"}
+runtime: {accept: [php]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: Dockerfile, line: 270, quote: "EXPOSE 8080"}
+    - {path: docker-compose.yml, line: 49, quote: "- \"8080:8080\""}
+bindAllInterfaces:
+  value: true
+  # FrankenPHP (Caddy) in the serversideup image listens on all interfaces; the compose file publishes 8080.
+  evidence:
+    - {path: docker-compose.yml, line: 49, quote: "- \"8080:8080\""}
+startCommand:
+  source: image
+  accept: ["frankenphp run"]
+  evidence:
+    - {path: Dockerfile, line: 170, quote: "FROM serversideup/php:8.5-frankenphp"}
+    - {path: docker-compose.yml, line: 85, quote: "test: [\"CMD\", \"healthcheck-frankenphp\"]"}
+healthPath:
+  accept: ["/up"]
+  evidence:
+    - {path: bootstrap/app.php, line: 72, quote: "health: '/up',"}
+    - {path: docker-compose.yml, line: 53, quote: "HEALTHCHECK_PATH: \"/up\""}
+database:
+  status: required
+  engines: [mysql, postgres]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {DB_CONNECTION: "mysql"}
+  connectionVars: [DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD, DB_URL]
+  # The image installs pdo_mysql only, so MySQL is the supported engine of the Docker image.
+  evidence:
+    - {path: .env.docker.example, line: 51, quote: "DB_CONNECTION=\"mysql\""}
+    - {path: config/database.php, line: 20, quote: "'default' => env('DB_CONNECTION', 'mysql'),"}
+    - {path: Dockerfile, line: 233, quote: "pdo_mysql \\"}
+migrations:
+  mode: command
+  accept: ["php artisan migrate --force", "php artisan migrate --force --isolated"]
+  # The image runs migrations at start when AUTORUN_LARAVEL_MIGRATION is true; a Deployz migration command is the explicit alternative.
+  evidence:
+    - {path: docker-compose.yml, line: 72, quote: "AUTORUN_LARAVEL_MIGRATION: \"true\""}
+    - {path: docker-compose.yml, line: 73, quote: "AUTORUN_LARAVEL_MIGRATION_ISOLATION: \"true\""}
+redis:
+  status: required
+  selectBy: {REDIS_HOST: "<host>"}
+  # Queue, cache and Horizon use Redis (phpredis). The code defaults are the database queue and the file cache, but the
+  # compose setup and Horizon need Redis.
+  evidence:
+    - {path: .env.docker.example, line: 68, quote: "CACHE_STORE=\"redis\""}
+    - {path: .env.docker.example, line: 69, quote: "QUEUE_DRIVER=\"redis\""}
+    - {path: config/horizon.php, line: 42, quote: "'use' => 'default',"}
+    - {path: Dockerfile, line: 234, quote: "redis \\"}
+workers:
+  status: independent
+  commands: ["php artisan horizon", "php artisan schedule:work"]
+  # Horizon runs the federation, media and fan-out queues; schedule:work runs the Laravel scheduler. Both use the same image as the web app.
+  evidence:
+    - {path: docker-compose.yml, line: 99, quote: "command: [\"php\", \"artisan\", \"horizon\"]"}
+    - {path: docker-compose.yml, line: 144, quote: "command: [\"php\", \"artisan\", \"schedule:work\"]"}
+scheduledJobs:
+  status: none
+  items: []
+  # The Laravel scheduler runs inside the schedule:work worker, not as a render cron service or a Kubernetes CronJob.
+  evidence:
+    - {path: docker-compose.yml, line: 144, quote: "command: [\"php\", \"artisan\", \"schedule:work\"]"}
+storage:
+  local: conditional
+  paths: [/var/www/html/storage, /var/www/html/storage/app/public]
+  s3: native
+  s3SelectBy: {PF_ENABLE_CLOUD: "true"}
+  # Uploaded media is written under storage/app/public unless PF_ENABLE_CLOUD=true selects the s3 disk.
+  # The S3 disk reads AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as optional values (the AWS SDK default chain applies when empty), AWS_BUCKET and AWS_URL.
+  evidence:
+    - {path: .env.docker.example, line: 97, quote: "PF_ENABLE_CLOUD=\"false\""}
+    - {path: config/pixelfed.php, line: 203, quote: "'cloud_storage' => env('PF_ENABLE_CLOUD', false),"}
+    - {path: config/filesystems.php, line: 78, quote: "'bucket' => env('AWS_BUCKET'),"}
+    - {path: config/filesystems.php, line: 79, quote: "'visibility' => env('AWS_VISIBILITY', 'public'),"}
+    - {path: docker-compose.yml, line: 80, quote: "- ./storage:/var/www/html/storage"}
+env:
+  required:
+    - {name: APP_KEY, secret: true, buildTime: false, note: "Laravel key; empty in .env.docker.example, generated with php artisan key:generate --show"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "public https URL of the instance"}
+    - {name: APP_DOMAIN, secret: false, buildTime: false, note: "instance domain used in ActivityPub identities; cannot change after federation starts"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "MySQL host"}
+    - {name: DB_DATABASE, secret: false, buildTime: false, note: "MySQL database"}
+    - {name: DB_USERNAME, secret: false, buildTime: false, note: "MySQL user"}
+    - {name: DB_PASSWORD, secret: true, buildTime: false, note: "MySQL password"}
+    - {name: REDIS_HOST, secret: false, buildTime: false, note: "Redis host for cache, queue and Horizon"}
+    - {name: PF_ENABLE_CLOUD, secret: false, buildTime: false, note: "true to store media in S3; false keeps media on task disk"}
+    - {name: AWS_BUCKET, secret: false, buildTime: false, note: "Deployz bucket; used when PF_ENABLE_CLOUD is true"}
+  optional: [DB_PORT, DB_URL, REDIS_PORT, REDIS_PASSWORD, REDIS_SCHEME, TRUSTED_PROXY, TRUST_PROXIES, OPEN_REGISTRATION, ENFORCE_EMAIL_VERIFICATION, PF_MAX_USERS, MAIL_DRIVER, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION, AWS_URL, AWS_VISIBILITY, AWS_ENDPOINT, PASSPORT_PRIVATE_KEY, PASSPORT_PUBLIC_KEY, HORIZON_PREFIX, SESSION_DOMAIN, IMAGE_DRIVER]
+  buildTime: []
+  evidence:
+    - {path: .env.docker.example, line: 7, quote: "APP_KEY="}
+    - {path: .env.docker.example, line: 32, quote: "APP_URL=\"https://yourdomain.com\""}
+    - {path: .env.docker.example, line: 62, quote: "REDIS_HOST=\"redis\""}
+    - {path: config/passport.php, line: 28, quote: "'private_key' => env('PASSPORT_PRIVATE_KEY'),"}
+blockers:
+  expected: []
+  mustNot:
+    - "MariaDB must not be reported: the compose file and the image use MySQL 9 and pdo_mysql"
+    - "docker-compose.yml (db, redis, app, horizon, scheduler) must not be read as several application services that must run together: horizon and scheduler are workers of the same image and Deployz declares them as worker commands"
+    - "Local media storage must not block: PF_ENABLE_CLOUD=true and AWS_BUCKET select S3"
+    - "Elasticsearch, Meilisearch or a second queue broker must not be required: none is used"
+    - "The Dockerfile must not be rejected for compiling ffmpeg and libvips: it is a long build but a normal production image"
+vendorQuestions:
+  legitimate:
+    - "Are the worker commands `php artisan horizon` and `php artisan schedule:work` both wanted? (both come from docker-compose.yml)"
+    - "Should media go to S3 (PF_ENABLE_CLOUD=true)? Without it, uploads are lost on restart"
+  unnecessary:
+    - "Which database? (MySQL through DB_*)"
+    - "Which port? (8080)"
+    - "Health path? (/up)"
+traps:
+  - "Media is stored on local disk by default (PF_ENABLE_CLOUD=false); a task restart removes uploads unless the S3 disk is on (.env.docker.example:97)"
+  - "The S3 disk uses public visibility by default and builds links from AWS_URL; a private Deployz bucket needs AWS_VISIBILITY=private and an AWS_URL that serves the media (config/filesystems.php:79-80)"
+  - "The guide runs instance:actor, import:cities, passport:keys and passport:client after the first start with docker compose exec (DOCKER_COMPOSE_SETUP.md:54-57); passport:keys writes storage/oauth-private.key, but PASSPORT_PRIVATE_KEY and PASSPORT_PUBLIC_KEY avoid the file (config/passport.php:28)"
+  - "TRUSTED_PROXY=local trusts private network ranges only; the load balancer is in private subnets, so X-Forwarded-For works (.env.docker.example:43)"
+  - "SESSION_DRIVER is the database in the Docker example, so sessions survive restarts; the code default is different (.env.docker.example:67)"
+  - ".dockerignore lists Dockerfile, docker-compose.yml and .env files; they do not enter the build context (.dockerignore:26-27)"
+  - "The root docker-compose.test.yml and the DDEV files are test and development setups, not the deploy path"
+openQuestions:
+  - "Whether first-run commands (instance:actor, passport:client --personal) must run before the instance federates; Deployz has only the migration command for one-shot work"
+crossReview:
+  - {field: outcome.accept, change: "DEPLOYABLE and DEPLOYABLE_WITH_CHANGES: all items are Deployz settings, but the S3 visibility and URL defaults and the first-run commands may need a small change", evidence: "config/filesystems.php:79-80; DOCKER_COMPOSE_SETUP.md:54-57"}
+  - {field: workers, change: "none: independent, horizon and schedule:work are compose services from the same Dockerfile", evidence: "docker-compose.yml:99,144"}
+  - {field: database / redis, change: "none: MySQL (pdo_mysql) and Redis (phpredis) are the only drivers installed", evidence: "Dockerfile:233-234; .env.docker.example:51,68-69"}
+  - {field: all, change: verified, evidence: "32 citations checked against the pinned commit by script (path, line, quote)"}

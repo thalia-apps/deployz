@@ -1,0 +1,162 @@
+id: new-233
+repository: maybe-finance/maybe
+commit: 77b5469832758d1cbee1a940f3012a1ae1c74cd3
+summary: >
+  Maybe is a Rails 7 personal finance app (Ruby 3.4, Puma, Hotwire). The README says the repository is no longer
+  maintained, but the code is complete and self-hostable. The root Dockerfile builds the app from source (bundle install,
+  assets:precompile) and starts `./bin/rails server` on port 3000 through bin/docker-entrypoint, which runs
+  `rails db:prepare` first. The database is PostgreSQL only (DB_HOST, POSTGRES_* variables). Redis is required: Active Job
+  uses Sidekiq and Action Cable uses the redis adapter. Background work (account syncs, imports, exports, market data) runs
+  in a separate Sidekiq process from the same image (`bundle exec sidekiq`), which also runs the sidekiq-cron schedule.
+  Active Storage defaults to local disk and switches to S3 with ACTIVE_STORAGE_SERVICE=amazon.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One web process from the root Dockerfile (builds from source), port 3000, the Rails /up health route, migrations at
+    start (db:prepare in the entrypoint), PostgreSQL through DB_HOST and POSTGRES_*, Redis through REDIS_URL, and one
+    Sidekiq worker from the same image. S3 for uploads and exports is selected by env (ACTIVE_STORAGE_SERVICE=amazon,
+    S3_BUCKET, S3_REGION). Only settings are needed: SECRET_KEY_BASE and SELF_HOSTED=true. As repo-051 (Rails, /up, migrations at start); the Sidekiq worker from the same image is the same topology as new-74.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: .devcontainer/Dockerfile, reason: "development container image for VS Code devcontainers, not the app image"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 37, quote: "COPY . ."}
+    - {path: Dockerfile, line: 43, quote: "RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile"}
+    - {path: Dockerfile, line: 62, quote: "ENTRYPOINT [\"/rails/bin/docker-entrypoint\"]"}
+    - {path: Dockerfile, line: 66, quote: "CMD [\"./bin/rails\", \"server\"]"}
+runtime: {accept: [ruby]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 65, quote: "EXPOSE 3000"}
+    - {path: config/puma.rb, line: 42, quote: "port ENV.fetch(\"PORT\") { 3000 }"}
+bindAllInterfaces:
+  value: true
+  # Puma `port` binds tcp://0.0.0.0; `rails server` binds 0.0.0.0 outside development.
+  evidence:
+    - {path: config/puma.rb, line: 42, quote: "port ENV.fetch(\"PORT\") { 3000 }"}
+startCommand:
+  source: image
+  accept: ["./bin/rails server"]
+  # The entrypoint runs db:prepare only when the command is exactly `./bin/rails server`.
+  evidence:
+    - {path: Dockerfile, line: 66, quote: "CMD [\"./bin/rails\", \"server\"]"}
+    - {path: bin/docker-entrypoint, line: 4, quote: "if [ \"${1}\" == \"./bin/rails\" ] && [ \"${2}\" == \"server\" ]; then"}
+healthPath:
+  accept: ["/up"]
+  # Rails::HealthController does not use the app login. RAILS_ASSUME_SSL defaults to true, so force_ssl does not redirect the HTTP probe.
+  evidence:
+    - {path: config/routes.rb, line: 264, quote: "get \"up\" => \"rails/health#show\", as: :rails_health_check"}
+    - {path: config/environments/production.rb, line: 49, quote: "config.assume_ssl = ActiveModel::Type::Boolean.new.cast(ENV.fetch(\"RAILS_ASSUME_SSL\", true))"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  # Rails also merges DATABASE_URL into database.yml, so a bound DATABASE_URL works too.
+  connectionVars: [DB_HOST, DB_PORT, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, DATABASE_URL]
+  evidence:
+    - {path: config/database.yml, line: 2, quote: "adapter: postgresql"}
+    - {path: config/database.yml, line: 5, quote: "host: <%= ENV.fetch(\"DB_HOST\") { \"127.0.0.1\" } %>"}
+    - {path: config/database.yml, line: 8, quote: "password: <%= ENV.fetch(\"POSTGRES_PASSWORD\") { nil } %>"}
+    - {path: config/database.yml, line: 20, quote: "database: <%= ENV.fetch(\"POSTGRES_DB\") { \"maybe_production\" } %>"}
+migrations:
+  mode: startup
+  accept: ["./bin/rails db:prepare", "bin/rails db:prepare", "bin/rails db:migrate"]
+  evidence:
+    - {path: bin/docker-entrypoint, line: 5, quote: "./bin/rails db:prepare"}
+redis:
+  status: required
+  selectBy: {REDIS_URL: "redis://<host>:6379/1"}
+  # Active Job uses Sidekiq (Redis) and Action Cable uses the redis adapter; no in-process fallback exists in production.
+  evidence:
+    - {path: config/environments/production.rb, line: 111, quote: "config.active_job.queue_adapter = :sidekiq"}
+    - {path: config/cable.yml, line: 8, quote: "adapter: redis"}
+    - {path: config/cable.yml, line: 9, quote: "url: <%= ENV.fetch(\"REDIS_URL\") { \"redis://localhost:6379/1\" } %>"}
+    - {path: compose.example.yml, line: 43, quote: "REDIS_URL: redis://redis:6379/1"}
+workers:
+  status: independent
+  commands: ["bundle exec sidekiq"]
+  # Account syncs, imports, exports, emails and market data run only in Sidekiq; the web process does not run jobs.
+  evidence:
+    - {path: compose.example.yml, line: 67, quote: "command: bundle exec sidekiq"}
+    - {path: Procfile.dev, line: 3, quote: "worker: bundle exec sidekiq"}
+    - {path: config/sidekiq.yml, line: 3, quote: "- [scheduled, 10] # For cron-like jobs (e.g. \"daily market data sync\")"}
+scheduledJobs:
+  status: embedded
+  items: [import_market_data, clean_syncs, run_security_health_checks]
+  # sidekiq-cron loads config/schedule.yml inside the Sidekiq worker process.
+  evidence:
+    - {path: config/schedule.yml, line: 1, quote: "import_market_data:"}
+    - {path: config/schedule.yml, line: 10, quote: "clean_syncs:"}
+    - {path: config/schedule.yml, line: 16, quote: "run_security_health_checks:"}
+    - {path: Gemfile, line: 35, quote: "gem \"sidekiq-cron\""}
+storage:
+  local: conditional
+  paths: [/rails/storage]
+  s3: native
+  s3SelectBy: {ACTIVE_STORAGE_SERVICE: amazon, S3_BUCKET: "<bucket>", S3_REGION: "<region>"}
+  # Profile images, family export files and import uploads use Active Storage. Default is Disk under /rails/storage, which
+  # is ephemeral (and not shared with the worker that writes exports). The S3 keys can stay empty so the task role is used.
+  evidence:
+    - {path: config/environments/production.rb, line: 34, quote: "config.active_storage.service = ENV.fetch(\"ACTIVE_STORAGE_SERVICE\", \"local\").to_sym"}
+    - {path: config/storage.yml, line: 3, quote: "root: <%= Rails.root.join(\"storage\") %>"}
+    - {path: config/storage.yml, line: 14, quote: "bucket: <%= ENV[\"S3_BUCKET\"] %>"}
+    - {path: app/models/family_export.rb, line: 4, quote: "has_one_attached :export_file"}
+    - {path: compose.example.yml, line: 51, quote: "- app-storage:/rails/storage"}
+env:
+  required:
+    - {name: SECRET_KEY_BASE, secret: true, buildTime: false, note: "Rails secret; also the seed of the Active Record encryption keys, so it must stay stable. compose.example.yml has a public default"}
+    - {name: SELF_HOSTED, secret: false, buildTime: false, note: "must be \"true\"; otherwise the app runs in managed mode (billing, hosted providers)"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "RDS host; default 127.0.0.1"}
+    - {name: DB_PORT, secret: false, buildTime: false, note: "5432"}
+    - {name: POSTGRES_USER, secret: false, buildTime: false, note: "database user"}
+    - {name: POSTGRES_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: POSTGRES_DB, secret: false, buildTime: false, note: "database name; default maybe_production"}
+    - {name: REDIS_URL, secret: false, buildTime: false, note: "Sidekiq and Action Cable; default redis://localhost:6379/1"}
+  optional: [ACTIVE_STORAGE_SERVICE, S3_BUCKET, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, APP_DOMAIN, SMTP_ADDRESS, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_TLS_ENABLED, EMAIL_SENDER, SYNTH_API_KEY, OPENAI_ACCESS_TOKEN, RAILS_FORCE_SSL, RAILS_ASSUME_SSL, RAILS_MAX_THREADS, WEB_CONCURRENCY, PORT, CACHE_REDIS_URL, SIDEKIQ_WEB_USERNAME, SIDEKIQ_WEB_PASSWORD, ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY, ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY, ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 11, quote: "SELF_HOSTED=true"}
+    - {path: .env.example, line: 15, quote: "SECRET_KEY_BASE=secret-value"}
+    - {path: config/application.rb, line: 30, quote: "config.app_mode = (ENV[\"SELF_HOSTED\"] == \"true\" || ENV[\"SELF_HOSTING_ENABLED\"] == \"true\" ? \"self_hosted\" : \"managed\").inquiry"}
+    - {path: config/initializers/active_record_encryption.rb, line: 13, quote: "secret_base = Rails.application.secret_key_base"}
+    - {path: config/initializers/sidekiq.rb, line: 6, quote: "configured_password = ::Digest::SHA256.hexdigest(ENV.fetch(\"SIDEKIQ_WEB_PASSWORD\", \"maybe\"))"}
+blockers:
+  expected: []
+  mustNot:
+    - "The README note that the repository is no longer maintained must not block: the code at the pinned commit builds and runs"
+    - "Redis must not be raised as unsupported: Deployz provides Redis (ElastiCache Valkey) through REDIS_URL"
+    - "The Sidekiq worker must not block: it runs from the same image with `bundle exec sidekiq`"
+    - "Local Active Storage must not block: S3 is selected by ACTIVE_STORAGE_SERVICE=amazon"
+    - "sidekiq-cron must not raise a schedule or a blocker: the schedule runs inside the worker"
+    - ".devcontainer/Dockerfile must not be chosen"
+vendorQuestions:
+  legitimate:
+    - "Which SMTP server sends password reset emails? (SMTP_* and EMAIL_SENDER are empty by default)"
+    - "Is a Synth API key (SYNTH_API_KEY) or an OpenAI key wanted for market data and AI features? Both are optional"
+  unnecessary:
+    - "Which database? (PostgreSQL only)"
+    - "Which port? (3000)"
+    - "Who runs migrations? (bin/docker-entrypoint runs db:prepare)"
+    - "Which worker command? (bundle exec sidekiq)"
+    - "Health path? (/up)"
+traps:
+  - "The entrypoint runs db:prepare only for the exact command `./bin/rails server`; a changed start command (for example `bundle exec puma`) skips migrations (bin/docker-entrypoint:4-5)"
+  - "SELF_HOSTED must be \"true\"; compose.example.yml sets it, but the Dockerfile does not (config/application.rb:30, compose.example.yml:38)"
+  - "SECRET_KEY_BASE derives the Active Record encryption keys; a changed value makes encrypted columns unreadable (config/initializers/active_record_encryption.rb:13-18)"
+  - "compose.example.yml has a fixed public SECRET_KEY_BASE default and uses the prebuilt ghcr.io image; the default must not be reused (compose.example.yml:37, :49)"
+  - "Sidekiq Web is mounted at /sidekiq with the default basic-auth login maybe / maybe (config/routes.rb:16, config/initializers/sidekiq.rb:5-6)"
+  - "compose.example.yml sets RAILS_FORCE_SSL=false and RAILS_ASSUME_SSL=false for local HTTP; behind the HTTPS ALB the defaults (true) are correct (compose.example.yml:39-40)"
+  - "The database config uses DB_HOST and POSTGRES_* names, not only DATABASE_URL (config/database.yml:5-8)"
+openQuestions: []
+crossReview:
+  - {field: "outcome.reason", change: "analog wording: new-74 accepts DEPLOYABLE_WITH_CHANGES and NOT_DEPLOYABLE, so it is named only for the Sidekiq-from-the-same-image topology; repo-051 is the DEPLOYABLE analog", evidence: "reasons.txt new-74, repo-051"}
+  - {field: "dockerfile.accept", change: "none: COPY sources (.ruby-version, Gemfile, Gemfile.lock, the tree) are in git; .dockerignore excludes only local state and build output", evidence: "Dockerfile:29,37; .dockerignore:4-45"}
+  - {field: "healthPath", change: "none: /up is the Rails health route; RAILS_ASSUME_SSL defaults to true, so force_ssl does not redirect the HTTP probe", evidence: "config/routes.rb:264; config/environments/production.rb:45,49"}
+  - {field: "migrations", change: "none: the entrypoint runs db:prepare only for the exact CMD ./bin/rails server", evidence: "bin/docker-entrypoint:4-5"}
+  - {field: "all", change: "verified", evidence: "37 citations checked"}

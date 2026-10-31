@@ -1294,6 +1294,7 @@ export function checkNoBuildableDockerfile(tree: FileTree): RejectionFinding {
 const DIRECTORY_VAR = /(?:HOMEPAGE_CONFIG_DIR|THELOUNGE_HOME|(?:^|_)(?:DATA_DIR|CONFIG_DIR|STORAGE_PATH|DATA_FOLDER)$)/;
 // The app's own YAML or TOML configuration file, and a setting in it that is the data location.
 const APP_CONFIG_FILE = /(?:^|\/)config(?:\/[\w.-]+)?\.(?:ya?ml|toml)$/i;
+// A temporary, cache or log directory (`CHROMIUM_DATA_DIR=/tmp/chromium-data`) is scratch space, not durable state.
 const EPHEMERAL_DIR_VALUE_REGEX = /\b(?:tmp|temp|cache|logs?)\b/i;
 const CONFIG_DATA_PATH_SETTING = /^\s*((?:storage|data|db|database)_(?:path|dir|directory))\s*[:=]\s*["']?([^\s"'#,]+)/im;
 
@@ -1354,7 +1355,7 @@ function findExplicitDurableDir(tree: FileTree): string | null {
     /CONFIG_DIR$/.test(name) && selected !== undefined && dockerfileCopiesInto(dockerfileLines, value);
   const isRuntimeDirVar = (name: string, value: string): boolean => {
     if (!DIRECTORY_VAR.test(name)) return false;
-    if (value.includes('://')) return false;
+    if (value.includes('://') || EPHEMERAL_DIR_VALUE_REGEX.test(value)) return false;
     return !shippedConfigDir(name, value);
   };
 
@@ -1377,7 +1378,13 @@ function findExplicitDurableDir(tree: FileTree): string | null {
     for (const m of folded.matchAll(/^\s*ENV\s+(.+)$/gm)) {
       for (const pair of (m[1] ?? '').split(/\s+(?=[A-Z][A-Z0-9_]*\s*=)/)) {
         const kv = /^([A-Z][A-Z0-9_]*)\s*=\s*"?([^"\s]+)/.exec(pair);
-        if (kv?.[1] && (isDurableImageDirVar(kv[1]) || isDataHomeVar(kv[1], kv[2] ?? '')) && isLocalDirValue(kv[2] ?? '') && !shippedConfigDir(kv[1], kv[2] ?? '')) {
+        if (
+          kv?.[1] &&
+          (isDurableImageDirVar(kv[1]) || isDataHomeVar(kv[1], kv[2] ?? '')) &&
+          isLocalDirValue(kv[2] ?? '') &&
+          !EPHEMERAL_DIR_VALUE_REGEX.test(kv[2] ?? '') &&
+          !shippedConfigDir(kv[1], kv[2] ?? '')
+        ) {
           return `${kv[1]}=${kv[2]} (${selected})`;
         }
       }
@@ -1401,7 +1408,7 @@ function findExplicitDurableDir(tree: FileTree): string | null {
       return 'THELOUNGE_HOME (runtime source)';
     }
     const ref = /(HOMEPAGE_CONFIG_DIR|[A-Z][A-Z0-9_]*_(?:DATA_DIR|CONFIG_DIR|DATA_FOLDER)|STORAGE_PATH)\b[^\n]*["'](\/[\w./-]+?)["']/.exec(content);
-    if (ref?.[1] && ref[2] && !ref[2].includes('://') && !shippedConfigDir(ref[1], ref[2])) {
+    if (ref?.[1] && ref[2] && !ref[2].includes('://') && !EPHEMERAL_DIR_VALUE_REGEX.test(ref[2]) && !shippedConfigDir(ref[1], ref[2])) {
       return `${ref[1]}=${ref[2]} (${path})`;
     }
     // Multiline fallback: `process.env.HOMEPAGE_CONFIG_DIR ? … : join(…, "config")`

@@ -194,6 +194,31 @@ describe('startup migration evidence follows the CMD/ENTRYPOINT script chain (DE
     expect(analyse(tree).metadata['migrationMode']).toBe('pre_deploy');
   });
 
+  it('follows an extension-less boot script that ENTRYPOINT names by its in-image path (Rails bin/docker-entrypoint)', () => {
+    const tree: FileTree = {
+      Dockerfile: ['FROM ruby:3.4-slim', 'WORKDIR /rails', 'COPY . .', 'ENTRYPOINT ["/rails/bin/docker-entrypoint"]', 'EXPOSE 3000', 'CMD ["./bin/rails", "server"]', ''].join('\n'),
+      Gemfile: "source 'https://rubygems.org'\ngem 'rails'\ngem 'pg'\n",
+      'bin/docker-entrypoint': '#!/bin/bash -e\nif [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; then\n  ./bin/rails db:prepare\nfi\nexec "${@}"\n',
+      'bin/rails': '#!/usr/bin/env ruby\nrequire_relative "../config/boot"\n',
+    };
+    expect(detectStartupMigrationEvidence(tree)).toEqual([
+      expect.objectContaining({ source: 'bin/docker-entrypoint', pattern: 'rails db:prepare/db:migrate', fromDockerCommand: true }),
+    ]);
+    expect(analyse(tree).metadata['migrationMode']).toBe('startup');
+  });
+
+  it('resolves an in-image script that several directories hold to the one next to the Dockerfile', () => {
+    const tree: FileTree = {
+      'docker/single-process/Dockerfile': ['FROM ruby:3.4-slim', 'WORKDIR /app', 'COPY ./ /app/', 'COPY ["docker/single-process/scripts/init", "/scripts/"]', 'EXPOSE 3000', 'CMD ["/scripts/init"]', ''].join('\n'),
+      Gemfile: "source 'https://rubygems.org'\ngem 'rails'\ngem 'pg'\n",
+      'docker/single-process/scripts/init': '#!/bin/bash -e\nbundle exec rake db:migrate\nexec bundle exec unicorn\n',
+      'docker/multi-process/scripts/init': '#!/bin/bash -e\nexec supervisord\n',
+    };
+    expect(detectStartupMigrationEvidence(tree)).toEqual([
+      expect.objectContaining({ source: 'docker/single-process/scripts/init', fromDockerCommand: true }),
+    ]);
+  });
+
   it('a CMD script chain with no migration pattern leaves mode unaffected (no false positive)', () => {
     const tree = umamiApp("const { execSync } = require('child_process');\nexecSync('pg_isready');\n");
     // The chain (CMD -> start-docker.sh -> check-db.js) has no migration

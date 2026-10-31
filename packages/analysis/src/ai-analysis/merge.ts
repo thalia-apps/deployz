@@ -4,7 +4,9 @@
  * - a blocker answered "required", or any answer that fails its check: the
  *   rules value stays (`rules`). A declared service answered "required" that
  *   passes, with a cited line that uses an engine Deployz does not provide,
- *   becomes that engine's rejection (`ai`): not deployable;
+ *   becomes that engine's rejection (`ai`): not deployable. When the question
+ *   names one PostgreSQL, MySQL, Redis or S3 service and a cited line uses
+ *   that engine, Deployz adds the engine and the rejection is dismissed (`ai`);
  * - a blocker answered "not used" or "optional by setting" that passes: the
  *   rejection is dismissed (`ai`). A setting adds the engine it selects (a
  *   database, Redis or S3). When Deployz does not set that variable itself,
@@ -23,8 +25,8 @@ import { postgresSemantic } from '../bindings.js';
 import { isSecretName, type FileTree, type MigrationStartupEvidence } from '../detectors.js';
 import { isGeneratableSecretName } from '../env-classification.js';
 import { combineOverrides } from '../vendor-disputes.js';
-import type { AnalystOutput, SupportedEngine } from './analyst.js';
-import { citedLine, databaseVariableSemantic, factValue, type AnswerCheck, type DockerfileValue, type MigrationValue } from './checks.js';
+import { SUPPORTED_ENGINES, type AnalystOutput, type SupportedEngine } from './analyst.js';
+import { citedLine, databaseVariableSemantic, ENGINE_PATTERN, factValue, type AnswerCheck, type DockerfileValue, type MigrationValue } from './checks.js';
 import { isProductionFile, type EvidencePack } from './evidence-pack.js';
 import { LOCAL_FILESYSTEM_FINDING } from './open-items.js';
 
@@ -87,6 +89,18 @@ const UNSUPPORTED_SERVICE_REJECTIONS: readonly { readonly words: RegExp; readonl
     engine: 'a datastore Deployz does not provide',
   },
 ];
+
+/**
+ * The engine Deployz provides for a declared-service question that names one
+ * service of that engine (`redis (redis:8.4) in docker-compose.yml`), when a
+ * cited line uses the same engine. MariaDB and other engines give none.
+ */
+function providedDeclaredEngine(reason: string, citedLines: readonly string[]): SupportedEngine | undefined {
+  const entries = reason.replace(/^.*?declares /, '').replace(/\. Deployz did not find.*$/, '').split('; ');
+  if (entries.length !== 1) return undefined;
+  const service = entries[0]!.replace(/ in \S+$/, '');
+  return SUPPORTED_ENGINES.find((engine) => ENGINE_PATTERN[engine].test(service) && citedLines.some((line) => ENGINE_PATTERN[engine].test(line)));
+}
 
 function replaceFinding(findings: AnalysisResult['findings'], detector: string, patch: Partial<AnalysisResult['findings'][number]>): AnalysisResult['findings'] {
   const index = findings.findIndex((finding) => finding.detector === detector);
@@ -160,6 +174,11 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
   const required: { reason: string; rejection: AnalysisResult['rejections'][number] }[] = [];
   const settings: SettingChange[] = [];
   const overrides: { -readonly [K in keyof ResourceOverrides]: ResourceOverrides[K] } = {};
+  const provide = (engine: SupportedEngine): void => {
+    if (engine === 'postgres' || engine === 'mysql') overrides.database = engine;
+    if (engine === 'redis') overrides.redis = true;
+    if (engine === 's3') overrides.storage = true;
+  };
   for (const answer of answers.blockers) {
     const question = pack.questions.find((entry) => entry.id === answer.id);
     if (question?.kind !== 'blocker') continue;
@@ -173,12 +192,16 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
               .map((item) => ({ ...entry, cited: `${item.path}:${item.line}` })),
           )[0]
         : undefined;
+    const provided =
+      question.category === 'declared_service' && answer.answer === 'required' && check.ok && unsupported === undefined
+        ? providedDeclaredEngine(question.reason, answer.evidence.map((item) => citedLine(pack, item) ?? ''))
+        : undefined;
     merged.push({
       id: answer.id,
       subject: question.dependency,
       answer: answer.answer,
       value: answer.answer === 'optional_by_setting' ? { setting: answer.setting, value: answer.settingValue, engine: answer.engine } : null,
-      decision: dismisses || unsupported !== undefined ? 'ai' : 'rules',
+      decision: dismisses || unsupported !== undefined || provided !== undefined ? 'ai' : 'rules',
       reasons: check.reasons,
     });
     if (unsupported !== undefined) {
@@ -191,14 +214,17 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
         },
       });
     }
+    if (provided !== undefined) {
+      dismissed.push(question.reason);
+      provide(provided);
+      continue;
+    }
     if (!dismisses) continue;
     if (question.dependency === LOCAL_FILESYSTEM_FINDING) overrides.localFilesystem = false;
     else dismissed.push(question.reason);
     if (answer.answer === 'optional_by_setting' && answer.setting !== null && answer.settingValue !== null && answer.engine !== null) {
       const engine = answer.engine;
-      if (engine === 'postgres' || engine === 'mysql') overrides.database = engine;
-      if (engine === 'redis') overrides.redis = true;
-      if (engine === 's3') overrides.storage = true;
+      provide(engine);
       settings.push({ dependency: question.dependency, setting: answer.setting, value: answer.settingValue, engine, vendor: !deployzSets(pack, engine, answer.setting) });
     }
   }

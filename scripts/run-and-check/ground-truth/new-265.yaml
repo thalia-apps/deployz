@@ -1,0 +1,136 @@
+id: new-265
+repository: vercel/chatbot
+commit: c2f8235e1f3ea903ad8b7f61447c4f74164b5c58
+summary: >
+  Chatbot (formerly ai-chatbot) is the Vercel AI chat template: a Next.js 16 app (next-auth with guest and credentials
+  login, Drizzle ORM on PostgreSQL through POSTGRES_URL, the AI SDK with the Vercel AI Gateway). The repository has no
+  Dockerfile, compose file or Procfile of any kind. `pnpm build` runs the Drizzle migration (skipped when POSTGRES_URL
+  is not set) and then `next build`; `pnpm start` is `next start`. REDIS_URL is optional (rate limit and resumable
+  streams). Image uploads call Vercel Blob (BLOB_READ_WRITE_TOKEN), which is not S3. The README deploys to Vercel.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The architecture fits Deployz: one Next.js web process on port 3000, PostgreSQL, optional Redis, no worker and no
+    local data. The full file list has no Dockerfile, so the vendor must add one (pnpm install, next build, next
+    start). That is the "no Dockerfile" repository change, as new-244 and new-156. File upload uses Vercel Blob, so
+    uploads need a code change to S3; the chat itself works without it.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: package.json, line: 7, quote: "\"build\": \"tsx lib/db/migrate && next build\","}
+    - {path: package.json, line: 8, quote: "\"start\": \"next start\","}
+    - {path: README.md, line: 51, quote: "You can deploy your own version of Chatbot to Vercel with one click:"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  # next start listens on 3000 by default; no other port is in the repository.
+  evidence:
+    - {path: package.json, line: 8, quote: "\"start\": \"next start\","}
+    - {path: README.md, line: 71, quote: "Your app template should now be running on [localhost:3000](http://localhost:3000)."}
+bindAllInterfaces:
+  value: true
+  # next start binds all interfaces by default.
+  evidence:
+    - {path: package.json, line: 8, quote: "\"start\": \"next start\","}
+startCommand:
+  source: explicit
+  accept: ["pnpm start", "next start", "npx next start", "pnpm exec next start"]
+  evidence:
+    - {path: package.json, line: 8, quote: "\"start\": \"next start\","}
+healthPath:
+  accept: ["/ping"]
+  # proxy.ts answers /ping with 200 "pong" before any auth check; `/` redirects to the guest sign-in (a 307 and then a cookie).
+  evidence:
+    - {path: proxy.ts, line: 8, quote: "if (pathname.startsWith(\"/ping\")) {"}
+    - {path: proxy.ts, line: 9, quote: "return new Response(\"pong\", { status: 200 });"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {POSTGRES_URL: "postgresql://<user>:<password>@<host>:5432/<db>"}
+  connectionVars: [POSTGRES_URL]
+  evidence:
+    - {path: lib/db/queries.ts, line: 36, quote: "const client = postgres(process.env.POSTGRES_URL ?? \"\");"}
+    - {path: drizzle.config.ts, line: 12, quote: "dialect: \"postgresql\","}
+    - {path: .env.example, line: 12, quote: "POSTGRES_URL=****"}
+migrations:
+  mode: command
+  accept: ["pnpm db:migrate", "npx tsx lib/db/migrate.ts", "tsx lib/db/migrate"]
+  # package.json build also runs the migration, but only when POSTGRES_URL is set; tsx is a devDependency, so the image keeps dev dependencies for the command.
+  evidence:
+    - {path: package.json, line: 13, quote: "\"db:migrate\": \"npx tsx lib/db/migrate.ts\","}
+    - {path: lib/db/migrate.ts, line: 22, quote: "await migrate(db, { migrationsFolder: \"./lib/db/migrations\" });"}
+    - {path: README.md, line: 67, quote: "pnpm db:migrate # Setup database or apply latest database changes"}
+redis:
+  status: optional
+  selectBy: {REDIS_URL: "redis://<host>:6379"}
+  # Redis serves the per-IP rate limit and resumable streams; without REDIS_URL both are skipped.
+  evidence:
+    - {path: lib/ratelimit.ts, line: 12, quote: "if (!client && process.env.REDIS_URL) {"}
+    - {path: app/(chat)/api/chat/route.ts, line: 407, quote: "if (!process.env.REDIS_URL) {"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: package.json, line: 8, quote: "\"start\": \"next start\","}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # Uploads go to Vercel Blob, not S3; the upload route fails without BLOB_READ_WRITE_TOKEN. No local disk state.
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: app/(chat)/api/files/upload/route.ts, line: 1, quote: "import { put } from \"@vercel/blob\";"}
+    - {path: .env.example, line: 9, quote: "BLOB_READ_WRITE_TOKEN=****"}
+env:
+  required:
+    - {name: POSTGRES_URL, secret: true, buildTime: false, note: "PostgreSQL URL; Deployz supplies it. Without it the build skips the migration and the app runs with an empty URL"}
+    - {name: AUTH_SECRET, secret: true, buildTime: false, note: "next-auth JWT secret; the proxy and the guest route read it"}
+    - {name: AI_GATEWAY_API_KEY, secret: true, buildTime: false, note: "Vercel AI Gateway key, required outside Vercel; the vendor creates it in their Vercel account"}
+  optional: [REDIS_URL, BLOB_READ_WRITE_TOKEN, IS_DEMO]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 2, quote: "AUTH_SECRET=****"}
+    - {path: .env.example, line: 4, quote: "# required for non-vercel deployments, vercel uses OIDC automatically"}
+    - {path: .env.example, line: 6, quote: "AI_GATEWAY_API_KEY=****"}
+    - {path: .env.example, line: 15, quote: "REDIS_URL=****"}
+    - {path: proxy.ts, line: 18, quote: "secret: process.env.AUTH_SECRET,"}
+blockers:
+  expected:
+    - "No Dockerfile: the vendor must add a production Dockerfile (pnpm install, next build, next start on port 3000) and a migration command"
+  mustNot:
+    - "Vercel deployment instructions must not block: the app is a normal Next.js server"
+    - "Vercel Blob must not block the whole app: only image upload needs it, and chat works without it"
+    - "Vercel AI Gateway must not block: it is an external API reached with a key"
+    - "Redis must not be required"
+    - "botid (Vercel bot protection) must not block: the chat route ignores a failed check"
+vendorQuestions:
+  legitimate:
+    - "Where does AI_GATEWAY_API_KEY come from? (a Vercel AI Gateway key)"
+    - "Should file upload work? (it needs a code change from Vercel Blob to S3, or the feature stays off)"
+  unnecessary:
+    - "Which database? (PostgreSQL only)"
+    - "Is a worker or Redis needed? (no, Redis is optional)"
+traps:
+  - "The build script runs `tsx lib/db/migrate` before `next build`; it needs POSTGRES_URL and tsx, and it skips quietly when POSTGRES_URL is empty, so a Dockerfile build without a database does not migrate (package.json:7, lib/db/migrate.ts:11)"
+  - "tsx is a devDependency (package.json:106); a runtime migration command needs the dev dependencies in the image"
+  - "Vercel Blob (@vercel/blob) is not S3 and has no Deployz equivalent; uploads return 500 without BLOB_READ_WRITE_TOKEN (app/(chat)/api/files/upload/route.ts:52)"
+  - "Redis looks required because the rate limit and resumable-stream code create a client, but both skip silently without REDIS_URL (lib/ratelimit.ts:12, app/(chat)/api/chat/route.ts:407)"
+  - "The proxy redirects every request without a session cookie to /api/auth/guest, so `/` is a redirect and /ping is the stable health path (proxy.ts:8, :24)"
+  - "next 16 with cacheComponents and the React compiler is on in next.config.ts; the build depends on that exact Next version (next.config.ts:21, :51)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the full tree has no Dockerfile or compose file of any kind (git ls-files shows only lib/editor/react-renderer.tsx for the pattern docker|compose|procfile|render|fly)', evidence: 'package.json:7-8'}
+  - {field: healthPath, change: 'none: proxy.ts answers /ping before the session check; other paths redirect to the guest sign-in', evidence: 'proxy.ts:8-9,24'}
+  - {field: migrations, change: 'none: db:migrate is a tsx script; the build script migrates only when POSTGRES_URL is set', evidence: 'package.json:7,13; lib/db/migrate.ts:11'}
+  - {field: redis / storage, change: 'none: REDIS_URL is optional in both places; Vercel Blob is the only upload target', evidence: 'lib/ratelimit.ts:12; app/(chat)/api/chat/route.ts:407; app/(chat)/api/files/upload/route.ts:1'}
+  - {field: outcome, change: 'none: one Next.js process with PostgreSQL; only the missing Dockerfile needs a change; analog new-244', evidence: 'package.json:8; drizzle.config.ts:12'}
+  - {field: all, change: verified, evidence: 25 citations checked}

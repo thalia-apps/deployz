@@ -1,0 +1,43 @@
+{
+  "id": "new-222",
+  "analyser": "judge@r11-final-3",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "change",
+      "verdict": "needs_changes",
+      "category": null,
+      "reason": "The selected Dockerfile is a development image that needs build arguments with no defaults (GROUP_ID, USER_ID), which Deployz does not pass, and it does not copy the application source.",
+      "evidence": [
+        {
+          "path": ".docker/Dockerfile",
+          "line": 12,
+          "quote": "ARG GROUP_ID"
+        },
+        {
+          "path": ".docker/Dockerfile",
+          "line": 21,
+          "quote": "RUN groupmod -g $GROUP_ID www-data \\"
+        },
+        {
+          "path": ".docker/Dockerfile",
+          "line": 44,
+          "quote": "COPY --link --chmod=755 .docker/install /var/www/html/.docker/install"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5436,
+      "completionTokens": 231,
+      "costUsd": 0.02610036
+    },
+    "latencyMs": 4639
+  }
+}

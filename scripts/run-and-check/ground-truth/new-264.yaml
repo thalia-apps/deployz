@@ -1,0 +1,125 @@
+id: new-264
+repository: elk-zone/elk
+commit: 3405d745d857cc8f3d16b472f975b581375ad73a
+summary: >
+  Elk is a Nuxt 4 web client for Mastodon. The browser talks to the chosen Mastodon server directly; the Nitro server
+  only registers an OAuth application on each Mastodon server and stores its client id and secret (key servers:v4:...)
+  through the unstorage driver in NUXT_STORAGE_DRIVER: fs (default, base /elk/data in the image), cloudflare KV, vercel
+  KV or memory. The root Dockerfile is a multi-stage pnpm build that runs `node .output/server/index.mjs` as the
+  non-root user elk on port 5314. No database, no Redis, no queue, no worker.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    The root Dockerfile builds the app from source and runs one Nitro process on port 5314. The app needs no database,
+    Redis or worker. The only server state is a cache of OAuth app registrations that the app re-creates when it is
+    missing (getApp registers a new app on the Mastodon server). The image's fs storage base /elk/data is not writable
+    by the elk user without a volume, so the vendor sets NUXT_STORAGE_DRIVER=memory as an environment variable. That is
+    a Deployz setting, not a repository change.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 29, quote: "RUN pnpm i --frozen-lockfile"}
+    - {path: Dockerfile, line: 32, quote: "RUN NODE_OPTIONS=\"--max-old-space-size=6144\" pnpm build"}
+    - {path: Dockerfile, line: 48, quote: "COPY --from=builder /elk/.output ./.output"}
+    - {path: Dockerfile, line: 60, quote: "CMD [\"node\", \".output/server/index.mjs\"]"}
+runtime: {accept: [node]}
+port:
+  accept: [5314]
+  evidence:
+    - {path: Dockerfile, line: 50, quote: "EXPOSE 5314/tcp"}
+    - {path: Dockerfile, line: 52, quote: "ENV PORT=5314"}
+    - {path: docker-compose.yaml, line: 12, quote: "- 5314:5314"}
+bindAllInterfaces:
+  value: true
+  # The Nitro node server listens on all interfaces when no HOST is set; the image sets only PORT.
+  evidence:
+    - {path: Dockerfile, line: 52, quote: "ENV PORT=5314"}
+startCommand:
+  source: image
+  accept: ["node .output/server/index.mjs"]
+  evidence:
+    - {path: Dockerfile, line: 60, quote: "CMD [\"node\", \".output/server/index.mjs\"]"}
+    - {path: package.json, line: 16, quote: "\"start\": \"PORT=5314 node .output/server/index.mjs\","}
+healthPath:
+  accept: ["/", "/api/list-servers"]
+  # No health route. `/` is prerendered at build; /api/list-servers lists the stored server keys.
+  evidence:
+    - {path: nuxt.config.ts, line: 187, quote: "'/': { prerender: true },"}
+    - {path: nuxt.config.ts, line: 190, quote: "'/api/list-servers': { swr: true },"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: Dockerfile, line: 60, quote: "CMD [\"node\", \".output/server/index.mjs\"]"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # The fs driver keeps OAuth app registrations as JSON files; the app registers a new app when a key is missing, so the data is a cache and not durable state.
+  local: conditional
+  paths: [/elk/data]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: Dockerfile, line: 55, quote: "ENV NUXT_STORAGE_FS_BASE='/elk/data'"}
+    - {path: Dockerfile, line: 58, quote: "VOLUME [ \"/elk/data\" ]"}
+    - {path: nuxt.config.ts, line: 156, quote: "driver: process.env.NUXT_STORAGE_DRIVER ?? (isCI ? 'cloudflare' : 'fs'),"}
+    - {path: server/utils/shared.ts, line: 45, quote: "else if (driver === 'memory') {"}
+    - {path: server/utils/shared.ts, line: 92, quote: "export async function getApp(origin: string, server: string) {"}
+env:
+  required:
+    - {name: NUXT_STORAGE_DRIVER, secret: false, buildTime: false, note: "set to memory; the default fs driver writes to /elk/data, which the non-root elk user cannot create without a mounted volume, and getApp then returns null so login fails"}
+  optional: [NUXT_PUBLIC_DEFAULT_SERVER, NUXT_PUBLIC_SINGLE_INSTANCE, NUXT_PUBLIC_PRIVACY_POLICY_URL, NUXT_PUBLIC_TRANSLATE_API, NUXT_STORAGE_FS_BASE, NUXT_ADMIN_KEY]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 2, quote: "NUXT_PUBLIC_DEFAULT_SERVER="}
+    - {path: .env.example, line: 3, quote: "NUXT_PUBLIC_SINGLE_INSTANCE="}
+    - {path: nuxt.config.ts, line: 160, quote: "adminKey: '',"}
+    - {path: Dockerfile, line: 44, quote: "USER elk"}
+blockers:
+  expected: []
+  mustNot:
+    - "The VOLUME /elk/data must not block: the stored data is a regenerable cache and the memory driver needs no disk"
+    - "Cloudflare KV and Vercel KV settings must not be read as required services: they are alternative storage drivers"
+    - "Netlify files and docs must not block"
+    - "No database, Redis or S3 may be reported as required"
+vendorQuestions:
+  legitimate:
+    - "Which Mastodon server is the default, and may users sign in to other servers? (NUXT_PUBLIC_DEFAULT_SERVER, NUXT_PUBLIC_SINGLE_INSTANCE)"
+  unnecessary:
+    - "Which database? (none)"
+    - "Is a worker or Redis needed? (no)"
+    - "Which port? (5314)"
+traps:
+  - "The default storage driver is fs with base /elk/data, but the image runs as user elk and /elk/data exists only as a mounted volume; without it getApp swallows the write error and returns null (Dockerfile:44, server/utils/shared.ts:92)"
+  - "The driver is chosen at build time too: nuxt.config.ts picks cloudflare when isCI is true, and NUXT_STORAGE_DRIVER overrides it (nuxt.config.ts:156)"
+  - "The build needs a large heap: NODE_OPTIONS sets 6144 MB (Dockerfile:32)"
+  - "Memory storage is per task: an OAuth callback that reaches a different task than the login request registers a new app and fails"
+  - "docker-compose.yaml has one service with a bind-mounted data folder; it is not a multi-service app (docker-compose.yaml:6)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the root Dockerfile builds from source with pnpm and runs the Nitro server as user elk', evidence: 'Dockerfile:29,32,44,60'}
+  - {field: storage / env, change: 'none: /elk/data exists only as a volume, the elk user cannot create it, and getApp returns null on a write error; memory driver avoids the disk and the data is re-created on demand', evidence: 'Dockerfile:44,55,58; server/utils/shared.ts:45,92'}
+  - {field: database / redis, change: 'none: the storage drivers are fs, cloudflare, vercel and memory; no SQL or Redis driver', evidence: 'server/utils/shared.ts:24-45'}
+  - {field: outcome, change: 'none: DEPLOYABLE with NUXT_STORAGE_DRIVER=memory as a setting; per-task memory is a limit for more than one task (see traps)', evidence: 'nuxt.config.ts:156'}
+  - {field: all, change: verified, evidence: 22 citations checked}

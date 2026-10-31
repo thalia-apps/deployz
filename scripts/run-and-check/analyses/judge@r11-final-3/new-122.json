@@ -1,0 +1,43 @@
+{
+  "id": "new-122",
+  "analyser": "judge@r11-final-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "unsupported_service",
+      "reason": "Sentry's core event ingestion and querying need Snuba, ClickHouse, Kafka and Relay, which Deployz does not provide, and the product runs as several services.",
+      "evidence": [
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 20,
+          "quote": "LABEL org.opencontainers.image.description=\"Sentry runtime image\""
+        },
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 22,
+          "quote": "LABEL org.opencontainers.image.documentation=\"https://develop.sentry.dev/self-hosted/\""
+        },
+        {
+          "path": "README.md",
+          "line": 14,
+          "quote": "Sentry is the debugging platform that helps every developer detect, trace, and fix issues. Code breaks, fix it faster."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6859,
+      "completionTokens": 276,
+      "costUsd": 0.03262644
+    },
+    "latencyMs": 5745
+  }
+}

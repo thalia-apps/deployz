@@ -1,0 +1,150 @@
+id: new-246
+repository: akaunting/akaunting
+commit: dadcb2c2c8ccbdbadab6d5c704274a6f4fb949f3
+summary: >
+  Akaunting is a Laravel 10 (PHP 8.2+) accounting app. The repository has no Dockerfile and no compose file; the README
+  installs it with `composer install`, `npm install`, `npm run dev` and `php artisan install`, and the web root is the
+  repository root (index.php and .htaccess). The database is chosen by DB_CONNECTION (MySQL by default; PostgreSQL and
+  SQLite are also configured). A web installer or `php artisan install` creates the tables, the company and the admin,
+  and writes the result (DB values, APP_INSTALLED=true) into the .env file on local disk. Uploads use a local disk by
+  default; an S3 disk exists. Reminders and recurring documents come from the Laravel scheduler. Apps from the
+  Akaunting app store are downloaded into modules/ on local disk.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The architecture fits Deployz (one PHP web process, RDS MySQL or PostgreSQL, no Redis, sync queue, S3 for uploads
+    with FILESYSTEM_DISK=s3). But the full file list has no Dockerfile, so the vendor must add one (PHP with a web
+    server, composer install, the npm asset build) and must set APP_INSTALLED and the DB values as environment variables
+    so the installer state is not kept only in a local .env file. This is the invoiceninja case (no Dockerfile, Laravel
+    with MySQL), so DEPLOYABLE_WITH_CHANGES and NOT_DEPLOYABLE are both accepted, as new-115. A strict read gives
+    NOT_DEPLOYABLE because the installer writes its state to a local .env and app-store modules go to local disk.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 30, quote: "* Install dependencies: `composer install ; npm install ; npm run dev`"}
+    - {path: README.md, line: 34, quote: "php artisan install --db-name=\"akaunting\" --db-username=\"root\" --db-password=\"pass\" --admin-email=\"admin@company.com\" --admin-password=\"123456\""}
+    - {path: index.php, line: 18, quote: "require __DIR__ . '/bootstrap/autoload.php';"}
+runtime: {accept: [php]}
+port:
+  accept: [80, 8000]
+  # No port is defined in the repo; a vendor image with Apache uses 80, `php artisan serve` uses 8000.
+  evidence:
+    - {path: README.md, line: 43, quote: "> If you prefer, `php artisan serve` also works for a quick local run."}
+bindAllInterfaces:
+  value: null
+  evidence: []
+startCommand:
+  source: explicit
+  accept: []
+  # No production start command exists in the repo; it comes from the vendor-written image.
+  evidence: []
+healthPath:
+  accept: ["/auth/login", "/"]
+  # /api/ping needs API authentication; / redirects to the installer or to the login page.
+  evidence:
+    - {path: routes/guest.php, line: 13, quote: "Route::get('login', 'Auth\\Login@create')->name('login');"}
+    - {path: app/Http/Middleware/RedirectIfNotInstalled.php, line: 19, quote: "if (config('app.installed', false) == true) {"}
+database:
+  status: required
+  engines: [mysql, postgres, sqlite]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {DB_CONNECTION: mysql, DB_HOST: "<host>", DB_PORT: "3306", DB_DATABASE: "<db>", DB_USERNAME: "<user>", DB_PASSWORD: "<password>"}
+  connectionVars: [DB_CONNECTION, DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD]
+  evidence:
+    - {path: config/database.php, line: 18, quote: "'default' => env('DB_CONNECTION', 'mysql'),"}
+    - {path: config/database.php, line: 123, quote: "'driver' => 'pgsql',"}
+    - {path: .env.example, line: 10, quote: "DB_CONNECTION=mysql"}
+    - {path: README.md, line: 19, quote: "* Database (e.g.: MariaDB, MySQL, PostgreSQL, SQLite)"}
+migrations:
+  mode: command
+  accept: ["php artisan install --no-interaction", "php artisan migrate --force"]
+  # The first install creates the tables, the company and the admin user; later updates use migrate. The install
+  # command also writes .env on local disk, which is lost on restart.
+  evidence:
+    - {path: app/Console/Commands/Install.php, line: 32, quote: "protected $signature = 'install"}
+    - {path: app/Utilities/Installer.php, line: 278, quote: "'APP_INSTALLED'         =>  'true',"}
+    - {path: app/Utilities/Installer.php, line: 333, quote: "file_put_contents(base_path('.env'), $env);"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: .env.example, line: 19, quote: "CACHE_DRIVER=file"}
+    - {path: .env.example, line: 21, quote: "QUEUE_CONNECTION=sync"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: .env.example, line: 21, quote: "QUEUE_CONNECTION=sync"}
+scheduledJobs:
+  status: conditional
+  items:
+    - {command: "php artisan schedule:run", schedule: "every minute (cron)", note: "invoice and bill reminders, recurring documents, temp cleanup; no render.yaml or CronJob, so Deployz provisions no schedule"}
+  evidence:
+    - {path: app/Console/Kernel.php, line: 32, quote: "$schedule->command('reminder:invoice')->dailyAt($schedule_time);"}
+    - {path: app/Console/Kernel.php, line: 34, quote: "$schedule->command('recurring:check')->dailyAt($schedule_time)->runInBackground();"}
+storage:
+  local: conditional
+  paths: [storage/app/uploads, storage/framework, storage/logs, modules, .env]
+  s3: native
+  s3SelectBy: {FILESYSTEM_DISK: s3, AWS_BUCKET: "<bucket>", AWS_DEFAULT_REGION: "<region>"}
+  # The Laravel s3 driver uses the SDK default credentials (task role) when AWS_ACCESS_KEY_ID is empty.
+  # File sessions and cache are per task. App-store modules installed at runtime go to modules/ and are lost on restart.
+  evidence:
+    - {path: config/filesystems.php, line: 16, quote: "'default' => env('FILESYSTEM_DISK', 'uploads'),"}
+    - {path: config/filesystems.php, line: 105, quote: "'root' => storage_path('app/uploads'),"}
+    - {path: config/filesystems.php, line: 112, quote: "'driver' => 's3',"}
+    - {path: config/module.php, line: 70, quote: "'modules' => base_path(env('MODULE_PATHS_MODULES', 'modules')),"}
+    - {path: .env.example, line: 20, quote: "SESSION_DRIVER=file"}
+env:
+  required:
+    - {name: APP_KEY, secret: true, buildTime: false, note: "Laravel key; empty in .env.example"}
+    - {name: APP_INSTALLED, secret: false, buildTime: false, note: "true after the first install; without it every request goes to the web installer"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "public HTTPS URL"}
+    - {name: DB_CONNECTION, secret: false, buildTime: false, note: "mysql (or pgsql)"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "RDS endpoint"}
+    - {name: DB_DATABASE, secret: false, buildTime: false, note: "database name"}
+    - {name: DB_USERNAME, secret: false, buildTime: false, note: "database user"}
+    - {name: DB_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: APP_DEBUG, secret: false, buildTime: false, note: "the example sets true; production needs false"}
+  optional: [DB_PORT, DB_PREFIX, FILESYSTEM_DISK, AWS_BUCKET, AWS_DEFAULT_REGION, SESSION_DRIVER, CACHE_DRIVER, MAIL_MAILER, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS, APP_LOCALE, APP_SCHEDULE_TIME, FIREWALL_ENABLED, LOG_LEVEL]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 4, quote: "APP_INSTALLED=false"}
+    - {path: .env.example, line: 5, quote: "APP_KEY="}
+    - {path: .env.example, line: 6, quote: "APP_DEBUG=true"}
+    - {path: config/app.php, line: 19, quote: "'installed' => (bool) env('APP_INSTALLED', false),"}
+blockers:
+  expected:
+    - "No Dockerfile: the vendor must add a production image (PHP with a web server, composer install, npm build, web root at the repository root)"
+    - "The installer writes its state (APP_INSTALLED, DB values) into a local .env file; a deploy must set these as environment variables"
+  mustNot:
+    - "MySQL must not block: it is the default engine; PostgreSQL is also configured"
+    - "Redis must not be required: cache and session default to file, queue to sync"
+    - "Uploads must not be a hard blocker: FILESYSTEM_DISK=s3 is native"
+vendorQuestions:
+  legitimate:
+    - "Which production image should Deployz use? (no Dockerfile in the repository)"
+    - "How is the first install done? (php artisan install --no-interaction with DB and admin options, then APP_INSTALLED=true in the environment)"
+    - "Do customers need the reminders and recurring documents? (they need `php artisan schedule:run` every minute, which Deployz does not provision)"
+    - "Are app-store modules used? (they install into modules/ on local disk and are lost on restart)"
+  unnecessary:
+    - "Which database? (MySQL default)"
+    - "Is Redis needed? (no)"
+traps:
+  - "The web installer writes DB credentials and APP_INSTALLED into .env with file_put_contents (app/Utilities/Installer.php:333); on Fargate that file is lost and the installer comes back"
+  - ".env.example sets APP_DEBUG=true and LOG_LEVEL=debug (.env.example:6, :25)"
+  - "The web root is the repository root (index.php, .htaccess), not public/ only; public/index.php also exists"
+  - "README lists MariaDB and SQLite; Deployz hosts MySQL 8 or PostgreSQL only (README.md:19)"
+  - "The scheduler is in app/Console/Kernel.php; no cron or CronJob manifest exists, so Deployz does not provision it"
+  - "The api/ping route needs API authentication, so it is not a health path (routes/api.php:13)"
+openQuestions:
+  - "Which PHP web server a vendor image should use (php-fpm with nginx would be two processes; Apache with mod_php is one)"
+crossReview:
+  - {field: dockerfile, change: 'none: the full tree has no Dockerfile or compose file', evidence: trees/new-246.txt}
+  - {field: healthPath, change: 'none: guest routes are in an ''auth'' prefix group, so the login page is /auth/login', evidence: 'routes/guest.php:12-13; app/Providers/Route.php:199-203'}
+  - {field: outcome, change: 'none: no Dockerfile plus installer state in a local .env; the pair DWC + NOT matches new-115 (Laravel, MySQL, no Dockerfile)', evidence: 'app/Utilities/Installer.php:333; config/app.php:19'}
+  - {field: all, change: verified, evidence: 23 citations checked}

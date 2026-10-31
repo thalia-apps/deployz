@@ -1,0 +1,172 @@
+id: new-270
+repository: wger-project/wger
+commit: dde740753e76dee89fcd5b20fbb02fd8513bfa04
+summary: >
+  wger is a self-hosted fitness, workout and nutrition tracker (Django, Python 3, a React front end from an npm
+  package). The production image is extras/docker/production/Dockerfile, built with the repository root as context. It
+  starts from the published base image wger/base:latest, installs the app and its wheels, and starts
+  extras/docker/production/entrypoint.sh. The entrypoint runs `wger bootstrap` (migrations, fixtures and a default admin
+  user on an empty database), collectstatic, `manage.py migrate`, sets the site URL, and then starts either gunicorn
+  (WGER_USE_GUNICORN=True) or the Django development server on port 8000. The database comes from DJANGO_DB_* variables
+  (PostgreSQL, no SQLite fallback in settings/main.py). Redis (cache, Celery) and S3 are optional. The image has no web
+  server for static files and no WhiteNoise: the compose setup of the separate wger-project/docker repository puts nginx
+  in front for /static and /media.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The shape fits Deployz (one web process, PostgreSQL, optional Redis, Celery workers from the same image, S3
+    media). But the image does not serve its own static files: collectstatic writes to /home/wger/static, the URL
+    patterns serve /media only when DEBUG is true, and the project has no WhiteNoise. Without the nginx container of the
+    separate docker repository, the pages have no CSS or JavaScript. The S3 option for static and media files needs
+    AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (no task-role path) and a public bucket. The vendor must add static file
+    serving (for example WhiteNoise) and, for durable uploads, S3 storage that works with the task role. This is a
+    repository change, so DEPLOYABLE_WITH_CHANGES.
+dockerfile:
+  accept: [extras/docker/production/Dockerfile]
+  reject:
+    - {path: extras/docker/base/Dockerfile, reason: "base image only; its own header says it does nothing on its own"}
+    - {path: extras/docker/development/Dockerfile, reason: "development image"}
+    - {path: extras/docker/demo/Dockerfile, reason: "demo image with cron and a demo site"}
+  target: null
+  context: .
+  evidence:
+    - {path: extras/docker/production/Dockerfile, line: 7, quote: "# docker build -f extras/docker/production/Dockerfile --tag wger/server ."}
+    - {path: extras/docker/production/Dockerfile, line: 14, quote: "FROM wger/base:latest AS builder"}
+    - {path: extras/docker/production/Dockerfile, line: 89, quote: "COPY --chown=wger:wger . /home/wger/src"}
+    - {path: extras/docker/production/Dockerfile, line: 114, quote: "CMD [\"/home/wger/entrypoint.sh\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: extras/docker/production/Dockerfile, line: 86, quote: "EXPOSE 8000"}
+    - {path: extras/docker/production/entrypoint.sh, line: 88, quote: "PORT=\"${WGER_PORT:-8000}\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: extras/docker/production/entrypoint.sh, line: 92, quote: "gunicorn wger.wsgi:application --preload --bind 0.0.0.0:$PORT"}
+    - {path: extras/docker/production/entrypoint.sh, line: 95, quote: "python3 manage.py runserver 0.0.0.0:$PORT"}
+startCommand:
+  source: image
+  accept: ["/home/wger/entrypoint.sh"]
+  # Without WGER_USE_GUNICORN=True the entrypoint starts the Django development server.
+  evidence:
+    - {path: extras/docker/production/Dockerfile, line: 114, quote: "CMD [\"/home/wger/entrypoint.sh\"]"}
+    - {path: extras/docker/production/entrypoint.sh, line: 89, quote: "if [[ \"$WGER_USE_GUNICORN\" == \"True\" ]];"}
+healthPath:
+  accept: ["/", "/en/user/login"]
+  # No health route. `/` redirects to the features page (anonymous) or the dashboard.
+  evidence:
+    - {path: wger/core/urls.py, line: 180, quote: "path('', misc.index, name='index'),"}
+    - {path: wger/core/urls.py, line: 70, quote: "path('login', user.WgerLoginView.as_view(), name='login'),"}
+    - {path: wger/urls.py, line: 272, quote: "urlpatterns = i18n_patterns("}
+database:
+  status: required
+  engines: [postgres]
+  default: null
+  deployzEngine: postgres
+  selectBy: {DJANGO_DB_ENGINE: django.db.backends.postgresql, DJANGO_DB_HOST: "<host>", DJANGO_DB_PORT: "5432", DJANGO_DB_DATABASE: "<db>", DJANGO_DB_USER: "<user>", DJANGO_DB_PASSWORD: "<password>"}
+  connectionVars: [DJANGO_DB_ENGINE, DJANGO_DB_DATABASE, DJANGO_DB_USER, DJANGO_DB_PASSWORD, DJANGO_DB_HOST, DJANGO_DB_PORT]
+  # DJANGO_DB_ENGINE and DJANGO_DB_DATABASE have no default, so settings fail without them. PS_DATABASE_URI is the
+  # alternative URL form.
+  evidence:
+    - {path: settings/main.py, line: 64, quote: "if os.environ.get('PS_DATABASE_URI'):"}
+    - {path: settings/main.py, line: 69, quote: "'ENGINE': env.str('DJANGO_DB_ENGINE'),"}
+    - {path: settings/main.py, line: 70, quote: "'NAME': env.str('DJANGO_DB_DATABASE'),"}
+    - {path: settings/main.py, line: 74, quote: "'PORT': env.int('DJANGO_DB_PORT', 5432),"}
+    - {path: pyproject.toml, line: 65, quote: "\"psycopg[binary]~=3.3.2\","}
+migrations:
+  mode: startup
+  accept: []
+  # The entrypoint runs `wger bootstrap` (first-time migrate, fixtures, admin) and then `manage.py migrate` at every
+  # start unless DJANGO_PERFORM_MIGRATIONS is False. A separate migration command is also possible.
+  evidence:
+    - {path: extras/docker/production/entrypoint.sh, line: 20, quote: "if ! wger bootstrap --no-process-static; then"}
+    - {path: extras/docker/production/entrypoint.sh, line: 42, quote: "if ! python3 manage.py migrate; then"}
+    - {path: wger/tasks.py, line: 86, quote: "migrate_db(context, settings_path=settings_path)"}
+redis:
+  status: optional
+  selectBy: {DJANGO_CACHE_BACKEND: django_redis.cache.RedisCache, DJANGO_CACHE_LOCATION: "redis://<host>:6379/1"}
+  # Redis is the cache and the Celery broker. USE_CELERY is False by default and the cache falls back to the Django
+  # default. CELERY_BROKER and CELERY_BACKEND default to redis://cache:6379/2, a host that does not exist.
+  evidence:
+    - {path: settings/main.py, line: 221, quote: "if os.environ.get('DJANGO_CACHE_BACKEND'):"}
+    - {path: settings/main.py, line: 322, quote: "CELERY_BROKER_URL = env.str('CELERY_BROKER', 'redis://cache:6379/2')"}
+    - {path: settings/main.py, line: 196, quote: "WGER_SETTINGS['USE_CELERY'] = env.bool('USE_CELERY', False)"}
+workers:
+  status: optional-independent
+  commands: ["/start-worker", "/start-beat"]
+  # Only when USE_CELERY is true; the same image holds the scripts. The web process works without them.
+  evidence:
+    - {path: extras/docker/production/Dockerfile, line: 94, quote: "COPY ${DOCKER_DIR}/celery/start-beat /start-beat"}
+    - {path: extras/docker/production/Dockerfile, line: 95, quote: "COPY ${DOCKER_DIR}/celery/start-worker /start-worker"}
+    - {path: extras/docker/production/celery/start-worker, line: 6, quote: "celery --app wger worker \\"}
+scheduledJobs:
+  status: conditional
+  items:
+    - {command: "/start-beat", schedule: "Celery beat schedule (exercise and ingredient sync, cache jobs)", note: "only with USE_CELERY; no render.yaml or CronJob, so Deployz provisions no schedule"}
+  evidence:
+    - {path: extras/docker/production/celery/start-beat, line: 7, quote: "celery --app wger beat --loglevel INFO --schedule /home/wger/beat/celerybeat-schedule"}
+storage:
+  local: required
+  paths: [/home/wger/media, /home/wger/static, /home/wger/beat]
+  s3: none
+  s3SelectBy: {}
+  # s3 is none because the S3 option works only with a static access key (USE_S3_MEDIA_FILES, AWS_ACCESS_KEY_ID,
+  # AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME, AWS_S3_REGION_NAME, AWS_S3_DOMAIN). Uploaded images (gallery,
+  # exercise images) are stored in MEDIA_ROOT by default. The S3 option reads the access key
+  # and the secret with no default, so it cannot use the task role. Static files have no server in the image.
+  evidence:
+    - {path: settings/main.py, line: 142, quote: "MEDIA_ROOT = env.str('DJANGO_MEDIA_ROOT', '/home/wger/media')"}
+    - {path: settings/main.py, line: 143, quote: "STATIC_ROOT = env.str('DJANGO_STATIC_ROOT', '/home/wger/static')"}
+    - {path: settings/main.py, line: 381, quote: "USE_S3_MEDIA_FILES = env.bool('USE_S3_MEDIA_FILES', False)"}
+    - {path: settings/main.py, line: 384, quote: "AWS_ACCESS_KEY_ID = env.str('AWS_ACCESS_KEY_ID')"}
+    - {path: wger/urls.py, line: 395, quote: "if settings.DEBUG:"}
+env:
+  required:
+    - {name: DJANGO_DB_ENGINE, secret: false, buildTime: false, note: "django.db.backends.postgresql; no default"}
+    - {name: DJANGO_DB_DATABASE, secret: false, buildTime: false, note: "database name; no default"}
+    - {name: DJANGO_DB_USER, secret: false, buildTime: false, note: "database user"}
+    - {name: DJANGO_DB_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: DJANGO_DB_HOST, secret: false, buildTime: false, note: "RDS endpoint"}
+    - {name: SECRET_KEY, secret: true, buildTime: false, note: "without it a random key is made per process and sessions break across restarts and tasks"}
+    - {name: SITE_URL, secret: false, buildTime: false, note: "public HTTPS URL; used for links and the site record"}
+    - {name: CSRF_TRUSTED_ORIGINS, secret: false, buildTime: false, note: "the public HTTPS origin; the default lists only localhost"}
+  optional: [WGER_USE_GUNICORN, DJANGO_DEBUG, DJANGO_DB_PORT, X_FORWARDED_PROTO_HEADER_SET, NUMBER_OF_PROXIES, DJANGO_PERFORM_MIGRATIONS, DJANGO_COLLECTSTATIC_ON_STARTUP, DJANGO_CACHE_BACKEND, DJANGO_CACHE_LOCATION, USE_CELERY, CELERY_BROKER, CELERY_BACKEND, ALLOW_REGISTRATION, TIME_ZONE, USE_S3_MEDIA_FILES, USE_S3_STATIC_FILES, SYNC_EXERCISES_ON_STARTUP, DOWNLOAD_EXERCISE_IMAGES_ON_STARTUP, LOAD_ONLINE_FIXTURES_ON_STARTUP, EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD]
+  buildTime: []
+  evidence:
+    - {path: settings/main.py, line: 89, quote: "SECRET_KEY = env.str('SECRET_KEY', '')"}
+    - {path: settings/main.py, line: 138, quote: "SITE_URL = env.str('SITE_URL', 'http://localhost:8000')"}
+    - {path: settings/main.py, line: 301, quote: "CSRF_TRUSTED_ORIGINS = env.list("}
+    - {path: settings/main.py, line: 306, quote: "if env.bool('X_FORWARDED_PROTO_HEADER_SET', False):"}
+    - {path: settings/main.py, line: 180, quote: "WGER_SETTINGS['ALLOW_REGISTRATION'] = env.bool('ALLOW_REGISTRATION', True)"}
+blockers:
+  expected:
+    - "The image has no server for static files: collectstatic output in /home/wger/static is not served by gunicorn or the development server, and the project has no WhiteNoise; the upstream setup uses an nginx container"
+    - "User uploads (gallery and exercise images) are served only in DEBUG mode and are stored on local disk; the S3 option needs a static access key and secret and a public bucket, not the task role"
+  mustNot:
+    - "Redis must not be required: USE_CELERY is False and the cache is optional"
+    - "Celery workers must not be treated as a second application: they run from the same image and only with USE_CELERY"
+    - "The base, development and demo Dockerfiles must not be selected as the application image"
+    - "wger/base:latest in the FROM line must not be read as a missing Dockerfile: it is a published base image"
+vendorQuestions:
+  legitimate:
+    - "How are static files and uploaded images served? (the image has no static file server; WhiteNoise or S3 storage that uses the task role must be added)"
+    - "Should the admin password be changed at once? (wger bootstrap creates admin with the password adminadmin)"
+    - "Is Celery used for the exercise and ingredient sync? (USE_CELERY, with Redis and the /start-worker command)"
+  unnecessary:
+    - "Which database? (PostgreSQL through DJANGO_DB_*)"
+    - "Which port? (8000)"
+traps:
+  - "Without WGER_USE_GUNICORN=True the entrypoint runs the Django development server (extras/docker/production/entrypoint.sh:93-95)"
+  - "wger bootstrap creates the user admin with the password adminadmin on an empty database (wger/tasks.py:259-268)"
+  - "The default CSRF_TRUSTED_ORIGINS lists only localhost, so form posts over the public HTTPS URL fail until it is set; behind a load balancer X_FORWARDED_PROTO_HEADER_SET is also needed (settings/main.py:301-306)"
+  - "The default CELERY_BROKER points to the host cache, which does not exist in Deployz (settings/main.py:322)"
+  - "S3 storage settings read AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY with no default, and AWS_QUERYSTRING_AUTH is False, so objects must be public (settings/main.py:384-385)"
+  - "The container image was designed to sit behind nginx from the docker repository (settings/main.py:145 comment about nginx alias definitions)"
+openQuestions:
+  - "Whether the Django development server (the default) could serve /static through runserver with DEBUG False; django.contrib.staticfiles serves static files only in DEBUG mode, so the static file blocker was assumed"
+crossReview:
+  - {field: dockerfile, change: 'none: only extras/docker/production/Dockerfile copies the app and starts the server; base is a parent image', evidence: 'extras/docker/production/Dockerfile:14,89,114'}
+  - {field: database, change: 'none: DJANGO_DB_ENGINE and DJANGO_DB_DATABASE have no default, so there is no silent SQLite fallback', evidence: 'settings/main.py:69-70'}
+  - {field: outcome, change: 'none: DEPLOYABLE_WITH_CHANGES only; the static file gap and the key-based S3 option need a repository change, as with other apps that rely on a sidecar nginx', evidence: 'wger/urls.py:395; settings/main.py:381-388'}
+  - {field: all, change: verified, evidence: 38 citations checked}

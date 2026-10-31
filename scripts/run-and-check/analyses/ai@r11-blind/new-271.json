@@ -1,0 +1,205 @@
+{
+  "id": "new-271",
+  "commit": "a4f43aa6436e1c67036b2db5eadc7dc6c16a59a1",
+  "analyser": "ai@r11-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: /httpd-foreground",
+      "port": 8080
+    },
+    "health": {
+      "path": "/accounts/login/",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AZURE_BOARDS_API_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in tcms/settings/common.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "KIWI_DISABLE_BUGTRACKER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in tcms/settings/common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KIWI_REGISTRATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in tcms/settings/common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KIWI_TIME_ZONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in tcms/settings/common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KIWI_USE_TZ",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in tcms/settings/common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "helm/Chart.yaml"
+    ],
+    "externalServices": [],
+    "unsupported": [
+      "Unconfirmed service: the repository declares db (mariadb:latest) in docker-compose.yml; mariadb (a Helm dependency) in helm/Chart.yaml. Deployz did not find how the application uses it.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares db (mariadb:latest) in docker-compose.yml; mariadb (a Helm dependency) in helm/Chart.yaml. Deployz did not find how the application uses it."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (helm/Chart.yaml). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.06835752,
+        "promptTokens": 13287,
+        "completionTokens": 795
+      },
+      "latencyMs": 10861
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [
+          "low confidence",
+          "no cited production source line uses the service"
+        ],
+        "subject": "unexplained-declared-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 10863,
+    "questions": 3,
+    "generatedAt": "2026-10-30T12:41:01.780Z",
+    "failedChecks": 1,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.03154932,
+      "promptTokens": 7587,
+      "completionTokens": 76
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "Kiwi TCMS is a Django app using MariaDB/PostgreSQL with uploads movable to S3, so a contained change suffices.",
+      "verdict": "keep",
+      "category": null,
+      "decision": "none",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "latencyMs": 2633,
+    "promptVersion": 4
+  }
+}

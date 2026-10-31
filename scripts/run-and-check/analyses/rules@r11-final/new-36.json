@@ -1,0 +1,863 @@
+{
+  "id": "new-36",
+  "commit": "6d117f8c52e54e810d5931f153eb2d31c904efb3",
+  "analyser": "rules@r11-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "@nestjs/core",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "nx run-many -t build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"pnpm\", \"start\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/api/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AI_COMPLETION_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_EMBEDDING_DIMENSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_EMBEDDING_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_EMBEDDING_SUPPORTS_MRL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_VECTOR_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares APP_SECRET",
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "APP_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_URL",
+            "read in apps/server/src/integrations/environment/environment.validation.ts",
+            "read in apps/server/src/main.ts",
+            "read in apps/client/src/lib/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_S3_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AWS_S3_ACCESS_KEY_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_S3_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_S3_BUCKET"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_S3_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_S3_ENDPOINT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_S3_FORCE_PATH_STYLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_S3_FORCE_PATH_STYLE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_S3_REGION"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_S3_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AWS_S3_SECRET_ACCESS_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_STORAGE_ACCOUNT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AZURE_STORAGE_ACCOUNT_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_STORAGE_ACCOUNT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AZURE_STORAGE_ACCOUNT_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_STORAGE_CONTAINER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AZURE_STORAGE_CONTAINER"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/app.module.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COLLAB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/collaboration/server/collab-main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COLLAB_SHOW_STATS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/collaboration/server/collab-app.module.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COLLAB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_URL",
+            "read in apps/server/src/integrations/environment/environment.validation.ts",
+            "read in apps/server/src/database/migrate.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEBUG_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DEBUG_DB",
+            "read in apps/server/src/database/database.module.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUG_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DEBUG_MODE",
+            "read in apps/server/src/common/logger/internal-log-filter.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_TELEMETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DISABLE_TELEMETRY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DRAWIO_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DRAWIO_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "EVENT_STORE_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FILE_UPLOAD_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FILE_UPLOAD_SIZE_LIMIT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEMINI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOTENBERG_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOTENBERG_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/main.ts",
+            "read in apps/server/src/collaboration/server/collab-main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTPS_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/common/proxy-fetch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/common/proxy-fetch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IFRAME_ALLOWED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IFRAME_ALLOWED_ORIGINS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "IFRAME_EMBED_ALLOWED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IFRAME_EMBED_ALLOWED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "JWT_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares JWT_TOKEN_EXPIRES_IN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LOG_HTTP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOG_HTTP"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MAIL_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_DRIVER",
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_FROM_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_FROM_ADDRESS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MAIL_FROM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_FROM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/common/logger/internal-log-filter.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NO_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/common/proxy-fetch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PORT",
+            "read in apps/server/src/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTMARK_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares POSTMARK_TOKEN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_URL",
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SEARCH_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_HOST",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_HOST",
+            "smtp requires SMTP_HOST"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_IGNORETLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_IGNORETLS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_PASSWORD"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_PORT",
+            "smtp requires SMTP_PORT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_SECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_SECURE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_USERNAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STORAGE_DRIVER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "storage selector: default \"local\" stores files on the container disk — set \"s3\" to use the managed S3 bucket",
+            ".env.example declares STORAGE_DRIVER",
+            "read in apps/server/src/integrations/environment/environment.validation.ts",
+            "read in apps/server/src/integrations/environment/environment.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SUBDOMAIN_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TURBOPUFFER_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TURBOPUFFER_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TURBOPUFFER_NAMESPACE_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TURBOPUFFER_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TYPESENSE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TYPESENSE_LOCALE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TYPESENSE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/integrations/environment/environment.validation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "smtp"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: STORAGE_DRIVER. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

@@ -1,0 +1,38 @@
+{
+  "id": "new-203",
+  "analyser": "judge@r11-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Harbor is a stack of cooperating services (core, jobservice, registry, portal, db, log and others) built from separate images, and Deployz runs only one web service per deployment; the selected Dockerfile builds only the portal frontend.",
+      "evidence": [
+        {
+          "path": "src/portal/docker-build/Dockerfile",
+          "line": 34,
+          "quote": "CMD [\"nginx\", \"-g\", \"daemon off;\"]"
+        },
+        {
+          "path": "README.md",
+          "line": 25,
+          "quote": "Harbor extends the open source Docker Distribution by adding the functionalities usually required by users such as security, identity and management."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5120,
+      "completionTokens": 226,
+      "costUsd": 0.02475
+    },
+    "latencyMs": 4571
+  }
+}

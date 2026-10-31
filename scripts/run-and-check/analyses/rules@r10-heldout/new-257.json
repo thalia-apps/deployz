@@ -1,0 +1,726 @@
+{
+  "id": "new-257",
+  "commit": "877e3c6b9020a4d4b19181cd5034ad73b3a9ce46",
+  "analyser": "rules@r10-heldout",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "server",
+      "runtime": "node",
+      "framework": "fastify",
+      "dockerfilePath": "server/Dockerfile"
+    },
+    "build": {
+      "command": "pnpm -r run build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"dist/cluster.js\"]",
+      "port": 3001
+    },
+    "health": {
+      "path": "/api/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_DB",
+          "kind": "database"
+        },
+        {
+          "name": "POSTGRES_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "R2_BUCKET_NAME",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "API_RATE_LIMIT_OBSERVE_ONLY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/lib/const.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSUMO_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/src/api/as/webhook.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSUMO_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/api/as/activate.ts",
+            "read in server/src/api/as/webhook.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSUMO_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/src/api/as/activate.ts",
+            "read in server/src/api/as/webhook.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares BASE_URL",
+            "read in server/src/lib/auth.ts",
+            "read in server/src/lib/cors.ts",
+            "read in server/src/lib/oauth.ts",
+            "read in server/src/mcp/wellKnown.ts",
+            "read in server/src/api/gsc/callback.ts",
+            "read in server/src/api/sites/siteTransfers.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "BETTER_AUTH_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares BETTER_AUTH_SECRET",
+            "read in server/src/lib/const.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "BETTER_AUTH_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/lib/oauth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_DB",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares CLICKHOUSE_DB",
+            "read in server/src/api/routes.ts",
+            "read in server/src/db/clickhouse/client.ts",
+            "read in server/src/db/clickhouse/queryUser.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLICKHOUSE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/api/routes.ts",
+            "read in server/src/db/clickhouse/client.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares CLICKHOUSE_PASSWORD",
+            "read in server/src/db/clickhouse/client.ts",
+            "read in server/src/db/clickhouse/queryUser.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLICKHOUSE_QUERY_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/src/db/clickhouse/client.ts",
+            "read in server/src/db/clickhouse/queryUser.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_QUERY_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/db/clickhouse/client.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CLICKHOUSE_USER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLIENT_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/src/api/gsc/callback.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLOUD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/lib/const.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLUSTER_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/cluster.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DASHBOARD_CACHE_TTL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/api/routes.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEPLOYMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/lib/const.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_SIGNUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DISABLE_SIGNUP",
+            "read in server/src/lib/const.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_TELEMETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/lib/const.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOMAIN_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DOMAIN_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITHUB_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/lib/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/src/lib/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/lib/auth.ts",
+            "read in server/src/api/gsc/callback.ts",
+            "read in server/src/api/gsc/connect.ts",
+            "read in server/src/api/gsc/utils.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/src/lib/auth.ts",
+            "read in server/src/api/gsc/callback.ts",
+            "read in server/src/api/gsc/utils.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_REDIRECT_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/api/gsc/callback.ts",
+            "read in server/src/api/gsc/connect.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST_BACKEND_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HOST_BACKEND_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HOST_CLIENT_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HOST_CLIENT_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LITE_DASHBOARD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/lib/const.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAPBOX_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares MAPBOX_TOKEN",
+            "read in server/src/lib/const.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/index.ts",
+            "read in server/src/cluster.ts",
+            "read in server/src/lib/auth.ts",
+            "read in server/src/lib/cors.ts",
+            "read in server/src/services/usageService.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENROUTER_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/src/lib/openrouter.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPENROUTER_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/lib/openrouter.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTGRES_DB",
+            "read in server/src/lib/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/lib/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares POSTGRES_PASSWORD",
+            "server/.env.example declares POSTGRES_PASSWORD",
+            "read in server/src/lib/auth.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/lib/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTGRES_USER",
+            "server/.env.example declares POSTGRES_USER",
+            "server/docker-entrypoint.sh declares POSTGRES_USER",
+            "read in server/src/lib/auth.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "R2_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "server/.env.example declares R2_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "server/.env.example declares REDIS_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "server/.env.example declares REDIS_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "server/.env.example declares REDIS_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SERVER_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/src/api/gsc/callback.ts",
+            "read in server/src/api/gsc/connect.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/src/lib/const.ts",
+            "read in server/src/lib/stripe.ts",
+            "read in server/src/api/admin/getAdminOrganizations.ts",
+            "stripe requires STRIPE_SECRET_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/src/api/stripe/webhook.ts",
+            "stripe requires STRIPE_WEBHOOK_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TURNSTILE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/src/lib/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_WEBSERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares USE_WEBSERVER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "resend"
+    ],
+    "unsupported": [
+      "Unsupported database driver: @clickhouse/client, and a clickhouse service is defined in docker-compose.yml. Deployz does not support ClickHouse.",
+      "Unsupported architecture: docker-compose.yml defines 2 application services (backend, client). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database driver: @clickhouse/client, and a clickhouse service is defined in docker-compose.yml. Deployz does not support ClickHouse."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yml defines 2 application services (backend, client). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: CLICKHOUSE_DB, CLICKHOUSE_PASSWORD, CLIENT_URL, MAPBOX_TOKEN, OPENROUTER_API_KEY, and 2 more. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 5,
+  "outcome": "NOT_DEPLOYABLE"
+}

@@ -131,6 +131,19 @@ describe('R3 — rejection signals', () => {
     });
   });
 
+  it('does not read a data directory under a temporary or cache path as durable state, and still rejects a real one', () => {
+    const read = (path: string): FileTree => ({
+      Dockerfile: 'FROM node:20\nCOPY . .\nCMD ["node","api/server.js"]\n',
+      'api/tech-stack.js': `const dir = process.env.CHROMIUM_DATA_DIR || '${path}';\n`,
+    });
+    expect(checkExplicitPersistentDataDir(read('/tmp/chromium-data'))).toMatchObject({ detected: false });
+    expect(checkExplicitPersistentDataDir(read('/var/cache/chromium'))).toMatchObject({ detected: false });
+    expect(checkExplicitPersistentDataDir({ Dockerfile: 'FROM node:20\nENV APP_DATA_DIR=/tmp/app\nCMD ["node","x.js"]\n' })).toMatchObject({ detected: false });
+    expect(checkExplicitPersistentDataDir({ Dockerfile: 'FROM node:20\nCMD ["node","x.js"]\n', '.env': 'APP_DATA_DIR=/tmp/app\n' })).toMatchObject({ detected: false });
+    expect(checkExplicitPersistentDataDir(read('/srv/chromium-data'))).toMatchObject({ detected: true, dependency: 'local-filesystem' });
+    expect(checkExplicitPersistentDataDir({ Dockerfile: 'FROM node:20\nENV APP_DATA_DIR=/data\nCMD ["node","x.js"]\n' })).toMatchObject({ detected: true });
+  });
+
   it('rejects an image ENV config file that no instruction creates', () => {
     const base = 'FROM alpine:3\nWORKDIR /app\nENV PATH=/app:$PATH \\\n  X_APP_CONFIG="/config/configuration.yml"\nCMD ["/app/server"]\n';
     expect(checkRequiredConfigFileMount({ Dockerfile: base })).toMatchObject({ detected: true, dependency: 'local-filesystem' });

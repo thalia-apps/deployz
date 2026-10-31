@@ -1,0 +1,132 @@
+id: new-260
+repository: gitroomhq/postiz-app
+commit: 60566e97539c2a49bc27385223238a65097e0461
+summary: >
+  Postiz is a social media scheduling tool in a pnpm monorepo: a Next.js frontend (port 4200), a NestJS backend API (port
+  3000) and a Temporal worker app (apps/orchestrator) that runs the posting workflows. Dockerfile.dev is the image that CI
+  publishes: it builds all three apps from source and starts nginx (port 5000) plus pm2, which runs prisma db push and
+  then starts the backend, frontend and orchestrator as three long-running processes. Data is in PostgreSQL (Prisma),
+  Redis is used, and every scheduled post runs through a Temporal server (TEMPORAL_ADDRESS), which in the compose file
+  needs its own PostgreSQL and Elasticsearch. Uploads go to a local /uploads directory by default or to Cloudflare R2.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The product needs a Temporal server for all post scheduling (TEMPORAL_ADDRESS, default localhost:7233), and Temporal is
+    a separate service outside the MVP (as new-164). The only image also supervises several long-running servers in one
+    container: nginx in the background plus pm2 with the backend, frontend and orchestrator (as new-138). Deployz runs one
+    web process per image and offers no Temporal.
+dockerfile:
+  accept: [Dockerfile.dev]
+  reject: []
+  target: null
+  context: .
+  # Dockerfile.dev builds from source and is the file CI publishes; the blocker is the process shape, not the build.
+  evidence:
+    - {path: Dockerfile.dev, line: 22, quote: "COPY . /app"}
+    - {path: Dockerfile.dev, line: 26, quote: "RUN NODE_OPTIONS=\"--max-old-space-size=4096\" pnpm run build"}
+    - {path: Dockerfile.dev, line: 28, quote: "CMD [\"sh\", \"-c\", \"nginx && pnpm run pm2\"]"}
+    - {path: .github/workflows/build-containers.yml, line: 53, quote: "-f Dockerfile.dev \\"}
+runtime: {accept: [node]}
+port:
+  accept: [5000]
+  evidence:
+    - {path: var/docker/nginx.conf, line: 15, quote: "listen 5000;"}
+    - {path: docker-compose.yaml, line: 126, quote: "- '4007:5000'"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: var/docker/nginx.conf, line: 15, quote: "listen 5000;"}
+startCommand:
+  source: image
+  accept: ["nginx && pnpm run pm2"]
+  evidence:
+    - {path: Dockerfile.dev, line: 28, quote: "CMD [\"sh\", \"-c\", \"nginx && pnpm run pm2\"]"}
+    - {path: package.json, line: 18, quote: "\"pm2-run\": \"pm2 delete all || true && pnpm run prisma-db-push && pnpm run --parallel pm2 && pm2 logs\","}
+healthPath:
+  accept: ["/"]
+  evidence:
+    - {path: var/docker/nginx.conf, line: 53, quote: "location / {"}
+    - {path: var/docker/nginx.conf, line: 54, quote: "proxy_pass http://localhost:4200/;"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: libraries/nestjs-libraries/src/database/prisma/schema.prisma, line: 7, quote: "provider = \"postgresql\""}
+    - {path: libraries/nestjs-libraries/src/database/prisma/schema.prisma, line: 8, quote: "url      = env(\"DATABASE_URL\")"}
+migrations:
+  mode: startup
+  accept: ["pnpm run prisma-db-push"]
+  evidence:
+    - {path: package.json, line: 18, quote: "\"pm2-run\": \"pm2 delete all || true && pnpm run prisma-db-push && pnpm run --parallel pm2 && pm2 logs\","}
+    - {path: package.json, line: 34, quote: "\"prisma-db-push\": \"pnpm dlx prisma@6.5.0 db push --schema ./libraries/nestjs-libraries/src/database/prisma/schema.prisma\","}
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: docker-compose.yaml, line: 13, quote: "REDIS_URL: 'redis://postiz-redis:6379'"}
+workers:
+  status: embedded
+  commands: ["pnpm run start:prod:orchestrator"]
+  # The orchestrator (Temporal worker) runs under pm2 in the same container; it could run from the same image, but it needs Temporal.
+  evidence:
+    - {path: apps/orchestrator/package.json, line: 9, quote: "\"pm2\": \"pm2 start pnpm --name orchestrator -- start\""}
+    - {path: package.json, line: 28, quote: "\"start:prod:orchestrator\": \"pnpm --filter ./apps/orchestrator run start\","}
+scheduledJobs:
+  status: embedded
+  items: [Temporal workflows (posting, token refresh, digest emails) run by the orchestrator]
+  evidence:
+    - {path: libraries/nestjs-libraries/src/temporal/temporal.module.ts, line: 30, quote: "address: process.env.TEMPORAL_ADDRESS || 'localhost:7233',"}
+storage:
+  local: conditional
+  paths: [/uploads]
+  s3: none
+  s3SelectBy: {}
+  # The default provider writes uploads to /uploads; the only object store option is Cloudflare R2 with account-based settings.
+  evidence:
+    - {path: docker-compose.yaml, line: 20, quote: "STORAGE_PROVIDER: 'local'"}
+    - {path: docker-compose.yaml, line: 21, quote: "UPLOAD_DIRECTORY: '/uploads'"}
+    - {path: docker-compose.yaml, line: 25, quote: "# STORAGE_PROVIDER: 'cloudflare'"}
+    - {path: var/docker/nginx.conf, line: 37, quote: "alias /uploads/;"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL for Prisma"}
+    - {name: REDIS_URL, secret: true, buildTime: false, note: "Redis URL"}
+    - {name: JWT_SECRET, secret: true, buildTime: false, note: "random string unique to the install"}
+    - {name: MAIN_URL, secret: false, buildTime: false, note: "public URL of the app"}
+    - {name: FRONTEND_URL, secret: false, buildTime: false, note: "public URL of the frontend"}
+    - {name: NEXT_PUBLIC_BACKEND_URL, secret: false, buildTime: false, note: "public URL of the API, <public URL>/api"}
+    - {name: BACKEND_INTERNAL_URL, secret: false, buildTime: false, note: "internal URL of the backend, http://localhost:3000"}
+    - {name: TEMPORAL_ADDRESS, secret: false, buildTime: false, note: "Temporal server host:port; no Temporal exists on Deployz"}
+  optional: [STORAGE_PROVIDER, UPLOAD_DIRECTORY, NEXT_PUBLIC_UPLOAD_DIRECTORY, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_ACCESS_KEY, CLOUDFLARE_SECRET_ACCESS_KEY, CLOUDFLARE_BUCKETNAME, CLOUDFLARE_BUCKET_URL, CLOUDFLARE_REGION, DISABLE_REGISTRATION, IS_GENERAL, X_API_KEY, X_API_SECRET, LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET]
+  buildTime: [NEXT_PUBLIC_VERSION]
+  evidence:
+    - {path: docker-compose.yaml, line: 11, quote: "JWT_SECRET: 'random string that is unique to every install - just type random characters here!'"}
+    - {path: docker-compose.yaml, line: 15, quote: "TEMPORAL_ADDRESS: 'temporal:7233'"}
+    - {path: Dockerfile.dev, line: 2, quote: "ARG NEXT_PUBLIC_VERSION"}
+blockers:
+  expected:
+    - "A Temporal server is required for post scheduling (TEMPORAL_ADDRESS); Temporal (with its own PostgreSQL and Elasticsearch in compose) is outside the MVP"
+    - "The image runs several long-running servers in one container: nginx in the background plus pm2 with backend, frontend and orchestrator"
+  mustNot:
+    - "Dockerfile.dev must not be rejected as a development image only because of its name: CI publishes it and it builds from source"
+    - "PostgreSQL and Redis must not be blockers: both are supported"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (nginx on 5000)"
+    - "Which database? (PostgreSQL through DATABASE_URL)"
+traps:
+  - "The file name Dockerfile.dev suggests a development image, but CI builds and publishes it (.github/workflows/build-containers.yml:53)"
+  - "Temporal is reached through TEMPORAL_ADDRESS with a localhost default, so the app looks self-contained until posts must be scheduled (libraries/nestjs-libraries/src/temporal/temporal.module.ts:30)"
+  - "The compose Temporal service needs its own PostgreSQL and Elasticsearch (docker-compose.yaml:216-218)"
+  - "Schema changes use prisma db push at every start, not migrations (package.json:34)"
+  - "deploy-aws.yml dispatches a build in another repository (gitroomhq/postiz-aws); it is not an in-repo deployment recipe (.github/workflows/deploy-aws.yml:31)"
+openQuestions: []
+crossReview:
+  - {field: startCommand.accept, change: "none: CMD runs nginx then pnpm run pm2, which is pm2-run: prisma db push and then the backend, frontend and orchestrator under pm2", evidence: "Dockerfile.dev:28; package.json:16,18"}
+  - {field: outcome.accept, change: "none: Temporal is required (as new-164) and the image supervises several servers (as new-138); Dockerfile.dev is the only Dockerfile", evidence: "libraries/nestjs-libraries/src/temporal/temporal.module.ts:30; reasons.txt new-138, new-164"}
+  - {field: all, change: verified, evidence: "26 citations checked"}

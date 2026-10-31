@@ -1,0 +1,43 @@
+{
+  "id": "new-196",
+  "analyser": "judge@r11-final-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "no_application",
+      "reason": "The only Dockerfile installs a prebuilt code-server .deb package produced by CI rather than building this source, and the core VS Code source lives only in a git submodule that the archive does not include.",
+      "evidence": [
+        {
+          "path": "ci/release-image/Dockerfile",
+          "line": 5,
+          "quote": "COPY release-packages/code-server*.deb /tmp/"
+        },
+        {
+          "path": "ci/release-image/Dockerfile",
+          "line": 48,
+          "quote": "RUN --mount=from=packages,src=/tmp,dst=/tmp/packages dpkg -i /tmp/packages/code-server*$(dpkg --print-architecture).deb"
+        },
+        {
+          "path": ".gitmodules",
+          "line": 2,
+          "quote": "path = lib/vscode"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 3878,
+      "completionTokens": 266,
+      "costUsd": 0.02062368
+    },
+    "latencyMs": 4976
+  }
+}

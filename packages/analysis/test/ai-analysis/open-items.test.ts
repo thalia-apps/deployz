@@ -100,10 +100,24 @@ describe('a declared service that the rules did not explain', () => {
     expect(buildReadinessReport(result.analysis).outcome).toBe('NOT_DEPLOYABLE');
   });
 
-  it('a checked "required" that cites an engine Deployz provides keeps the question', () => {
+  it('a checked "required" that cites an engine Deployz provides keeps the question when it also names another service', () => {
     const { result } = merge(STACK, [blocker('q1', 'required', { evidence: cite('config/initializers/cable.rb', 1, 'adapter: :redis') })]);
     expect(declared(result.analysis)).toEqual(['unexplained-declared-service']);
     expect(buildReadinessReport(result.analysis).outcome).toBe('DEPLOYABLE_WITH_CHANGES');
+  });
+
+  it('a checked "required" for one declared Redis service adds Redis instead of a change', () => {
+    const redisOnly: FileTree = {
+      ...STACK,
+      'app/models/search.rb': 'class Item\nend\n',
+      '.devcontainer/compose.yaml': STACK['.devcontainer/compose.yaml']!.replace('      ES_URL: http://search:9200\n', '').replace('  search:\n    image: elasticsearch:9.5.5\n', ''),
+    };
+    const { rules, result } = merge(redisOnly, [blocker('q1', 'required', { evidence: cite('config/initializers/cable.rb', 1, 'adapter: :redis') })]);
+    expect(declared(rules)).toEqual(['unexplained-declared-service']);
+    expect(declared(result.analysis)).toEqual([]);
+    expect(result.answers[0]).toMatchObject({ decision: 'ai' });
+    expect((result.analysis.metadata['redis'] as { required: boolean }).required).toBe(true);
+    expect(buildReadinessReport(result.analysis).outcome).toBe('DEPLOYABLE');
   });
 
   it('"not used" passes only when no production line names the service, and then dismisses it', () => {

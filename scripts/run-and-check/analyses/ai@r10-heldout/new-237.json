@@ -1,0 +1,262 @@
+{
+  "id": "new-237",
+  "commit": "eb44e6207d7b3d924ea7fd962fd2284f637cf8b8",
+  "analyser": "ai@r10-heldout",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "pnpm run clean && pnpm run build:viz && NODE_ENV=production webpack",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"server\"]",
+      "port": 5000
+    },
+    "health": {
+      "path": "/ping",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": "python manage.py db upgrade",
+      "mode": "pre_deploy"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ATHENA_ANNOTATE_QUERY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in redash/query_runner/athena.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ATHENA_ASSUME_ROLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in redash/query_runner/athena.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ATHENA_OPTIONAL_CREDENTIALS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in redash/query_runner/athena.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ATHENA_SHOW_EXTRA_SETTINGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in redash/query_runner/athena.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABRICKS_ROW_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in redash/query_runner/databricks.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATADOG_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in redash/destinations/datadog.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REMOTE_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in redash/__init__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.06862284,
+        "promptTokens": 13839,
+        "completionTokens": 698
+      },
+      "latencyMs": 9939
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": {
+          "mode": "pre_deploy",
+          "command": "python manage.py db upgrade"
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 9941,
+    "questions": 2,
+    "generatedAt": "2026-10-30T11:33:23.489Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02525688,
+      "promptTokens": 6023,
+      "completionTokens": 71
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "reason": "Redash builds from its Dockerfile and runs with managed PostgreSQL and Redis, so the deployable outcome stands.",
+      "verdict": "keep",
+      "category": null,
+      "decision": "none",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "latencyMs": 2782,
+    "promptVersion": 3
+  }
+}

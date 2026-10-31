@@ -1,0 +1,140 @@
+id: new-234
+repository: spliit-app/spliit
+commit: 73478ed2f67a59e83866948caeece6bf2ecb985e
+summary: >
+  Spliit is a Next.js 16 app (tRPC, Prisma 7) to share expenses in groups. There is no user login: groups are reached by
+  their link. The root Dockerfile builds the standalone Next.js output from source and its entrypoint runs
+  `prisma migrate deploy` and then `node server.js` on port 3000 (HOSTNAME=0.0.0.0). PostgreSQL is the only database
+  (POSTGRES_PRISMA_URL and POSTGRES_URL_NON_POOLING). No Redis and no worker. Optional features are expense documents in
+  S3 (static keys only), OpenAI receipt and category extraction, analytics, and group deletion, which needs a scheduled
+  call to /api/cron/purge-deleted-groups (listed in vercel.json).
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One web process from the root Dockerfile (builds from source), port 3000, /api/health/liveness and /api/health,
+    migrations at start in the entrypoint, PostgreSQL through two URL variables, no Redis, no worker and no durable local
+    disk. Only settings are needed (the two database URLs and BASE_URL). The optional S3 expense documents need static
+    keys, but they are an opt-in feature. As new-40 (one container, PostgreSQL, startup migrations).
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 26, quote: "COPY ./src ./src"}
+    - {path: Dockerfile, line: 36, quote: "RUN npm run build"}
+    - {path: Dockerfile, line: 88, quote: "COPY --from=base /usr/app/.next/standalone ./"}
+    - {path: Dockerfile, line: 99, quote: "ENTRYPOINT [\"/bin/sh\", \"/usr/app/scripts/container-entrypoint.sh\"]"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 74, quote: "EXPOSE 3000/tcp"}
+    - {path: Dockerfile, line: 82, quote: "ENV PORT=3000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 81, quote: "ENV HOSTNAME=0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["node server.js", "/bin/sh /usr/app/scripts/container-entrypoint.sh"]
+  # The image has an ENTRYPOINT and no CMD; the script migrates and then execs node server.js.
+  evidence:
+    - {path: Dockerfile, line: 99, quote: "ENTRYPOINT [\"/bin/sh\", \"/usr/app/scripts/container-entrypoint.sh\"]"}
+    - {path: scripts/container-entrypoint.sh, line: 10, quote: "exec node server.js"}
+healthPath:
+  accept: ["/api/health/liveness", "/api/health", "/api/health/readiness"]
+  # liveness always returns 200; /api/health and readiness return 503 when the database query fails.
+  evidence:
+    - {path: src/app/api/health/liveness/route.ts, line: 5, quote: "export async function GET() {"}
+    - {path: src/lib/health.ts, line: 87, quote: "return createHealthResponse(healthStatus, true) // Always 200 for liveness"}
+    - {path: src/lib/health.ts, line: 19, quote: "await prisma.$queryRaw`SELECT 1`"}
+    - {path: README.md, line: 167, quote: "- `GET /api/health/readiness` or `GET /api/health` - Check if the application is ready to serve requests, including database connectivity."}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [POSTGRES_PRISMA_URL, POSTGRES_URL_NON_POOLING]
+  evidence:
+    - {path: prisma/schema.prisma, line: 10, quote: "provider = \"postgresql\""}
+    - {path: src/lib/env.ts, line: 38, quote: "POSTGRES_URL_NON_POOLING: z.string().url(),"}
+    - {path: src/lib/env.ts, line: 39, quote: "POSTGRES_PRISMA_URL: z.string().url(),"}
+    - {path: src/lib/prisma.ts, line: 14, quote: "connectionString: process.env['POSTGRES_PRISMA_URL'],"}
+    - {path: prisma.config.ts, line: 21, quote: "process.env.POSTGRES_URL_NON_POOLING ??"}
+migrations:
+  mode: startup
+  accept: ["node node_modules/prisma/build/index.js migrate deploy", "prisma migrate deploy", "npx prisma migrate deploy"]
+  evidence:
+    - {path: scripts/container-entrypoint.sh, line: 7, quote: "node node_modules/prisma/build/index.js migrate deploy"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: compose.yaml, line: 2, quote: "app:"}
+scheduledJobs:
+  status: optional
+  items:
+    - {command: "GET /api/cron/purge-deleted-groups with Authorization: Bearer $CRON_SECRET", schedule: "0 3 * * *", note: "only when ENABLE_GROUP_DELETION=true; without CRON_SECRET the route returns 404"}
+  evidence:
+    - {path: vercel.json, line: 5, quote: "\"path\": \"/api/cron/purge-deleted-groups\","}
+    - {path: vercel.json, line: 6, quote: "\"schedule\": \"0 3 * * *\""}
+    - {path: src/app/api/cron/purge-deleted-groups/route.ts, line: 9, quote: "if (!env.CRON_SECRET) return new Response(null, { status: 404 })"}
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  # Expense documents are opt-in (ENABLE_EXPENSE_DOCUMENTS) and need static S3_UPLOAD_KEY and S3_UPLOAD_SECRET, so the
+  # task role cannot be used. With the feature off, nothing is written to disk or S3.
+  evidence:
+    - {path: src/lib/env.ts, line: 184, quote: "(!env.S3_UPLOAD_BUCKET ||"}
+    - {path: src/lib/env.ts, line: 185, quote: "!env.S3_UPLOAD_KEY ||"}
+    - {path: src/lib/env.ts, line: 192, quote: "'If ENABLE_EXPENSE_DOCUMENTS is set, then S3_* must be set too',"}
+env:
+  required:
+    - {name: POSTGRES_PRISMA_URL, secret: true, buildTime: false, note: "PostgreSQL URL used by the app (pg driver adapter); the env schema requires a URL"}
+    - {name: POSTGRES_URL_NON_POOLING, secret: true, buildTime: false, note: "PostgreSQL URL used by prisma migrate deploy; may be the same URL"}
+    - {name: BASE_URL, secret: false, buildTime: false, note: "public HTTPS URL used for links; default http://localhost:3000"}
+  optional: [DEFAULT_CURRENCY_CODE, ENABLE_EXPENSE_DOCUMENTS, S3_UPLOAD_KEY, S3_UPLOAD_SECRET, S3_UPLOAD_BUCKET, S3_UPLOAD_REGION, S3_UPLOAD_ENDPOINT, ENABLE_GROUP_DELETION, CRON_SECRET, ENABLE_RECEIPT_EXTRACT, ENABLE_CATEGORY_EXTRACT, OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL_RECEIPT_EXTRACT, OPENAI_MODEL_CATEGORY_EXTRACT, ANALYTICS_PROVIDER, PLAUSIBLE_DOMAIN, PLAUSIBLE_HOST, PLAUSIBLE_SCRIPT_URL, PLAUSIBLE_API_URL, UMAMI_WEBSITE_ID, UMAMI_SCRIPT_URL, UMAMI_HOST_URL]
+  buildTime: []
+  evidence:
+    - {path: src/lib/env.ts, line: 43, quote: "BASE_URL: z.preprocess("}
+    - {path: src/lib/env.ts, line: 53, quote: ": 'http://localhost:3000',"}
+    - {path: container.env.example, line: 5, quote: "POSTGRES_PRISMA_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db"}
+    - {path: container.env.example, line: 6, quote: "POSTGRES_URL_NON_POOLING=postgresql://postgres:${POSTGRES_PASSWORD}@db"}
+blockers:
+  expected: []
+  mustNot:
+    - "The vercel.json cron must not block or provision a schedule: group deletion is opt-in and a vendor question at most"
+    - "S3 must not be required: expense documents are off by default"
+    - "The scripts/build.env placeholder values (database host db, fake S3 and OpenAI keys) must not be read as runtime requirements"
+    - "OpenAI must not be required: receipt and category extraction are off by default"
+    - "A missing CMD must not be raised: the ENTRYPOINT starts the server"
+vendorQuestions:
+  legitimate:
+    - "Should users be able to delete groups? It needs ENABLE_GROUP_DELETION, CRON_SECRET and a daily call to /api/cron/purge-deleted-groups"
+    - "Are expense documents wanted? They need a bucket and static S3 keys (S3_UPLOAD_KEY and S3_UPLOAD_SECRET)"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Which database? (PostgreSQL)"
+    - "Who runs migrations? (the entrypoint runs prisma migrate deploy)"
+    - "Health path? (/api/health/liveness)"
+traps:
+  - "The image has ENTRYPOINT and no CMD; the start command is the entrypoint script (Dockerfile:99, scripts/container-entrypoint.sh:10)"
+  - "Two database variables are needed, and the app reads POSTGRES_PRISMA_URL, not DATABASE_URL (src/lib/env.ts:38-39, src/lib/prisma.ts:14)"
+  - "scripts/build.env is copied to .env only for the build and is deleted from the standalone output; its values are placeholders (Dockerfile:35, :43, scripts/build.env:1)"
+  - "NEXT_PUBLIC_* flags are inlined at build time; runtime switches use the ENABLE_* and BASE_URL names (scripts/build.env:12-14, src/lib/env.ts:40-42)"
+  - "The node pg driver treats sslmode=require as full certificate checking; an RDS URL may need sslmode=no-verify or the RDS CA (src/lib/prisma.ts:13-15)"
+  - "The app has no login: anyone with a group link can see and change the group"
+openQuestions: []
+crossReview:
+  - {field: "dockerfile.accept", change: "none: every COPY source (scripts/, prisma/, src/, messages/, public/, scripts/build.env) is in git; scripts/build.env gives placeholder values so next build needs no database", evidence: "Dockerfile:4-13,26-27,35,90; scripts/build.env:8-9"}
+  - {field: "startCommand", change: "none: the ENTRYPOINT runs the script with /bin/sh (busybox ash supports set -o pipefail); the script migrates, then execs node server.js", evidence: "Dockerfile:99; scripts/container-entrypoint.sh:3,7,10"}
+  - {field: "database.connectionVars", change: "none: the app reads POSTGRES_PRISMA_URL; prisma.config.ts reads POSTGRES_URL_NON_POOLING; the env schema requires both", evidence: "src/lib/env.ts:38-39; src/lib/prisma.ts:14"}
+  - {field: "all", change: "verified", evidence: "30 citations checked"}

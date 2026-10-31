@@ -1,0 +1,1227 @@
+{
+  "id": "new-252",
+  "commit": "d6efd6b054e515e6cdd41da64feb0d9673013e29",
+  "analyser": "ai@r10-heldout",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "php",
+      "framework": null,
+      "dockerfilePath": ".docker/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/sbin/tini\", \"--\", \"/start.sh\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "LEAN_DB_DATABASE",
+          "kind": "database"
+        },
+        {
+          "name": "LEAN_DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "LEAN_DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "LEAN_DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "LEAN_DB_URL",
+          "kind": "url"
+        },
+        {
+          "name": "LEAN_DB_USER",
+          "kind": "username"
+        }
+      ],
+      "engine": "mysql"
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "LEAN_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_DEFAULT_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BEANSTALKD_QUEUE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_APP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_CHARSET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_COLLATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_CONNECTION_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LEAN_DB_DEFAULT_CONNECTION",
+          "required": true,
+          "secret": false,
+          "source": [
+            "AI Analysis: set LEAN_DB_DEFAULT_CONNECTION=mysql to use mysql"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LEAN_DB_FOREIGN_KEYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LEAN_DB_IDLE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_MYSQL_ATTR_SSL_CA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_MYSQL_ATTR_SSL_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_MYSQL_ATTR_SSL_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_MYSQL_ATTR_SSL_VERIFY_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LEAN_DB_PERSISTENT_CONNECTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LEAN_DB_SCHEMA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_SOCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_SSLMODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LEAN_DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LEAN_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_DEFAULT_TIMEZONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_FILESYSTEM_RENAME_FILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_HSTS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Middleware/InitialHeaders.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_LANGUAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_LOG_CHANNELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_LOG_DEPRECATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_REDIS_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_REDIS_SCHEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_REDIS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_S3_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_S3_END_POINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_S3_FOLDER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_S3_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LEAN_S3_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_S3_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_S3_USE_PATH_STYLE_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_BREADCRUMBS_CACHE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_BREADCRUMBS_COMMAND_JOBS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_BREADCRUMBS_HTTP_CLIENT_REQUESTS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_BREADCRUMBS_LIVEWIRE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_BREADCRUMBS_LOGS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_BREADCRUMBS_NOTIFICATIONS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_BREADCRUMBS_QUEUE_INFO_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_BREADCRUMBS_SQL_BINDINGS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_BREADCRUMBS_SQL_QUERIES_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_LARAVEL_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_PROFILES_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_SEND_DEFAULT_PII",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACES_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_CACHE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_CONTINUE_AFTER_RESPONSE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_DEFAULT_INTEGRATIONS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_HTTP_CLIENT_REQUESTS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_LIVEWIRE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_MISSING_ROUTES_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_NOTIFICATIONS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_QUEUE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_QUEUE_JOBS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_SQL_BINDINGS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_SQL_ORIGIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_SQL_ORIGIN_THRESHOLD_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_SQL_QUERIES_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SENTRY_TRACE_VIEWS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SESSION_EXPIRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SESSION_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SESSION_SECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_SITENAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_USE_REDIS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEAN_USE_S3",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_SYSLOG_FACILITY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SANCTUM_STATEFUL_DOMAINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SANCTUM_TOKEN_PREFIX",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQS_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQS_SUFFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Core/Configuration/laravelConfig.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "helm/Chart.yaml"
+    ],
+    "externalServices": [
+      "stripe",
+      "sentry"
+    ],
+    "unsupported": [
+      "Unsupported container setup: .docker/Dockerfile runs supervisord with a web server and a worker program (.docker/config/supervisord.conf) in one container. Deployz runs one web process and declared workers as separate services."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: .docker/Dockerfile runs supervisord with a web server and a worker program (.docker/config/supervisord.conf) in one container. Deployz runs one web process and declared workers as separate services."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: LEAN_DB_DEFAULT_CONNECTION. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (helm/Chart.yaml). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.08546868,
+        "promptTokens": 16893,
+        "completionTokens": 938
+      },
+      "latencyMs": 14455
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": {
+          "value": "mysql",
+          "engine": "mysql",
+          "setting": "LEAN_DB_DEFAULT_CONNECTION"
+        },
+        "answer": "optional_by_setting",
+        "reasons": [],
+        "subject": "unexplained-declared-service",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      }
+    ],
+    "settings": [
+      {
+        "value": "mysql",
+        "engine": "mysql",
+        "vendor": true,
+        "setting": "LEAN_DB_DEFAULT_CONNECTION",
+        "dependency": "unexplained-declared-service"
+      }
+    ],
+    "latencyMs": 14718,
+    "questions": 2,
+    "generatedAt": "2026-10-30T11:34:48.987Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02927232,
+      "promptTokens": 6922,
+      "completionTokens": 94
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "The Dockerfile downloads a released tarball instead of building this source, but replacing that with a COPY of the repository is a contained change, so DEPLOYABLE_WITH_CHANGES stands.",
+      "verdict": "keep",
+      "category": null,
+      "decision": "none",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "latencyMs": 3095,
+    "promptVersion": 3
+  }
+}

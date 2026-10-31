@@ -1,0 +1,121 @@
+id: new-267
+repository: TriliumNext/Trilium
+commit: 6c3f5d78ec6010044b324e810a2a9aa9040383bd
+summary: >
+  TriliumNext Trilium Notes is a pnpm monorepo for a hierarchical note-taking application (Node 24, Express). The web
+  server is apps/server; the repository also holds a desktop app (Electron), a web clipper, a mobile client and other
+  apps. The server keeps all notes in a SQLite file, document.db, in a data directory (TRILIUM_DATA_DIR,
+  /home/node/trilium-data in the image) and also writes its config.ini, backups and a healthcheck file there. There is
+  no PostgreSQL, MySQL or S3 option. apps/server/Dockerfile copies a pre-built ./dist folder; it does not build from
+  source. The server listens on 8080 on all interfaces and asks the user to set a password on the first visit.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    Trilium stores every note in a SQLite database on local disk (document.db in the data directory), with backups and
+    configuration next to it. Fargate task storage is ephemeral, and the application has no PostgreSQL, MySQL or S3
+    storage option, so the durable local disk state cannot be moved to a Deployz service. This is the durable-local-state
+    case, as new-200 (Garage). The Dockerfile also needs a pre-built dist folder, so it would need a change even if the
+    storage were supported.
+dockerfile:
+  accept: []
+  reject:
+    - {path: apps/server/Dockerfile, reason: "copies ./dist, which pnpm build creates outside the Dockerfile; it is not buildable from a plain clone"}
+    - {path: apps/server/Dockerfile.alpine, reason: "the same pre-built dist, for Alpine"}
+    - {path: apps/server/Dockerfile.legacy, reason: "variant for 32-bit ARM platforms"}
+  target: null
+  context: .
+  evidence:
+    - {path: apps/server/Dockerfile, line: 19, quote: "COPY ./dist /usr/src/app"}
+    - {path: apps/server/Dockerfile, line: 34, quote: "CMD [ \"sh\", \"./start-docker.sh\" ]"}
+    - {path: docker-compose.yml, line: 7, quote: "image: triliumnext/trilium:latest"}
+runtime: {accept: [node]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: apps/server/Dockerfile, line: 33, quote: "EXPOSE 8080"}
+    - {path: apps/server/src/services/config.ts, line: 190, quote: "export const DEFAULT_NETWORK_PORT = \"8080\";"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: apps/server/src/services/config.ts, line: 365, quote: "defaultValue: '0.0.0.0'"}
+startCommand:
+  source: image
+  accept: ["sh ./start-docker.sh", "node ./main.mjs"]
+  evidence:
+    - {path: apps/server/Dockerfile, line: 34, quote: "CMD [ \"sh\", \"./start-docker.sh\" ]"}
+    - {path: apps/server/start-docker.sh, line: 9, quote: "exec node ./main.mjs"}
+healthPath:
+  accept: ["/api/health-check"]
+  evidence:
+    - {path: apps/server/src/routes/routes.ts, line: 124, quote: "route(GET, \"/api/health-check\", [], () => ({ status: \"ok\" }), apiResultHandler);"}
+database:
+  # SQLite on local disk only.
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: apps/server/package.json, line: 41, quote: "\"better-sqlite3\": \"13.0.3\","}
+    - {path: apps/server/src/services/data_dir.ts, line: 45, quote: "DOCUMENT_PATH: process.env.TRILIUM_DOCUMENT_PATH || pathJoin(TRILIUM_DATA_DIR, \"document.db\"),"}
+migrations:
+  mode: startup
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: apps/server/start-docker.sh, line: 9, quote: "exec node ./main.mjs"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # All notes, attachments, backups and config.ini are files in the data directory; there is no S3 or SQL backend.
+  local: required
+  paths: [/home/node/trilium-data]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: apps/server/Dockerfile, line: 30, quote: "ENV TRILIUM_DATA_DIR=/home/node/trilium-data"}
+    - {path: docker-compose.yml, line: 20, quote: "- ./trilium-data:/home/node/trilium-data"}
+    - {path: apps/server/src/services/data_dir.ts, line: 45, quote: "DOCUMENT_PATH: process.env.TRILIUM_DOCUMENT_PATH || pathJoin(TRILIUM_DATA_DIR, \"document.db\"),"}
+env:
+  required: []
+  optional: [TRILIUM_DATA_DIR, TRILIUM_NETWORK_PORT, TRILIUM_NETWORK_HOST, USER_UID, USER_GID]
+  buildTime: []
+  evidence:
+    - {path: apps/server/src/services/config.ts, line: 363, quote: "standardEnvVar: 'TRILIUM_NETWORK_HOST',"}
+    - {path: apps/server/start-docker.sh, line: 12, quote: "[ ! -z \"${USER_UID}\" ] && usermod -u ${USER_UID} node || echo \"No USER_UID specified, leaving 1000\""}
+blockers:
+  expected:
+    - "Notes live in a SQLite file (document.db) on durable local disk; Fargate storage is ephemeral and there is no PostgreSQL, MySQL or S3 option"
+  mustNot:
+    - "The missing PostgreSQL or Redis must not be reported as the blocker: the app does not use them"
+    - "docker-compose.yml (one service, one bind mount) must not be read as several services"
+    - "Dockerfile.alpine and Dockerfile.legacy must not be read as extra applications"
+    - "The desktop, mobile and web-clipper apps in apps/ must not be read as services that must run together"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (SQLite file only)"
+    - "Is a worker or Redis needed? (no)"
+    - "Which port? (8080)"
+traps:
+  - "apps/server/Dockerfile copies ./dist and ./start-docker.sh from the build context; dist is the output of pnpm build, so the image is not buildable from a plain clone (apps/server/Dockerfile:19)"
+  - "The root has no Dockerfile; the image Dockerfiles are under apps/server (docker-compose.yml:7 uses the published image)"
+  - "A volume mapping of the data directory in docker-compose.yml is a requirement, not a hint: without it every restart loses all notes (docker-compose.yml:20)"
+  - "The image runs HEALTHCHECK through a script that reads a file in the data directory, not an HTTP path from the Dockerfile (apps/server/docker_healthcheck.sh)"
+  - "The first visit asks for a password at /set-password; the instance is open until someone sets it (apps/server/src/routes/routes.ts:50)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: apps/server/Dockerfile copies the pre-built ./dist; the two other Dockerfiles are variants; the root has no Dockerfile', evidence: 'apps/server/Dockerfile:19'}
+  - {field: storage / database, change: 'none: better-sqlite3 is the only database driver and document.db lives in the data directory; no PostgreSQL, MySQL or S3 setting exists in the config mapping', evidence: 'apps/server/package.json:41; apps/server/src/services/data_dir.ts:45'}
+  - {field: outcome, change: 'none: durable SQLite on local disk with no S3 or SQL option is the new-200 case', evidence: 'docker-compose.yml:20; apps/server/Dockerfile:30'}
+  - {field: all, change: verified, evidence: 17 citations checked}

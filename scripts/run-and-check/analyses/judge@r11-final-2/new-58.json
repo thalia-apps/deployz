@@ -1,0 +1,43 @@
+{
+  "id": "new-58",
+  "analyser": "judge@r11-final-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "The Supabase Studio dashboard depends on several separate application services (postgres-meta, API gateway, auth, realtime, storage) that must run together, and Deployz runs only one web service per deployment.",
+      "evidence": [
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 33,
+          "quote": "STUDIO_PG_META_URL: http://meta:8080"
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 51,
+          "quote": "SUPABASE_URL: http://api-gw:8000"
+        },
+        {
+          "path": "README.md",
+          "line": 44,
+          "quote": "Supabase is a combination of open source tools."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8153,
+      "completionTokens": 227,
+      "costUsd": 0.03678048
+    },
+    "latencyMs": 12795
+  }
+}

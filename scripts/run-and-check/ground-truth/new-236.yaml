@@ -1,0 +1,150 @@
+id: new-236
+repository: milesmcc/shynet
+commit: ca35caba3af2b888acc990b99152c500a1c44461
+summary: >
+  Shynet is a Django 4 web analytics app (tracking pixel and script, dashboard). The root Dockerfile builds the app from
+  source (poetry install, npm install, collectstatic) and starts ./entrypoint.sh, which runs startup checks and
+  `manage.py migrate`, then gunicorn on 0.0.0.0:${PORT:-8080}. PostgreSQL is the default database (DB_* variables or
+  DATABASE_URL); SQLite is an opt-in with SQLITE=True. Celery tasks run inline by default (CELERY_TASK_ALWAYS_EAGER=True),
+  so Redis and a worker are optional. GeoLite databases are baked into the image. The first admin is created with
+  `./manage.py registeradmin <email>`. docker-compose.yml adds an nginx proxy, which is not needed behind an ALB.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One web process from the root Dockerfile (builds from source), port 8080, /healthz/ (django-health-check), migrations
+    at start in entrypoint.sh, PostgreSQL through DB_* variables or DATABASE_URL, no required Redis or worker, and no
+    durable local disk. Only settings are needed: DJANGO_SECRET_KEY, the DB values, CSRF_TRUSTED_ORIGINS and an
+    ALLOWED_HOSTS value that also accepts the load-balancer probe. As new-1 (Django, one web process, settings only).
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: .devcontainer/Dockerfile, reason: "VS Code devcontainer image for development, not the app image"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 48, quote: "poetry install --no-dev --no-interaction --no-ansi && \\"}
+    - {path: Dockerfile, line: 58, quote: "COPY shynet ."}
+    - {path: Dockerfile, line: 66, quote: "CMD [ \"./entrypoint.sh\" ]"}
+    - {path: heroku.yml, line: 3, quote: "web: Dockerfile"}
+runtime: {accept: [python]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: Dockerfile, line: 64, quote: "EXPOSE 8080"}
+    - {path: shynet/webserver.sh, line: 5, quote: "--bind 0.0.0.0:${PORT:-8080} \\"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: shynet/webserver.sh, line: 5, quote: "--bind 0.0.0.0:${PORT:-8080} \\"}
+startCommand:
+  source: image
+  accept: ["./entrypoint.sh", "./webserver.sh", "gunicorn shynet.wsgi:application"]
+  evidence:
+    - {path: Dockerfile, line: 66, quote: "CMD [ \"./entrypoint.sh\" ]"}
+    - {path: shynet/entrypoint.sh, line: 4, quote: "./startup_checks.sh && exec ./webserver.sh"}
+    - {path: shynet/webserver.sh, line: 4, quote: "exec gunicorn shynet.wsgi:application \\"}
+healthPath:
+  accept: ["/healthz/", "/healthz/?format=json"]
+  # django-health-check checks the database and the cache. Django returns 400 for a Host that is not in ALLOWED_HOSTS,
+  # so the ALB probe (Host is the task IP) needs ALLOWED_HOSTS to include it or *.
+  evidence:
+    - {path: shynet/shynet/urls.py, line: 26, quote: "path(\"healthz/\", include(\"health_check.urls\")),"}
+    - {path: shynet/shynet/settings.py, line: 58, quote: "\"health_check.db\","}
+    - {path: Dockerfile, line: 65, quote: "HEALTHCHECK CMD bash -c 'H=\"${ALLOWED_HOSTS:-localhost}\"; wget -o /dev/null -O /dev/null --header \"Host: ${H%%,*}\" \"http://127.0.0.1:${PORT:-8080}/healthz/?format=json\"'"}
+database:
+  status: required
+  engines: [postgres, sqlite]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  # PostgreSQL is the default branch; SQLite only with SQLITE=True. DATABASE_URL overrides the DB_* parts when set.
+  connectionVars: [DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DATABASE_URL]
+  evidence:
+    - {path: shynet/shynet/settings.py, line: 111, quote: "if os.getenv(\"SQLITE\", \"False\") == \"True\":"}
+    - {path: shynet/shynet/settings.py, line: 121, quote: "\"ENGINE\": \"django.db.backends.postgresql_psycopg2\","}
+    - {path: shynet/shynet/settings.py, line: 125, quote: "\"HOST\": os.environ.get(\"DB_HOST\"),"}
+    - {path: shynet/shynet/settings.py, line: 132, quote: "if \"DATABASE_URL\" in os.environ:"}
+migrations:
+  mode: startup
+  accept: ["./manage.py migrate", "python manage.py migrate"]
+  # Skipped when PERFORM_CHECKS_AND_SETUP=False.
+  evidence:
+    - {path: shynet/entrypoint.sh, line: 3, quote: "if [[ ! $PERFORM_CHECKS_AND_SETUP == False ]]; then"}
+    - {path: shynet/startup_checks.sh, line: 8, quote: "./manage.py migrate && echo \"Migrations complete!\""}
+redis:
+  status: optional
+  selectBy: {REDIS_CACHE_LOCATION: "redis://<host>:6379/0", CELERY_BROKER_URL: "redis://<host>:6379/1"}
+  # Only for several instances or a separate Celery worker; the default cache is local memory and tasks run eagerly.
+  evidence:
+    - {path: shynet/shynet/settings.py, line: 233, quote: "if not DEBUG and os.getenv(\"REDIS_CACHE_LOCATION\") is not None:"}
+    - {path: shynet/shynet/settings.py, line: 274, quote: "CELERY_TASK_ALWAYS_EAGER = os.getenv(\"CELERY_TASK_ALWAYS_EAGER\", \"True\") == \"True\""}
+    - {path: TEMPLATE.env, line: 75, quote: "# Redis, queue, and parellization settings; not necessary for single-instance deployments."}
+workers:
+  status: optional-independent
+  commands: ["./celeryworker.sh", "celery -A shynet worker -E --loglevel=INFO --concurrency=3"]
+  # Needed only when CELERY_BROKER_URL is set and CELERY_TASK_ALWAYS_EAGER=False.
+  evidence:
+    - {path: shynet/celeryworker.sh, line: 5, quote: "exec celery -A shynet worker -E --loglevel=INFO --concurrency=3"}
+    - {path: TEMPLATE.env, line: 81, quote: "# that you have a separate queue consumer running somewhere via `celeryworker.sh`."}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  # GeoLite databases are baked into /etc at build time; static files are served by whitenoise from the image.
+  evidence:
+    - {path: Dockerfile, line: 33, quote: "mv /tmp/GeoLite2*/*.mmdb /etc && \\"}
+    - {path: shynet/shynet/settings.py, line: 225, quote: "STATICFILES_STORAGE = \"whitenoise.storage.CompressedManifestStaticFilesStorage\""}
+env:
+  required:
+    - {name: DJANGO_SECRET_KEY, secret: true, buildTime: false, note: "the default is the public value onlyusethisindev"}
+    - {name: ALLOWED_HOSTS, secret: false, buildTime: false, note: "comma-separated; default localhost,127.0.0.1. Must accept the public host and the ALB health probe"}
+    - {name: CSRF_TRUSTED_ORIGINS, secret: false, buildTime: false, note: "https://<public host>; needed for login and form posts behind HTTPS"}
+    - {name: DB_NAME, secret: false, buildTime: false, note: "database name (or DATABASE_URL)"}
+    - {name: DB_USER, secret: false, buildTime: false, note: "database user (or DATABASE_URL)"}
+    - {name: DB_PASSWORD, secret: true, buildTime: false, note: "database password (or DATABASE_URL)"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "RDS host (or DATABASE_URL)"}
+    - {name: DB_PORT, secret: false, buildTime: false, note: "5432"}
+  optional: [DATABASE_URL, SQLITE, PORT, NUM_WORKERS, PERFORM_CHECKS_AND_SETUP, EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, EMAIL_USE_SSL, EMAIL_USE_TLS, SERVER_EMAIL, LANGUAGE_CODE, TIME_ZONE, ACCOUNT_SIGNUPS_ENABLED, ACCOUNT_EMAIL_VERIFICATION, SCRIPT_USE_HTTPS, SCRIPT_HEARTBEAT_FREQUENCY, SESSION_MEMORY_TIMEOUT, ONLY_SUPERUSERS_CREATE, SHOW_SHYNET_VERSION, SHOW_THIRD_PARTY_ICONS, BLOCK_ALL_IPS, AGGRESSIVE_HASH_SALTING, LOCATION_URL, DASHBOARD_PAGE_SIZE, USE_RELATIVE_MAX_IN_BAR_VISUALIZATION, REDIS_CACHE_LOCATION, CELERY_BROKER_URL, CELERY_TASK_ALWAYS_EAGER, MAXMIND_CITY_DB, MAXMIND_ASN_DB, DEBUG]
+  buildTime: []
+  evidence:
+    - {path: shynet/shynet/settings.py, line: 36, quote: "SECRET_KEY = os.getenv(\"DJANGO_SECRET_KEY\", \"onlyusethisindev\")"}
+    - {path: shynet/shynet/settings.py, line: 43, quote: "ALLOWED_HOSTS = (os.getenv(\"ALLOWED_HOSTS\") or \"localhost,127.0.0.1\").split(\",\")"}
+    - {path: shynet/shynet/settings.py, line: 44, quote: "CSRF_TRUSTED_ORIGINS = filter(lambda k: len(k) > 0, os.getenv(\"CSRF_TRUSTED_ORIGINS\", \"\").split(\",\"))"}
+    - {path: TEMPLATE.env, line: 6, quote: "DB_NAME=shynet_db"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite must not be chosen or block: PostgreSQL is the default and SQLite is opt-in with SQLITE=True"
+    - "Redis and a Celery worker must not be required: tasks run eagerly by default"
+    - "The nginx service in docker-compose.yml must not be raised as a second application service: it is only a reverse proxy"
+    - "The baked MaxMind license key and GeoLite files must not be raised as a blocker"
+    - ".devcontainer/Dockerfile must not be chosen"
+vendorQuestions:
+  legitimate:
+    - "How is the first admin created? (`./manage.py registeradmin <email>` prints a random password; it is a one-off command, not part of the start)"
+    - "Which SMTP server sends emails? Without EMAIL_HOST emails go to the console"
+  unnecessary:
+    - "Which database? (PostgreSQL by default)"
+    - "Which port? (8080)"
+    - "Who runs migrations? (entrypoint.sh runs migrate)"
+    - "Is Redis or a worker needed? (no, tasks run eagerly)"
+traps:
+  - "ALLOWED_HOSTS defaults to localhost,127.0.0.1; the public host and the ALB probe host must be allowed or every request returns 400. app.json warns against * because of password-reset Host poisoning (shynet/shynet/settings.py:43, app.json:82)"
+  - "CSRF_TRUSTED_ORIGINS needs the https:// scheme; without it, login forms fail behind HTTPS (TEMPLATE.env:29-31)"
+  - "The image HEALTHCHECK sends a Host header from ALLOWED_HOSTS; the ALB probe does not (Dockerfile:65)"
+  - "The first admin user does not exist after migrate; startup_checks.sh only prints a warning (shynet/startup_checks.sh:15-16, shynet/core/management/commands/registeradmin.py:23-27)"
+  - "docker-compose.yml uses the prebuilt milesmcc/shynet:latest image and an nginx proxy; Deployz builds from the Dockerfile (docker-compose.yml:5, :33)"
+  - "The base image python:alpine3.14 is old; a build may need a newer base if dependency wheels fail (Dockerfile:1)"
+  - "debug_toolbar is always in INSTALLED_APPS and urls; it shows only with DEBUG=True (shynet/shynet/urls.py:21)"
+openQuestions:
+  - "Whether the old python:alpine3.14 base image and poetry 1.2.2 still build cleanly today was not proven by a build"
+crossReview:
+  - {field: "dockerfile.accept", change: "none: the GeoLite archives are in git under assets/, so the build needs no MaxMind download; poetry.lock, package-lock.json and shynet/ exist", evidence: "Dockerfile:28-33,38-39,58; trees/new-236.txt assets/GeoLite2-*.tar.gz"}
+  - {field: "migrations", change: "none: startup_checks.sh runs migrate when the migration plan is not empty or the database is missing", evidence: "shynet/startup_checks.sh:4-8; shynet/core/management/commands/startup_checks.py:18-33"}
+  - {field: "database", change: "none: PostgreSQL is the default branch; SQLite only with SQLITE=True", evidence: "shynet/shynet/settings.py:111,121"}
+  - {field: "all", change: "verified", evidence: "30 citations checked"}
