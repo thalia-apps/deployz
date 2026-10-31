@@ -1,0 +1,66 @@
+{
+  "id": "new-291",
+  "analyser": "judge@r12-blind-3",
+  "from": "ai@r12-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "The app keeps its core inbox and request data in an embedded Badger database on local disk, or in DynamoDB, and Deployz provides neither persistent volumes nor DynamoDB.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 66,
+          "quote": "# Create directory for embedded database"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 136,
+          "quote": "DB_ENGINE=\"${DB_ENGINE}\",DB_BADGER_PATH=\"${DB_BADGER_PATH}\""
+        },
+        {
+          "path": "README.md",
+          "line": 51,
+          "quote": "docker run -d -p 80:80 -p 8080:8080 -v inbox-data:/app/data jesusnoseq/request-inbox:latest"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6518,
+      "completionTokens": 618,
+      "costUsd": 0.019216
+    },
+    "latencyMs": 123844
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume inbox-data:/app/data (docker-compose.yml request-inbox)",
+        "verdict": "stands",
+        "reason": "The production Dockerfile creates /app/data for an embedded Badger database, and the shown configuration selects only Badger (DB_ENGINE=badger), not a supported managed datastore, so the data needs persistent disk.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6468,
+      "completionTokens": 112,
+      "costUsd": 0.014056
+    },
+    "latencyMs": 123842
+  }
+}

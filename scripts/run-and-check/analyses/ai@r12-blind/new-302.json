@@ -1,0 +1,128 @@
+{
+  "id": "new-302",
+  "commit": "ecb121302ba055b7b57c563af0586c414d0ce343",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "vite build && tsc",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"./safebucket\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "CONFIG_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/configuration/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "deployments/aws/terraform/main.tf"
+    ],
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": [
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (deployments/aws/terraform/main.tf). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": null,
+    "answers": [],
+    "settings": [],
+    "latencyMs": 3,
+    "questions": 0,
+    "generatedAt": "2026-10-31T06:59:06.339Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.0277398,
+      "promptTokens": 4540,
+      "completionTokens": 493
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "reason": "The build downloads UPX using TARGETARCH, a build argument with no default that Deployz does not pass; it builds only if the builder fills it in automatically.",
+      "verdict": "not_sure",
+      "category": null,
+      "decision": "question",
+      "evidence": [
+        {
+          "line": 15,
+          "path": "Dockerfile",
+          "quote": "ARG TARGETARCH"
+        },
+        {
+          "line": 17,
+          "path": "Dockerfile",
+          "quote": "RUN curl -L -o upx.tar.xz https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-${TARGETARCH}_linux.tar.xz && \\"
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 6715,
+    "promptVersion": 5
+  },
+  "findings": []
+}

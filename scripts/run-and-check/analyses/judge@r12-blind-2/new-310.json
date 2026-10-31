@@ -1,0 +1,44 @@
+{
+  "id": "new-310",
+  "analyser": "judge@r12-blind-2",
+  "from": "ai@r12-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Ente needs its separate Go API server (server/) alongside this static web image, and the web image itself serves several apps on different ports, so Deployz cannot run the product as one HTTP service.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 13,
+          "quote": "the client apps (iOS / Android / F-Droid / Web / Linux / macOS / Windows) for both the products (and more planned future ones!), and the server that powers them."
+        },
+        {
+          "path": "web/Dockerfile",
+          "line": 117,
+          "quote": "ENV ENTE_API_ORIGIN=http://localhost:8080"
+        },
+        {
+          "path": "web/Dockerfile",
+          "line": 51,
+          "quote": "    listen 3001;"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6563,
+      "completionTokens": 249,
+      "costUsd": 0.015616
+    },
+    "latencyMs": 126067
+  },
+  "softReview": null
+}

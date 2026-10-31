@@ -1,0 +1,105 @@
+id: new-298
+repository: conversejs/converse.js
+commit: b418951bae232aba7d35de3265c667349bfcf81c
+summary: >
+  Converse.js is a client-side XMPP chat application written in JavaScript. `npm run build` bundles it with rspack into
+  dist/ (which is git-ignored), and static pages (fullscreen.html, dev.html, index.html) load dist/converse.min.js and
+  call converse.initialize with a JSON block in the page. The browser connects straight to an XMPP server through a BOSH
+  or WebSocket URL set in that block (the shipped value is the public test server of the project). The repository has no
+  Dockerfile, no server code, no database, no worker. `npm run serve` starts the dev dependency http-server.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    There is no Dockerfile and no server: the deliverable is a static bundle that needs `npm install` and `npm run build`
+    and a static file server. A contained repository change adds a Dockerfile (node build stage, then a static server such
+    as nginx serving dist and the page) and sets bosh_service_url or websocket_url in the page to the customer's XMPP
+    server. That makes it DEPLOYABLE_WITH_CHANGES. NOT_DEPLOYABLE is also accepted because the client does nothing without
+    an XMPP server (ejabberd, Prosody) that Deployz does not provide; it is truly ambiguous because the customer may
+    already run that server elsewhere and the client needs only its URL.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence: []
+runtime: {accept: [static, node]}
+port:
+  accept: []
+  # No server exists in the repository; a Dockerfile added by the change chooses the port (for example 80 for nginx).
+  evidence: []
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: explicit
+  accept: ["http-server", "npm run serve"]
+  evidence:
+    - {path: package.json, line: 63, quote: "\"serve\": \"http-server -c-1\","}
+    - {path: package.json, line: 46, quote: "\"build\": \"npm run build:website-min-css && npm run build:headless && npm run build:main\","}
+    - {path: .gitignore, line: 2, quote: "dist"}
+    - {path: fullscreen.html, line: 37, quote: "\"bosh_service_url\": \"https://conversejs.org/http-bind/\","}
+healthPath:
+  accept: ["/", "/fullscreen.html"]
+  evidence:
+    - {path: fullscreen.html, line: 15, quote: "<script type=\"module\" src=\"./dist/converse.min.js\"></script>"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: README.md, line: 12, quote: "100% client-side"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "No Dockerfile and no server: a repository change must add an image that builds dist and serves the page"
+    - "The client needs an XMPP server with a BOSH or WebSocket endpoint that the customer runs elsewhere"
+  mustNot:
+    - "The bosh_service_url in fullscreen.html is a public test connection manager and must not be read as a backend of this repository"
+    - "composer.json and the Makefile must not be read as a PHP or other runtime"
+    - "http-server is a dev dependency used by `npm run serve` and must not be reported as a production web server"
+    - "No database, Redis, worker or S3 may be reported as required"
+vendorQuestions:
+  legitimate:
+    - "Which XMPP server does the client connect to? (the BOSH or WebSocket URL in the converse-config block)"
+  unnecessary:
+    - "Which database? (none)"
+    - "Is a worker or Redis needed? (no)"
+traps:
+  - "dist is git-ignored, so no built file is in the clone; the page fullscreen.html loads ./dist/converse.min.js and fails until npm run build has run (.gitignore:2; fullscreen.html:15)"
+  - "The XMPP server URL is data in the page, not an environment variable; changing it needs a file change at build or start (fullscreen.html:37)"
+  - "The shipped bosh_service_url points to the public test server of the project (fullscreen.html:31,37)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the repository has no Dockerfile; the root listing has package.json, rspack, the static html pages and no container file', evidence: 'root listing'}
+  - {field: startCommand, change: 'none: only `npm run serve` (http-server) is defined, a development helper', evidence: 'package.json:63'}
+  - {field: outcome, change: 'none: static client with no server; needs an added Dockerfile and an external XMPP server', evidence: 'README.md:12,24-33; fullscreen.html:15,37'}
+  - {field: all, change: verified, evidence: 6 citations checked}

@@ -1,0 +1,118 @@
+id: new-285
+repository: killbill/killbill
+commit: 52e2f55f103baf0703ddee71e10a7036595fc851
+summary: >
+  Kill Bill is a subscription billing and payments platform written in Java (Maven multi-module, about 25 modules). The
+  deployable profile is profiles/killbill, which has packaging war and a web.xml with a Guice listener. The repository
+  has no Dockerfile. The documented developer start is bin/start-server, which runs `mvn jetty:run` on port 8080. The
+  database is MySQL or PostgreSQL (org.killbill.dao.url, user, password; the PostgreSQL DDL for the util module is
+  ddl-postgresql.sql). The schema comes from a set of ddl.sql files in the modules and is not applied by the server at
+  start. Notification and bus queues run inside the one process. No Redis. Payment gateways are OSGi plugins that load
+  from a bundles directory on disk. The admin UI (Kaui) is another project.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The war is the one HTTP application and the database engines are supported, so the app fits the one-image model.
+    But the repository has no Dockerfile and the only run path is a Maven `jetty:run` developer script. A contained
+    change is needed: a Dockerfile that builds the profile war (mvn package) and runs it in Jetty or Tomcat, with the
+    database properties passed as system properties, and a step that loads the ddl.sql files into the database before
+    the first start. No second application service is needed.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: profiles/killbill/pom.xml, line: 28, quote: "<packaging>war</packaging>"}
+    - {path: bin/start-server, line: 78, quote: "jetty:run\""}
+runtime: {accept: [java]}
+port:
+  # The developer script uses 8080 and passes it as -Djetty.port.
+  accept: [8080]
+  evidence:
+    - {path: bin/start-server, line: 56, quote: "PORT=8080"}
+    - {path: bin/start-server, line: 88, quote: "-Djetty.port=$PORT"}
+bindAllInterfaces:
+  value: true
+  # No bind address is set in the repository; Jetty listens on all interfaces by default.
+  evidence:
+    - {path: bin/start-server, line: 88, quote: "-Djetty.port=$PORT"}
+startCommand:
+  source: explicit
+  accept: ["jetty:run", "java -jar", "catalina.sh run"]
+  evidence:
+    - {path: bin/start-server, line: 78, quote: "jetty:run\""}
+healthPath:
+  # The /1.0/healthcheck servlet comes from the killbill-platform dependency; the repository binds the health check plugin registry.
+  accept: ["/1.0/healthcheck"]
+  evidence:
+    - {path: profiles/killbill/src/main/java/org/killbill/billing/server/modules/KillbillServerModule.java, line: 118, quote: "bind(new TypeLiteral<OSGIServiceRegistration<Healthcheck>>() {}).to(DefaultHealthcheckPluginRegistry.class).asEagerSingleton();"}
+    - {path: jaxrs/src/main/java/org/killbill/billing/jaxrs/resources/JaxrsResource.java, line: 24, quote: "String API_VERSION = \"/1.0\";"}
+database:
+  status: required
+  engines: [mysql, postgres]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {}
+  connectionVars: [org.killbill.dao.url, org.killbill.dao.user, org.killbill.dao.password, org.killbill.billing.osgi.dao.url, org.killbill.billing.osgi.dao.user, org.killbill.billing.osgi.dao.password]
+  # The properties are Java system properties or entries of a properties file; the file in the repository points to a local MySQL root user.
+  evidence:
+    - {path: profiles/killbill/src/main/resources/killbill-server.properties, line: 26, quote: "org.killbill.dao.url=jdbc:mysql://127.0.0.1:3306/killbill"}
+    - {path: profiles/killbill/src/main/resources/killbill-server.properties, line: 65, quote: "org.killbill.billing.osgi.dao.url=jdbc:mysql://127.0.0.1:3306/killbill"}
+    - {path: util/src/main/resources/org/killbill/billing/util/ddl-postgresql.sql, line: 3, quote: "CREATE DOMAIN datetime AS timestamp without time zone;"}
+    - {path: account/src/main/resources/org/killbill/billing/account/ddl.sql, line: 4, quote: "CREATE TABLE accounts ("}
+migrations:
+  mode: command
+  accept: ["mysql < ddl.sql"]
+  evidence:
+    - {path: account/src/main/resources/org/killbill/billing/account/ddl.sql, line: 3, quote: "DROP TABLE IF EXISTS accounts;"}
+    - {path: util/src/main/resources/org/killbill/billing/util/ddl-postgresql.sql, line: 2, quote: "DROP DOMAIN IF EXISTS datetime CASCADE;"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: bin/start-server, line: 88, quote: "-Dorg.killbill.queue.creator.name="}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [logs, osgi bundles directory]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: bin/start-server, line: 76, quote: "mkdir -p $LOG_DIR"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository has no Dockerfile; the profile builds a war and the run path is mvn jetty:run"
+    - "The schema is a set of ddl.sql files that nothing applies at start"
+  mustNot:
+    - "The Maven multi-module layout must not be read as several application services: the one deployable is profiles/killbill"
+    - "Kaui, the OSGi payment plugins and the killpay profile are not required to run the API"
+    - "Notification and bus queues are in the process and must not be read as a worker or a broker"
+vendorQuestions:
+  legitimate:
+    - "Which payment plugins are installed? (OSGi bundles directory, optional)"
+  unnecessary:
+    - "Which database? (MySQL or PostgreSQL by org.killbill.dao.url)"
+    - "Is Redis or a broker needed? (no)"
+traps:
+  - "The shipped properties file points to a local MySQL as root with password root (killbill-server.properties:26-28)"
+  - "The PostgreSQL DDL exists as a util-only extra file that defines MySQL type names as domains; other modules use MySQL syntax in ddl.sql (ddl-postgresql.sql:3, account ddl.sql:1)"
+  - "The profiles/killpay directory is a second profile with its own web.xml; it is not the main server"
+  - "The README documents only the hosted getting-started guide; there is no Docker instruction in the repository"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: 'WITH_CHANGES: no Dockerfile and no automatic schema; the war and the database engines are otherwise deployable', evidence: 'profiles/killbill/pom.xml:28; bin/start-server:78'}
+  - {field: healthPath, change: 'the path /1.0/healthcheck is defined by the killbill-platform library, not a file in this repository', evidence: 'KillbillServerModule.java:118'}
+  - {field: all, change: verified, evidence: 17 citations checked}

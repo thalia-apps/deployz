@@ -1,0 +1,143 @@
+{
+  "id": "new-225",
+  "commit": "a76a3689a0706dcec7955051e09bdba8dc7cefd8",
+  "analyser": "ai@r12-dev",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile.noble"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": null
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0817542,
+        "promptTokens": 17975,
+        "completionTokens": 534
+      },
+      "latencyMs": 7603
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "port",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": "datastore",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 7605,
+    "questions": 3,
+    "generatedAt": "2026-10-31T07:29:28.994Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "reason": "not_deployable",
+    "status": "skipped",
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "unsupported-datastore-server",
+      "title": "Is a database or message broker, not an application",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Unsupported repository: it is a datastore server that other applications connect to (README.md:48, utils/install_server.sh:63), not a web application.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "port-unresolved",
+      "title": "Tell Deployz which port your app listens on",
+      "fixClass": "SETTING",
+      "technicalEvidence": "No port was found in the Dockerfile (EXPOSE or ENV PORT), an env file, a compose file, or a process.env.PORT default in source.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "start-command-missing",
+      "title": "Tell Deployz how to start your app",
+      "fixClass": "SETTING",
+      "technicalEvidence": "The Dockerfile has no CMD or ENTRYPOINT instruction and no \"start\" script was found in any package.json.",
+      "confidence": "confirmed"
+    }
+  ]
+}

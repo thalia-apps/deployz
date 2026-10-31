@@ -1,0 +1,524 @@
+{
+  "id": "new-69",
+  "commit": "4c33587fe88c52e50cb63dc8cea347fac6ef01ac",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "server",
+      "runtime": "node",
+      "framework": "@nestjs/core",
+      "dockerfilePath": "server/Dockerfile"
+    },
+    "build": {
+      "command": "nest build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"start.sh\"]",
+      "port": 2283
+    },
+    "health": {
+      "path": "/api/server/ping",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": "sql-tools -u ${DB_URL:-postgres://postgres:postgres@localhost:5432/immich} migrations run",
+      "mode": "pre_deploy"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ANN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANN_FP16_TURBO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANN_TUNING_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_FOLDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_KEEPALIVE_TIMEOUT_S",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMMICH_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMMICH_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py",
+            "read in server/src/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMMICH_MACHINE_LEARNING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/dtos/config.dto.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMMICH_MACHINE_LEARNING_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/dtos/config.dto.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMMICH_MEDIA_LOCATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/commands/media-location.command.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMMICH_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MACHINE_LEARNING_DEVICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MODEL_ARENA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MODEL_INTER_OP_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MODEL_INTRA_OP_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MODEL_ORGANIZATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MODEL_REVISION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MODEL_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MODEL_TTL_POLL_S",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NO_COLOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PRELOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REQUEST_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RKNN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RKNN_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_FULL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKER_TIMEOUT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in machine-learning/immich_ml/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp"
+    ],
+    "unsupported": [
+      "Unsupported architecture: docker/docker-compose.prod.yml defines 2 application services (immich-server, immich-machine-learning). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Unsupported infrastructure: the app requires a GPU (machine-learning/pyproject.toml). Deployz runs CPU-only containers.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker/docker-compose.prod.yml defines 2 application services (immich-server, immich-machine-learning). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported infrastructure: the app requires a GPU (machine-learning/pyproject.toml). Deployz runs CPU-only containers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: WORKER_TIMEOUT. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "NOT_DEPLOYABLE",
+  "findings": [
+    {
+      "id": "unsupported-multi-service",
+      "title": "Runs as several services",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported architecture: docker/docker-compose.prod.yml defines 2 application services (immich-server, immich-machine-learning). Deployz runs ONE web process per deployment plus declared background workers.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "unsupported-gpu",
+      "title": "Needs a graphics processor (GPU)",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Unsupported infrastructure: the app requires a GPU (machine-learning/pyproject.toml). Deployz runs CPU-only containers.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "local-file-storage",
+      "title": "Files stored on local disk",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Durable local filesystem state declared: VOLUME /data (server/Dockerfile), volume ${UPLOAD_LOCATION}/photos:/data (docker/docker-compose.prod.yml immich-server)",
+      "confidence": "confirmed"
+    }
+  ]
+}

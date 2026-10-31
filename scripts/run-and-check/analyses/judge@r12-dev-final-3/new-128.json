@@ -1,0 +1,50 @@
+{
+  "id": "new-128",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Outcome DEPLOYABLE_WITH_CHANGES is acceptable; Meilisearch is an optional search add-on and storage can use S3.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6904,
+      "completionTokens": 80,
+      "costUsd": 0.02892384
+    },
+    "latencyMs": 2762
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares meilisearch (getmeili/meilisearch:v1.13.3) in docker-compose.yml. Deployz did not find how the application uses it.",
+        "verdict": "stands",
+        "reason": "Meilisearch is declared in the production compose file and configured through MEILI_HOST and MEILI_MASTER_KEY, but no shown line proves it is optional for the production app, so please confirm whether full-text search needs it.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7999,
+      "completionTokens": 112,
+      "costUsd": 0.017118
+    },
+    "latencyMs": 143667
+  }
+}

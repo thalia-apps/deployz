@@ -1,0 +1,66 @@
+{
+  "id": "new-311",
+  "analyser": "judge@r12-blind-3",
+  "from": "ai@r12-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "The outcome already requires changes: the selected dashboard image is only a proxy frontend, and the Rust server has a PostgreSQL image option that can serve the UI from one process.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5578,
+      "completionTokens": 85,
+      "costUsd": 0.012006
+    },
+    "latencyMs": 123762
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume rustrak_data:/data (docker-compose.yml server)",
+        "verdict": "probably_wrong",
+        "reason": "The selected Dockerfile builds only the nginx dashboard image that serves static files and proxies the API, while the /data volume belongs to the separate rustrak-server compose service, which this image does not run.",
+        "evidence": [
+          {
+            "path": "apps/dashboard/Dockerfile",
+            "line": 60,
+            "quote": "COPY --from=builder /app/apps/dashboard/dist /usr/share/nginx/html"
+          },
+          {
+            "path": "apps/dashboard/Dockerfile",
+            "line": 44,
+            "quote": "ENV RUSTRAK_API_URL=http://server:8080"
+          },
+          {
+            "path": "docker-compose.yml",
+            "line": 11,
+            "quote": "image: rustrak/rustrak-server:latest"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5844,
+      "completionTokens": 263,
+      "costUsd": 0.014318
+    },
+    "latencyMs": 123761
+  }
+}

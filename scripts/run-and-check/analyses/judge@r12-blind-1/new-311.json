@@ -1,0 +1,66 @@
+{
+  "id": "new-311",
+  "analyser": "judge@r12-blind-1",
+  "from": "ai@r12-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "The outcome already requires changes, and the server image has a PostgreSQL variant, so selecting the server Dockerfile with PostgreSQL is a contained change.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5578,
+      "completionTokens": 81,
+      "costUsd": 0.011966
+    },
+    "latencyMs": 138726
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume rustrak_data:/data (docker-compose.yml server)",
+        "verdict": "probably_wrong",
+        "reason": "The selected Dockerfile builds only the standalone nginx dashboard that serves static files and proxies the API elsewhere, so the server's /data volume from docker-compose.yml is not part of this production image.",
+        "evidence": [
+          {
+            "path": "apps/dashboard/Dockerfile",
+            "line": 60,
+            "quote": "COPY --from=builder /app/apps/dashboard/dist /usr/share/nginx/html"
+          },
+          {
+            "path": "apps/dashboard/Dockerfile",
+            "line": 44,
+            "quote": "ENV RUSTRAK_API_URL=http://server:8080"
+          },
+          {
+            "path": "docker-compose.yml",
+            "line": 11,
+            "quote": "image: rustrak/rustrak-server:latest"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5844,
+      "completionTokens": 265,
+      "costUsd": 0.014338
+    },
+    "latencyMs": 138725
+  }
+}

@@ -1,0 +1,135 @@
+id: new-301
+repository: importantimport/hatsu
+commit: 08db193d44a8838376d5e3bbae4a8d4feb0264e2
+summary: >
+  Hatsu is a Rust (axum, SeaORM) service that makes a static website part of the fediverse: it reads the site's feed and
+  serves ActivityPub actors, inbox and a Mastodon-compatible API under one domain. The server is one binary that runs
+  migrations at start (Migrator::up) and starts in-process cron jobs (apalis-cron, every 5 and 10 minutes) for feed
+  updates. The database is chosen by HATSU_DATABASE_URL: sqlite:... (the default is an in-memory SQLite) or a postgres:
+  URL. The root Dockerfile does not build the program: it copies a prebuilt binary from target_${TARGETARCH}/hatsu,
+  which the release workflow produces with cargo. The listen host defaults to 127.0.0.1; HATSU_LISTEN_PORT is 3939 in the
+  image. HATSU_DOMAIN and HATSU_PRIMARY_ACCOUNT (the static site) are required.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The only Dockerfile copies a binary that is not in the clone (target_${TARGETARCH}/hatsu), so a build from the
+    repository fails. A contained change adds a Rust builder stage (cargo build --release) to the Dockerfile. After that,
+    settings give a working deployment: HATSU_DATABASE_URL=postgres://..., HATSU_LISTEN_HOST=0.0.0.0, HATSU_DOMAIN,
+    HATSU_PRIMARY_ACCOUNT; migrations and cron jobs run in the one process, and there is no Redis, no worker and no local
+    file state with PostgreSQL.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 7, quote: "COPY target_${TARGETARCH}/hatsu /app/hatsu"}
+    - {path: Dockerfile, line: 19, quote: "ENTRYPOINT [ \"/app/hatsu\" ]"}
+    - {path: .github/workflows/release.yml, line: 84, quote: "path: target_amd64"}
+    - {path: Justfile, line: 24, quote: "cargo build --release"}
+runtime: {accept: [rust]}
+port:
+  accept: [3939]
+  evidence:
+    - {path: Dockerfile, line: 14, quote: "ENV HATSU_LISTEN_PORT=3939"}
+    - {path: Dockerfile, line: 15, quote: "EXPOSE $HATSU_LISTEN_PORT"}
+    - {path: docs/src/admins/environments.md, line: 49, quote: "- default: `3939`"}
+bindAllInterfaces:
+  value: false
+  # The default listen host is 127.0.0.1; the image does not change it, so HATSU_LISTEN_HOST=0.0.0.0 is needed (a setting).
+  evidence:
+    - {path: crates/utils/src/data.rs, line: 39, quote: ".unwrap_or_else(|_| String::from(\"127.0.0.1\")),"}
+    - {path: .env.example, line: 4, quote: "HATSU_LISTEN_HOST = \"0.0.0.0\""}
+startCommand:
+  source: image
+  accept: ["/app/hatsu"]
+  evidence:
+    - {path: Dockerfile, line: 19, quote: "ENTRYPOINT [ \"/app/hatsu\" ]"}
+healthPath:
+  accept: ["/api/v0/generate_204"]
+  # Returns 204 without a login. The image HEALTHCHECK uses it.
+  evidence:
+    - {path: Dockerfile, line: 17, quote: "HEALTHCHECK CMD [ \"curl\", \"--fail\", \"http://localhost:${HATSU_LISTEN_PORT}/api/v0/generate_204\" ]"}
+    - {path: crates/api/src/routes/generate_204.rs, line: 9, quote: "path = \"/api/v0/generate_204\","}
+database:
+  status: required
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {HATSU_DATABASE_URL: "<postgres url>"}
+  connectionVars: [HATSU_DATABASE_URL]
+  # The default is sqlite::memory:, which loses all data at each restart.
+  evidence:
+    - {path: crates/utils/src/data.rs, line: 34, quote: "hatsu_database_url: env::var(\"HATSU_DATABASE_URL\")"}
+    - {path: crates/utils/src/data.rs, line: 35, quote: ".unwrap_or_else(|_| String::from(\"sqlite::memory:\")),"}
+    - {path: docs/src/admins/environments.md, line: 27, quote: "Should be a valid `sqlite:` or `postgres:` URL."}
+    - {path: Cargo.toml, line: 115, quote: "\"sqlx-postgres\","}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: src/commands/run.rs, line: 29, quote: "tracing::info!(\"running database migration\");"}
+    - {path: src/commands/run.rs, line: 30, quote: "Migrator::up(&conn, None).await?;"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # The feed update jobs are apalis-cron workers started inside the one process.
+  evidence:
+    - {path: crates/cron/src/lib.rs, line: 12, quote: "let partial_update_schedule = Schedule::from_str(\"0 */5 * * * *\")?;"}
+    - {path: crates/cron/src/lib.rs, line: 20, quote: "let full_update_schedule = Schedule::from_str(\"0 */10 * * * *\")?;"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  # With a PostgreSQL URL the program writes no durable local file; the docker example mounts the SQLite file only.
+  evidence:
+    - {path: docker-compose.yaml, line: 15, quote: "- ./hatsu.sqlite3:/app/hatsu.sqlite3"}
+env:
+  required:
+    - {name: HATSU_DOMAIN, secret: false, buildTime: false, note: "public domain of the instance; the program panics without it"}
+    - {name: HATSU_PRIMARY_ACCOUNT, secret: false, buildTime: false, note: "the static site (host name) that this instance serves; the program panics without it"}
+    - {name: HATSU_DATABASE_URL, secret: true, buildTime: false, note: "postgres:// URL; the default sqlite::memory: loses data at restart"}
+    - {name: HATSU_LISTEN_HOST, secret: false, buildTime: false, note: "0.0.0.0; the default is 127.0.0.1"}
+  optional: [HATSU_LISTEN_PORT, HATSU_ACCESS_TOKEN, HATSU_NODE_NAME, HATSU_NODE_DESCRIPTION, HATSU_LOG]
+  buildTime: []
+  evidence:
+    - {path: crates/utils/src/data.rs, line: 36, quote: "hatsu_domain: env::var(\"HATSU_DOMAIN\")"}
+    - {path: crates/utils/src/data.rs, line: 42, quote: "hatsu_primary_account: env::var(\"HATSU_PRIMARY_ACCOUNT\")"}
+    - {path: crates/utils/src/data.rs, line: 44, quote: "hatsu_access_token: env::var(\"HATSU_ACCESS_TOKEN\").ok(),"}
+blockers:
+  expected:
+    - "The Dockerfile copies a prebuilt binary (target_${TARGETARCH}/hatsu) that is not in the repository, so the image cannot be built from the clone; a Rust builder stage must be added"
+  mustNot:
+    - "SQLite as the example database must not block: HATSU_DATABASE_URL accepts a postgres: URL"
+    - "The apalis cron jobs must not be read as a separate worker or an EventBridge schedule"
+    - "The static site named in HATSU_PRIMARY_ACCOUNT must not be reported as an application service that Deployz must run"
+    - "The just recipes, Nix files and docs build (docs/, gh-pages workflow) must not be read as deployable parts"
+vendorQuestions:
+  legitimate:
+    - "Which domain and which static site (primary account) does the instance serve? (HATSU_DOMAIN, HATSU_PRIMARY_ACCOUNT)"
+  unnecessary:
+    - "Which database? (HATSU_DATABASE_URL=postgres://...)"
+    - "Is Redis or a worker needed? (no)"
+    - "Which port? (3939)"
+traps:
+  - "The Dockerfile has no build step: it copies target_${TARGETARCH}/hatsu from the CI workflow (Dockerfile:7; release.yml:84)"
+  - "The default listen host is 127.0.0.1 and the Dockerfile does not set HATSU_LISTEN_HOST, so a container started with the image alone is not reachable (crates/utils/src/data.rs:39)"
+  - "The default database is sqlite::memory:, so a start without HATSU_DATABASE_URL works but loses all data at restart (crates/utils/src/data.rs:35)"
+  - "The program panics at start when HATSU_DOMAIN or HATSU_PRIMARY_ACCOUNT is not set (crates/utils/src/data.rs:36-43)"
+  - "The Dockerfile installs curl and the just tool in the runtime image for the healthcheck (Dockerfile:9-11)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the only Dockerfile copies a CI-built binary; it needs a builder stage', evidence: 'Dockerfile:7; .github/workflows/release.yml:84'}
+  - {field: database, change: 'none: sqlx-sqlite and sqlx-postgres are both enabled; the URL scheme selects the engine', evidence: 'Cargo.toml:115; docs/src/admins/environments.md:27'}
+  - {field: bindAllInterfaces, change: 'none: the default is 127.0.0.1 and the setting makes it 0.0.0.0', evidence: 'crates/utils/src/data.rs:39'}
+  - {field: outcome, change: 'none: DEPLOYABLE_WITH_CHANGES for the Dockerfile only', evidence: 'Dockerfile:7'}
+  - {field: all, change: verified, evidence: 24 citations checked}

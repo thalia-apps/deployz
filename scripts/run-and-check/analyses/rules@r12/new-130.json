@@ -1,0 +1,498 @@
+{
+  "id": "new-130",
+  "commit": "599a05360f59b4538cbbe7b721834c5f6a82ccbe",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "php",
+      "framework": null,
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": null
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "MAILER_DSN",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "APP_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/app.php",
+            "read in web/app_dev.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/app.php",
+            "read in web/app_dev.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env declares APP_SECRET",
+            ".env.test declares APP_SECRET",
+            "read in app/config/config.yml",
+            "read in app/config/security.yml"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares DATABASE_URL",
+            ".env.test declares DATABASE_URL",
+            "read in app/config/config.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEFAULT_LOCALE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares DEFAULT_LOCALE",
+            ".env.test declares DEFAULT_LOCALE",
+            "read in app/config/config.yml",
+            "read in app/config/services.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILER_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares MAILER_DSN",
+            ".env.test declares MAILER_DSN",
+            "read in app/config/config.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "RABBITMQ_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares RABBITMQ_URL",
+            ".env.test declares RABBITMQ_URL",
+            "read in app/config/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares REDIS_URL",
+            ".env.test declares REDIS_URL",
+            "read in app/config/services.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares SENTRY_DSN",
+            ".env.test declares SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WALLABAG_ARTICLE_REPORTING_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WALLABAG_ARTICLE_REPORTING_URL",
+            ".env.test declares WALLABAG_ARTICLE_REPORTING_URL",
+            "read in app/config/wallabag.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WALLABAG_BASE_URL",
+            ".env.test declares WALLABAG_BASE_URL",
+            "read in app/config/config.yml",
+            "read in app/config/services.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_CAPTCHA_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WALLABAG_CAPTCHA_ENABLED",
+            ".env.test declares WALLABAG_CAPTCHA_ENABLED",
+            "read in app/config/services.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_CONFIRMATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WALLABAG_CONFIRMATION_ENABLED",
+            ".env.test declares WALLABAG_CONFIRMATION_ENABLED",
+            "read in app/config/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_FROM_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WALLABAG_FROM_EMAIL",
+            ".env.test declares WALLABAG_FROM_EMAIL",
+            "read in app/config/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WALLABAG_LOG_LEVEL",
+            ".env.test declares WALLABAG_LOG_LEVEL",
+            "read in app/config/config_prod.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_OAUTH_ACCESS_TOKEN_LIFETIME",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env declares WALLABAG_OAUTH_ACCESS_TOKEN_LIFETIME",
+            ".env.test declares WALLABAG_OAUTH_ACCESS_TOKEN_LIFETIME",
+            "read in app/config/config.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_OAUTH_REFRESH_TOKEN_LIFETIME",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env declares WALLABAG_OAUTH_REFRESH_TOKEN_LIFETIME",
+            ".env.test declares WALLABAG_OAUTH_REFRESH_TOKEN_LIFETIME",
+            "read in app/config/config.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_RABBITMQ_PREFETCH_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WALLABAG_RABBITMQ_PREFETCH_COUNT",
+            ".env.test declares WALLABAG_RABBITMQ_PREFETCH_COUNT",
+            "read in app/config/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_REGISTRATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WALLABAG_REGISTRATION_ENABLED",
+            ".env.test declares WALLABAG_REGISTRATION_ENABLED",
+            "read in app/config/config.yml",
+            "read in app/config/services.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_REMEMBER_ME_COOKIE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.dev declares WALLABAG_REMEMBER_ME_COOKIE_NAME",
+            "read in app/config/config_dev.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_SERVER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WALLABAG_SERVER_NAME",
+            ".env.test declares WALLABAG_SERVER_NAME",
+            "read in app/config/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_SESSION_COOKIE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.dev declares WALLABAG_SESSION_COOKIE_NAME",
+            "read in app/config/config_dev.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_SITE_CONFIG_FOLDERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/config/services.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_TABLE_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WALLABAG_TABLE_PREFIX",
+            ".env.test declares WALLABAG_TABLE_PREFIX",
+            "read in app/config/services.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_TRUSTED_DEVICE_COOKIE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.dev declares WALLABAG_TRUSTED_DEVICE_COOKIE_NAME",
+            "read in app/config/config_dev.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_TWOFACTOR_SENDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WALLABAG_TWOFACTOR_SENDER",
+            ".env.test declares WALLABAG_TWOFACTOR_SENDER",
+            "read in app/config/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLABAG_USER_AGENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WALLABAG_USER_AGENT",
+            ".env.test declares WALLABAG_USER_AGENT",
+            "read in app/config/services.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: The only Dockerfile is for development or a template (docker/php/Dockerfile). Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: The only Dockerfile is for development or a template (docker/php/Dockerfile). Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "findings": [
+    {
+      "id": "unsupported-no-dockerfile",
+      "title": "Has no Dockerfile that builds the app",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported container setup: The only Dockerfile is for development or a template (docker/php/Dockerfile). Deployz builds the app from a Dockerfile in the repository.",
+      "confidence": "confirmed"
+    }
+  ]
+}

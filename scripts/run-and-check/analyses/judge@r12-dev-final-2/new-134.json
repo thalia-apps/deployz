@@ -1,0 +1,50 @@
+{
+  "id": "new-134",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "CommaFeed supports PostgreSQL, and the Dockerfile that needs CI-built artifacts can be replaced with a contained build change.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 4531,
+      "completionTokens": 76,
+      "costUsd": 0.01944756
+    },
+    "latencyMs": 2491
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /commafeed/data (commafeed-server/src/main/docker/Dockerfile.jvm)",
+        "verdict": "stands",
+        "reason": "The shown files do not include a setting that moves the data in /commafeed/data (the default H2 embedded database) to PostgreSQL, so the volume may hold durable state.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 3633,
+      "completionTokens": 93,
+      "costUsd": 0.008196
+    },
+    "latencyMs": 147634
+  }
+}

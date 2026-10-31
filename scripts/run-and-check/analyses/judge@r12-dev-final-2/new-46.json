@@ -1,0 +1,50 @@
+{
+  "id": "new-46",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Homepage is a stateless-capable Next.js dashboard whose YAML config can be baked into the image, so a contained change suffices.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5607,
+      "completionTokens": 72,
+      "costUsd": 0.02362932
+    },
+    "latencyMs": 3055
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-persistent-volume",
+        "findingEvidence": "Unsupported storage: the app declares durable local state (HOMEPAGE_CONFIG_DIR (runtime source)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory.",
+        "verdict": "stands",
+        "reason": "No shown line proves that the configuration directory named by HOMEPAGE_CONFIG_DIR is replaced by a supported datastore or holds only disposable data, so the vendor should confirm whether config files must persist or can be baked into the image.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4677,
+      "completionTokens": 117,
+      "costUsd": 0.010524
+    },
+    "latencyMs": 146885
+  }
+}

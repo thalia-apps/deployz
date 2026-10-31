@@ -1,0 +1,39 @@
+{
+  "id": "new-201",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "GitLab's core data is Git repositories stored on local disk (served by Gitaly), and Deployz has no persistent volumes; the selected Dockerfile is also only a QA test runner.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 17,
+          "quote": "- Manage Git repositories with fine grained access controls that keep your code secure"
+        },
+        {
+          "path": "qa/Dockerfile",
+          "line": 66,
+          "quote": "ENTRYPOINT [\"bin/test\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6603,
+      "completionTokens": 187,
+      "costUsd": 0.02985048
+    },
+    "latencyMs": 4056
+  },
+  "softReview": null
+}

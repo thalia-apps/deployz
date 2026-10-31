@@ -1,0 +1,281 @@
+{
+  "id": "new-120",
+  "commit": "f7ca7c3c49318cefa10299960b2c8dd7d9d4f9cb",
+  "analyser": "ai@r12-dev",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "docker/targets/server.Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "scripts/sh/entrypoint.sh"
+      ]
+    },
+    "web": {
+      "command": "CMD: [ \"/etc/temporal/entrypoint.sh\" ]",
+      "port": null
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALPINE_TAG",
+          "required": true,
+          "secret": false,
+          "source": [
+            "docker/targets/server.Dockerfile build arg ALPINE_TAG selects the base image; the build fails without it"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Final review: Temporal server is a gRPC workflow server that clients and SDK workers connect to, not a web application serving HTTP on one port."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Final review: Temporal server is a gRPC workflow server that clients and SDK workers connect to, not a web application serving HTTP on one port."
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies scripts/sh/entrypoint.sh, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ALPINE_TAG. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 5,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07956432,
+        "promptTokens": 16562,
+        "completionTokens": 706
+      },
+      "latencyMs": 9741
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "port",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "healthPath",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      },
+      {
+        "id": "q4",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 9742,
+    "questions": 4,
+    "generatedAt": "2026-10-31T07:28:24.774Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02524104,
+      "promptTokens": 4924,
+      "completionTokens": 290
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "Temporal server is a gRPC workflow server that clients and SDK workers connect to, not a web application serving HTTP on one port.",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "decision": "block",
+      "evidence": [
+        {
+          "line": 64,
+          "path": "README.md",
+          "quote": "This repository contains the source code of the Temporal server. To implement Workflows, Activities and Workers, use one of the [supported languages](https://docs.temporal.io/dev-guide/)."
+        },
+        {
+          "line": 24,
+          "path": "README.md",
+          "quote": "The Temporal server executes units of application logic called Workflows in a resilient manner that automatically handles intermittent failures, and retries failed operations."
+        },
+        {
+          "line": 14,
+          "path": "docker/targets/server.Dockerfile",
+          "quote": "COPY --chmod=755 ./build/${TARGETARCH}/temporal-server /usr/local/bin/"
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 4425,
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "port-unresolved",
+      "title": "Tell Deployz which port your app listens on",
+      "fixClass": "SETTING",
+      "technicalEvidence": "No port was found in the Dockerfile (EXPOSE or ENV PORT), an env file, a compose file, or a process.env.PORT default in source.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "health-check",
+      "title": "Give Deployz a way to check your app",
+      "fixClass": "SETTING",
+      "technicalEvidence": "No health endpoint or container health check was found (no /health-style route, no HEALTHCHECK instruction).",
+      "confidence": "likely"
+    },
+    {
+      "id": "migration-command-needs-input",
+      "title": "Choose how Deployz runs database migrations",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "The AI Analysis could not tell how this app migrates its database.",
+      "confidence": "needs_confirmation"
+    },
+    {
+      "id": "final-review-unsupported",
+      "title": "Is not a web application",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Final review: Temporal server is a gRPC workflow server that clients and SDK workers connect to, not a web application serving HTTP on one port. Evidence: README.md:64 \"This repository contains the source code of the Temporal server. To implement Workflows, Activities and Workers, use one of the [supported languages](https://docs.temporal.io/dev-guide/).\"; README.md:24 \"The Temporal server executes units of application logic called Workflows in a resilient manner that automatically handles intermittent failures, and retries failed operations.\"; docker/targets/server.Dockerfile:14 \"COPY --chmod=755 ./build/${TARGETARCH}/temporal-server /usr/local/bin/\".",
+      "confidence": "likely"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "id": "new-116",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Monica is a Laravel web app on PostgreSQL/MySQL with optional search services, so deploying with repository changes is a reasonable outcome.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6859,
+      "completionTokens": 78,
+      "costUsd": 0.02870604
+    },
+    "latencyMs": 2966
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares MEILISEARCH_URL in .env.example; TYPESENSE_HOST in .env.example. Deployz did not find how the application uses it.",
+        "verdict": "stands",
+        "reason": "The shown lines do not include the MEILISEARCH_URL or TYPESENSE_HOST settings or a scout driver setting that would prove the search engines are optional, so the vendor should confirm whether production needs them.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7069,
+      "completionTokens": 109,
+      "costUsd": 0.015228
+    },
+    "latencyMs": 143617
+  }
+}

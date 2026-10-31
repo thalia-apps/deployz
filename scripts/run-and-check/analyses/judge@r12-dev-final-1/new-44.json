@@ -1,0 +1,50 @@
+{
+  "id": "new-44",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Uptime Kuma can store its data in MySQL through the UPTIME_KUMA_DB_* settings, so the outcome of deployable with changes stands.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6614,
+      "completionTokens": 175,
+      "costUsd": 0.02965644
+    },
+    "latencyMs": 4011
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume ./data:/app/data (compose.yaml uptime-kuma)",
+        "verdict": "stands",
+        "reason": "Uptime Kuma keeps its database and settings in /app/data by default, and none of the shown lines selects an external database that would replace that directory.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5842,
+      "completionTokens": 84,
+      "costUsd": 0.012524
+    },
+    "latencyMs": 131107
+  }
+}

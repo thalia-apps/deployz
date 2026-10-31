@@ -1,0 +1,185 @@
+{
+  "id": "new-218",
+  "commit": "ca1a3adaa616a8fe513762b7886bce72ac16bdf3",
+  "analyser": "ai@r12-dev",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": null
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: The only Dockerfiles are for development or a template (distribution/docker/src/docker/Dockerfile, test/fixtures/azure-fixture/Dockerfile, test/fixtures/gcs-fixture/Dockerfile). Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: The only Dockerfiles are for development or a template (distribution/docker/src/docker/Dockerfile, test/fixtures/azure-fixture/Dockerfile, test/fixtures/gcs-fixture/Dockerfile). Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 4,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0928818,
+        "promptTokens": 17695,
+        "completionTokens": 1152
+      },
+      "latencyMs": 14438
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "dockerfile",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "port",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": "/tini -- /usr/local/bin/docker-entrypoint.sh opensearchwrapper",
+        "answer": "value",
+        "reasons": [
+          "it is not the image CMD or ENTRYPOINT, or a script that the CMD runs"
+        ],
+        "subject": "startCommand",
+        "decision": "rules"
+      },
+      {
+        "id": "q4",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "healthPath",
+        "decision": "rules"
+      },
+      {
+        "id": "q5",
+        "value": "datastore",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 14440,
+    "questions": 5,
+    "generatedAt": "2026-10-31T07:28:36.188Z",
+    "failedChecks": 1,
+    "promptVersion": 20
+  },
+  "judge": {
+    "reason": "not_deployable",
+    "status": "skipped",
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "unsupported-datastore-server",
+      "title": "Is a database or message broker, not an application",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Unsupported repository: it is a datastore server that other applications connect to (distribution/packages/build.gradle:327, README.md:23), not a web application.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "container-setup",
+      "title": "Deployz doesn't know how to start your app",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "No Dockerfile was found in the repository.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "health-check",
+      "title": "Give Deployz a way to check your app",
+      "fixClass": "SETTING",
+      "technicalEvidence": "No health endpoint or container health check was found (no /health-style route, no HEALTHCHECK instruction).",
+      "confidence": "likely"
+    }
+  ]
+}

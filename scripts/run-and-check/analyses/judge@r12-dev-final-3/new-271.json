@@ -1,0 +1,75 @@
+{
+  "id": "new-271",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r11-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Kiwi TCMS is a Django web app using MariaDB/MySQL or PostgreSQL with uploads movable to S3, so the outcome DEPLOYABLE_WITH_CHANGES is right.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7587,
+      "completionTokens": 100,
+      "costUsd": 0.03202452
+    },
+    "latencyMs": 2865
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares db (mariadb:latest) in docker-compose.yml; mariadb (a Helm dependency) in helm/Chart.yaml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "The declared db service is MariaDB, a MySQL-compatible database that the app reaches through KIWI_DB_* settings, so Deployz's managed MySQL 8 can replace it.",
+        "evidence": [
+          {
+            "path": "docker-compose.yml",
+            "line": 4,
+            "quote": "image: mariadb:latest"
+          },
+          {
+            "path": "docker-compose.yml",
+            "line": 29,
+            "quote": "KIWI_DB_HOST: db"
+          },
+          {
+            "path": "Dockerfile",
+            "line": 29,
+            "quote": "pip3 install --no-cache-dir -r requirements/mariadb.txt -r requirements/postgres.txt"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      },
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume uploads:/Kiwi/uploads:Z (docker-compose.yml web)",
+        "verdict": "stands",
+        "reason": "The shown lines do not prove that user uploads in /Kiwi/uploads are stored anywhere other than local disk, so they would be lost on restart.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6700,
+      "completionTokens": 313,
+      "costUsd": 0.01653
+    },
+    "latencyMs": 143675
+  }
+}

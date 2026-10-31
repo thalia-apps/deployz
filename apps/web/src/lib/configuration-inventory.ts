@@ -7,7 +7,7 @@
 // prices itself: sizes, resources and prices are the API's.
 
 import {
-  isDisputableFinding,
+  acceptsVendorAnswer,
   type DeploymentPlan,
   type DeploymentPlanAwsResource,
   type FootprintCostEstimate,
@@ -298,11 +298,11 @@ function settingRow(row: ConfigurationRow, overrides: Partial<InventoryRow> = {}
 
 const STALE_DISPUTE_TEXT = 'The evidence changed after you marked this as not used. Check it again.';
 
-/** The row's first disputable blocking finding, and a notice when the vendor's earlier answer no longer matches it. */
+/** The row's first finding that accepts a vendor answer (a disputable blocker, or a soft finding that the final review questioned), and a notice when the vendor's earlier answer no longer matches it. */
 function addBlockerDispute(row: InventoryRow, readiness: ApplicationReadiness): void {
   const finding = row.findingIds
     .map((id) => readiness.findings.find((candidate) => candidate.id === id))
-    .find((candidate) => candidate !== undefined && candidate.blocking && isDisputableFinding(candidate.id));
+    .find((candidate) => candidate !== undefined && acceptsVendorAnswer(candidate));
   if (!finding) return;
   row.dispute = { findingId: finding.id, reason: finding.technicalEvidence, testId: `readiness-finding-dispute-${finding.id}` };
   const stale = readiness.vendorDismissedRejections?.some((entry) => entry.findingId === finding.id && entry.stale === true);

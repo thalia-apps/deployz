@@ -1,0 +1,271 @@
+{
+  "id": "new-184",
+  "commit": "3cfe56fa781acdcebb3f5a5669e7c3d18dfae90c",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "koa",
+      "dockerfilePath": "Dockerfile-postgresql"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 8000
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "BEHIND_HTTPS_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in zproject/dev_settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_MANDATORY_SECRET_CHECK",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in zproject/config.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXTERNAL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in zproject/dev_settings.py",
+            "read in zproject/computed_settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MANUAL_CONFIGURATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in zerver/middleware.py",
+            "read in zerver/checks.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PARTIAL_USERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in zproject/computed_settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in zproject/computed_settings.py",
+            "sentry requires SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHARED_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in web/server/katex_server.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ZULIP_TEST_SUITE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in zerver/checks.py",
+            "read in zproject/configured_settings.py",
+            "read in zproject/dev_settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "smtp",
+      "sentry",
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported infrastructure: a RabbitMQ client declared in pyproject.toml, and RABBITMQ_HOST is set in zproject/default_settings.py. Deployz does not host RabbitMQ."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported infrastructure: a RabbitMQ client declared in pyproject.toml, and RABBITMQ_HOST is set in zproject/default_settings.py. Deployz does not host RabbitMQ."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "NOT_DEPLOYABLE",
+  "findings": [
+    {
+      "id": "unsupported-message-queue",
+      "title": "Relies on its own message queue",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Unsupported infrastructure: a RabbitMQ client declared in pyproject.toml, and RABBITMQ_HOST is set in zproject/default_settings.py. Deployz does not host RabbitMQ.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "port-unresolved",
+      "title": "Tell Deployz which port your app listens on",
+      "fixClass": "SETTING",
+      "technicalEvidence": "No port was found in the Dockerfile (EXPOSE or ENV PORT), an env file, a compose file, or a process.env.PORT default in source.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "start-command-missing",
+      "title": "Tell Deployz how to start your app",
+      "fixClass": "SETTING",
+      "technicalEvidence": "The Dockerfile has no CMD or ENTRYPOINT instruction and no \"start\" script was found in any package.json.",
+      "confidence": "confirmed"
+    }
+  ]
+}

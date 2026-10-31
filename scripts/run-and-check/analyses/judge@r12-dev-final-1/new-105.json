@@ -1,0 +1,70 @@
+{
+  "id": "new-105",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Khoj is a single-image web app on PostgreSQL, and its sandbox, computer and search services are optional add-ons, so a contained change is enough.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6946,
+      "completionTokens": 281,
+      "costUsd": 0.03306996
+    },
+    "latencyMs": 5273
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker-compose.yml defines 3 application services (sandbox, computer, server). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "probably_wrong",
+        "reason": "The computer service is optional and only used when KHOJ_OPERATOR_ENABLED is set, and the production image runs only the gunicorn server, though the sandbox service may still need vendor confirmation.",
+        "evidence": [
+          {
+            "path": "docker-compose.yml",
+            "line": 29,
+            "quote": "# Set KHOJ_OPERATOR_ENABLED=True in the server service environment variable to enable."
+          },
+          {
+            "path": "prod.Dockerfile",
+            "line": 64,
+            "quote": "ENTRYPOINT [\"gunicorn\", \"-c\", \"gunicorn-config.py\", \"src.khoj.main:app\"]"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      },
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume khoj_computer:/home/operator (docker-compose.yml computer), volume khoj_config:/root/.khoj/ (docker-compose.yml server)",
+        "verdict": "stands",
+        "reason": "The shown lines do not prove that the /root/.khoj/ config volume holds only a cache or data replaced by a managed service.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6074,
+      "completionTokens": 313,
+      "costUsd": 0.015278
+    },
+    "latencyMs": 131181
+  }
+}

@@ -10,7 +10,7 @@
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
-import { evaluateManifestReadiness } from '@deployz/analysis';
+import { evaluateManifestReadiness, type ReadinessFinding } from '@deployz/analysis';
 import type { FetchFn } from '@deployz/api/github';
 import {
   evaluateEnvironmentSetup,
@@ -115,7 +115,8 @@ export async function openAnalyser(options: AnalyserOptions): Promise<Analyser> 
       const raw = await session.analyse({ id: recipe.id, repository, commit });
       const gate = raw.manifest ? freshApplicationGate(raw.manifest) : null;
       const buildTarget = raw.row?.detectedMetadata?.['dockerfileBuildTarget'];
-      const outcome = (raw.row?.detectedMetadata?.['readiness'] as { outcome?: unknown } | undefined)?.outcome;
+      const readiness = raw.row?.detectedMetadata?.['readiness'] as { outcome?: unknown; findings?: ReadinessFinding[] } | undefined;
+      const outcome = readiness?.outcome;
       return {
         id: recipe.id,
         commit,
@@ -129,6 +130,14 @@ export async function openAnalyser(options: AnalyserOptions): Promise<Analyser> 
         ...(outcome === 'DEPLOYABLE' || outcome === 'DEPLOYABLE_WITH_CHANGES' || outcome === 'NOT_DEPLOYABLE' ? { outcome } : {}),
         ...(raw.aiEngine ? { ai: raw.aiEngine } : {}),
         ...(raw.aiJudge ? { judge: raw.aiJudge } : {}),
+        ...(raw.aiSoftReview ? { softReview: raw.aiSoftReview } : {}),
+        ...(readiness?.findings
+          ? {
+              findings: readiness.findings
+                .filter((finding) => finding.severity === 'required')
+                .map(({ id, title, fixClass, technicalEvidence, confidence }) => ({ id, title, ...(fixClass ? { fixClass } : {}), technicalEvidence, confidence })),
+            }
+          : {}),
       };
     },
     close: () => session.close(),

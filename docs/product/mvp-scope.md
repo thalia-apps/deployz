@@ -126,6 +126,11 @@ see [`user-flows.md#who-chooses-the-aws-region`](user-flows.md#who-chooses-the-a
   disputes of allowlisted blocking findings ("not used in production"),
   which the next analysis applies while the evidence stays the same
   ([`../ai-analysis.md#vendor-disputes`](../ai-analysis.md#vendor-disputes)).
+  When a final review finds that a soft (heuristic) finding is probably
+  wrong, the finding stays and the vendor gets a "Confirm" question; the
+  vendor's "not used in production" answer decides, also for a required
+  repository change such as a volume or a loopback bind address
+  ([`../ai-analysis.md#soft-review-ask-instead-of-saying-no`](../ai-analysis.md#soft-review-ask-instead-of-saying-no)).
 - **Releases**: CodeBuild builds a commit from the application's branch into
   an immutable ECR image digest. Failed builds expose redacted log evidence
   and an on-request AI explanation.

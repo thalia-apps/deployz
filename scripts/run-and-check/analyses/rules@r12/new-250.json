@@ -1,0 +1,342 @@
+{
+  "id": "new-250",
+  "commit": "298a8857c7128a0d121e7f699dfd729f23b3966d",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": "contentlayer build && next build",
+      "context": "."
+    },
+    "web": {
+      "command": "start: next start",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "engine": "mysql"
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_URL",
+            "read in env.mjs",
+            "read in prisma/schema.prisma"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "GITHUB_ACCESS_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares GITHUB_ACCESS_TOKEN",
+            "read in env.mjs",
+            "read in app/(marketing)/page.tsx"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GITHUB_CLIENT_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares GITHUB_CLIENT_ID",
+            "read in env.mjs",
+            "read in lib/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GITHUB_CLIENT_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares GITHUB_CLIENT_SECRET",
+            "read in env.mjs",
+            "read in lib/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NEXTAUTH_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXTAUTH_SECRET",
+            "read in env.mjs"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "NEXTAUTH_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXTAUTH_URL",
+            "read in env.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_APP_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_APP_URL",
+            "read in env.mjs",
+            "read in lib/utils.ts",
+            "read in app/(marketing)/[...slug]/page.tsx",
+            "read in app/(docs)/guides/[...slug]/page.tsx",
+            "read in app/(marketing)/blog/[...slug]/page.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in components/tailwind-indicator.tsx",
+            "read in lib/db.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTMARK_ACTIVATION_TEMPLATE",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTMARK_ACTIVATION_TEMPLATE",
+            "read in env.mjs",
+            "read in lib/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "POSTMARK_API_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares POSTMARK_API_TOKEN",
+            "read in env.mjs",
+            "read in lib/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "POSTMARK_SIGN_IN_TEMPLATE",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTMARK_SIGN_IN_TEMPLATE",
+            "read in env.mjs",
+            "read in lib/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SMTP_FROM",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_FROM",
+            "read in env.mjs",
+            "read in lib/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares STRIPE_API_KEY",
+            "read in env.mjs",
+            "read in lib/stripe.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_PRO_MONTHLY_PLAN_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares STRIPE_PRO_MONTHLY_PLAN_ID",
+            "read in env.mjs",
+            "read in config/subscriptions.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares STRIPE_WEBHOOK_SECRET",
+            "read in env.mjs",
+            "read in app/api/webhooks/stripe/route.ts",
+            "stripe requires STRIPE_WEBHOOK_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "smtp"
+    ],
+    "unsupported": [
+      "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: GITHUB_ACCESS_TOKEN, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, NEXT_PUBLIC_APP_URL, POSTMARK_ACTIVATION_TEMPLATE, and 6 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses MySQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 12,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "findings": [
+    {
+      "id": "unsupported-no-dockerfile",
+      "title": "Has no Dockerfile that builds the app",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository.",
+      "confidence": "confirmed"
+    }
+  ]
+}

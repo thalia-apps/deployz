@@ -1,0 +1,176 @@
+{
+  "id": "new-297",
+  "commit": "8c032705ae78daa237cd77affcc5087ca68e3a15",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 10222
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [
+      "smtp"
+    ],
+    "unsupported": [
+      "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository.",
+      "Final review: Mail-in-a-Box is a full mail server appliance (SMTP, IMAP, DNS) that installs onto a fresh Ubuntu machine, not an HTTP web application that Deployz can run in one container."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Final review: Mail-in-a-Box is a full mail server appliance (SMTP, IMAP, DNS) that installs onto a fresh Ubuntu machine, not an HTTP web application that Deployz can run in one container."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.04050288,
+        "promptTokens": 7613,
+        "completionTokens": 523
+      },
+      "latencyMs": 7328
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 7328,
+    "questions": 2,
+    "generatedAt": "2026-10-31T06:58:41.299Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.0235224,
+      "promptTokens": 4420,
+      "completionTokens": 304
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "Mail-in-a-Box is a full mail server appliance (SMTP, IMAP, DNS) that installs onto a fresh Ubuntu machine, not an HTTP web application that Deployz can run in one container.",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "decision": "block",
+      "evidence": [
+        {
+          "line": 26,
+          "path": "README.md",
+          "quote": "Mail-in-a-Box turns a fresh Ubuntu 22.04 LTS 64-bit machine into a working mail server by installing and configuring various components."
+        },
+        {
+          "line": 32,
+          "path": "README.md",
+          "quote": "* SMTP ([postfix](http://www.postfix.org/)), IMAP ([Dovecot](http://dovecot.org/)), CardDAV/CalDAV ([Nextcloud](https://nextcloud.com/)), and Exchange ActiveSync ([z-push](http://z-push.org/)) servers"
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 4799,
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "unsupported-no-dockerfile",
+      "title": "Has no Dockerfile that builds the app",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "final-review-unsupported",
+      "title": "Is not a web application",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Final review: Mail-in-a-Box is a full mail server appliance (SMTP, IMAP, DNS) that installs onto a fresh Ubuntu machine, not an HTTP web application that Deployz can run in one container. Evidence: README.md:26 \"Mail-in-a-Box turns a fresh Ubuntu 22.04 LTS 64-bit machine into a working mail server by installing and configuring various components.\"; README.md:32 \"* SMTP ([postfix](http://www.postfix.org/)), IMAP ([Dovecot](http://dovecot.org/)), CardDAV/CalDAV ([Nextcloud](https://nextcloud.com/)), and Exchange ActiveSync ([z-push](http://z-push.org/)) servers\".",
+      "confidence": "likely"
+    }
+  ]
+}

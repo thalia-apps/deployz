@@ -1,0 +1,154 @@
+{
+  "id": "new-268",
+  "commit": "88932ba8e32b403fe3e8069b36f42751fb078264",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [ \"./scripts/entrypoint.sh\" ]",
+      "port": 5000
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "LT_DAILY_REQ_LIMIT_MULTIPLIER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LT_HOURLY_REQ_LIMIT_MULTIPLIER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LT_LOCALE_LINK_TEMPLATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/locales.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LT_POWERCYCLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LT_WEB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROMETHEUS_MULTIPROC_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_SOFTWARE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libretranslate/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VUE_ENV",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in libretranslate/static/js/vue@2.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: VUE_ENV. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE",
+  "findings": []
+}

@@ -1,0 +1,44 @@
+{
+  "id": "new-136",
+  "analyser": "judge@r12-parity-batch",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "change",
+      "verdict": "needs_changes",
+      "category": null,
+      "reason": "The Dockerfile needs a GO_VERSION build argument that Deployz does not pass, and it skips the UI build by default, so the image cannot build as-is.",
+      "evidence": [
+        {
+          "path": "docker/Dockerfile",
+          "line": 3,
+          "quote": "ARG GO_VERSION=PLEASE_PROVIDE_GO_VERSION"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 29,
+          "quote": "FROM --platform=${BUILDPLATFORM} gotify/build:${GO_VERSION}-${__TARGETPLATFORM_GO_NOTATION} AS builder"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 15,
+          "quote": "ARG BUILD_JS=0"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5044,
+      "completionTokens": 266,
+      "costUsd": 0.012748
+    },
+    "latencyMs": 167889
+  },
+  "softReview": null
+}

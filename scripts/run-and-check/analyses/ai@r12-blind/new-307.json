@@ -1,0 +1,187 @@
+{
+  "id": "new-307",
+  "commit": "e21e0c9552dc53a16ae21744e8d8025784b0eaaf",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "next build",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/usr/bin/dumb-init\", \"--\", \"python\", \"/container/entrypoint.py\"]",
+      "port": 5000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DEV_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in entrypoint.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_LOGO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in entrypoint.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_STORAGE_MANAGEMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in entrypoint.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOCKERHUB_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in update_dockerhub_description.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "DOCKERHUB_REPO",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in update_dockerhub_description.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DOCKERHUB_USERNAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in update_dockerhub_description.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/src/i18n/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: DOCKERHUB_PASSWORD, DOCKERHUB_REPO, DOCKERHUB_USERNAME. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": null,
+    "answers": [],
+    "settings": [],
+    "latencyMs": 5,
+    "questions": 0,
+    "generatedAt": "2026-10-31T07:00:03.181Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.03697848,
+      "promptTokens": 6433,
+      "completionTokens": 581
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "reason": "The Dockerfile pulls its base images from the dhi.io Docker Hardened Images registry, which normally requires an authenticated login that a Deployz build may not have, so the build may fail.",
+      "verdict": "not_sure",
+      "category": null,
+      "decision": "question",
+      "evidence": [
+        {
+          "line": 11,
+          "path": "Dockerfile",
+          "quote": "FROM dhi.io/node:24-debian13-sfw-dev@sha256:d33e9108a3a7ef728ee61f90a951dce680433a768a9a09134fd721b10f8b110b AS frontend-build-stage"
+        },
+        {
+          "line": 34,
+          "path": "Dockerfile",
+          "quote": "FROM dhi.io/debian-base:trixie-debian13-dev@sha256:cc4e05ff415ee2d83918f2af45c737983209924ef7362c53f00cfcdaa1c94326 AS backend-build-stage"
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 8601,
+    "promptVersion": 5
+  },
+  "findings": []
+}

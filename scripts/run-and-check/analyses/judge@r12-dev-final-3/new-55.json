@@ -1,0 +1,50 @@
+{
+  "id": "new-55",
+  "analyser": "judge@r12-dev-3b",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Authentik is a single-image web app on PostgreSQL with a same-image worker, and the local storage it uses can be moved to S3 as a contained change.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6489,
+      "completionTokens": 78,
+      "costUsd": 0.02724084
+    },
+    "latencyMs": 2746
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume ./data:/data (lifecycle/container/compose.yml server), volume ./custom-templates:/templates (lifecycle/container/compose.yml server), volume ./data:/data (lifecycle/container/compose.yml worker), volume ./custom-templates:/templates (lifecycle/container/compose.yml worker)",
+        "verdict": "stands",
+        "reason": "The shown files do not prove that the /data media directory and the /templates directory are moved to S3 or are otherwise unnecessary, so the vendor should confirm whether this local state is needed.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6859,
+      "completionTokens": 98,
+      "costUsd": 0.014698
+    },
+    "latencyMs": 167691
+  }
+}

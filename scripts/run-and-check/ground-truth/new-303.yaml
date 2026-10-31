@@ -1,0 +1,107 @@
+id: new-303
+repository: 0xERR0R/blocky
+commit: 501edc07a373f949452097655619f77df4e1fcb6
+summary: >
+  Blocky is a DNS proxy and ad-blocker for a local network, written in Go. Its main service is a DNS server on port 53
+  (UDP and TCP). An optional HTTP listener (ports.http, example 4000) serves a REST API, Prometheus metrics and DNS over
+  HTTPS. The root Dockerfile builds a static binary and runs it as ENTRYPOINT /app/blocky in a scratch image; the
+  configuration is a YAML file (BLOCKY_CONFIG_FILE=/app/config.yml) that is not part of the image. The cache can use
+  Redis and the query log can use PostgreSQL or MySQL, all optional.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The application is a DNS server, not an HTTP web application. Its clients are DNS resolvers on port 53 (UDP and TCP).
+    The Deployz load balancer forwards HTTPS to one HTTP port and does not carry DNS. The HTTP listener is a secondary
+    interface (metrics, REST API, DoH) and the application is useless without the DNS port.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 42, quote: "RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} make build"}
+    - {path: Dockerfile, line: 51, quote: "FROM scratch"}
+    - {path: Dockerfile, line: 80, quote: "ENTRYPOINT [\"/app/blocky\"]"}
+runtime: {accept: [go]}
+port:
+  accept: [53, 4000]
+  # The DNS port is the main service; the HTTP port 4000 is only the documented example for ports.http.
+  evidence:
+    - {path: config/config.go, line: 346, quote: "DNS ListenConfig `default:\"53\" yaml:\"dns\"`"}
+    - {path: config/config.go, line: 348, quote: "HTTP ListenConfig `yaml:\"http\"`"}
+    - {path: docs/installation.md, line: 106, quote: "docker run --name blocky -v /path/to/config.yml:/app/config.yml -p 4000:4000 -p 53:53/udp spx01/blocky"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: config/config.go, line: 346, quote: "DNS ListenConfig `default:\"53\" yaml:\"dns\"`"}
+startCommand:
+  source: image
+  accept: ["/app/blocky"]
+  evidence:
+    - {path: Dockerfile, line: 80, quote: "ENTRYPOINT [\"/app/blocky\"]"}
+    - {path: cmd/serve.go, line: 37, quote: "Short:        \"start blocky DNS server (default command)\","}
+healthPath:
+  accept: ["/api/blocking/status"]
+  # The Docker health check is a DNS query through `blocky healthcheck`, not an HTTP path. The REST API is optional.
+  evidence:
+    - {path: Dockerfile, line: 82, quote: "HEALTHCHECK --start-period=1m --timeout=3s CMD [\"/app/blocky\", \"healthcheck\"]"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: optional
+  selectBy: {}
+  evidence:
+    - {path: config/config.go, line: 290, quote: "Redis Redis `yaml:\"redis\"`"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: Dockerfile, line: 80, quote: "ENTRYPOINT [\"/app/blocky\"]"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: [/app/cache, /logs]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: Dockerfile, line: 75, quote: "COPY --from=build --chown=100:100 /seed-dir /app/cache"}
+    - {path: Dockerfile, line: 76, quote: "COPY --from=build --chown=100:100 /seed-dir /logs"}
+env:
+  required: []
+  optional: [BLOCKY_CONFIG_FILE]
+  buildTime: []
+  evidence:
+    - {path: Dockerfile, line: 78, quote: "ENV BLOCKY_CONFIG_FILE=/app/config.yml"}
+blockers:
+  expected:
+    - "Blocky is a DNS server (port 53 UDP and TCP); the load balancer carries HTTPS only, so it is not an HTTP web application"
+  mustNot:
+    - "The HTTP listener for REST API, metrics and DoH must not turn this into DEPLOYABLE: it is a secondary interface of a DNS server"
+    - "Optional Redis and the optional query-log database must not be reported as the blocker"
+    - "The missing config.yml in the image must not be reported as the blocker"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (none required)"
+    - "Is a worker needed? (no)"
+traps:
+  - "ports.http has no default and the HTTP API is off unless configured; the image exposes no HTTP port by itself (config/config.go:348)"
+  - "Port 53 is privileged: the image runs as user 100 and needs NET_BIND_SERVICE or a port above 1024 (docs/installation.md:70)"
+  - "The final image is scratch and the configuration file is not copied into it (Dockerfile:51,78)"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: 'none: DNS server on port 53 with an optional HTTP interface; not an HTTP web app', evidence: 'README.md:20; config/config.go:346-348'}
+  - {field: all, change: verified, evidence: 15 citations checked}

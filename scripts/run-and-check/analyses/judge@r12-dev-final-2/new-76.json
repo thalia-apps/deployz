@@ -1,0 +1,50 @@
+{
+  "id": "new-76",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Mattermost runs on PostgreSQL with S3 file storage, so writing a Dockerfile that builds this source is a contained change.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6445,
+      "completionTokens": 299,
+      "costUsd": 0.0314424
+    },
+    "latencyMs": 6841
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /mattermost/data (server/build/Dockerfile), VOLUME /mattermost/config (server/build/Dockerfile), VOLUME /mattermost/plugins (server/build/Dockerfile), VOLUME /mattermost/client/plugins (server/build/Dockerfile)",
+        "verdict": "stands",
+        "reason": "The Dockerfile declares volumes for data, config and plugins, and no shown line sets the file storage driver to S3 or moves the config and plugins off the local disk, so the finding holds.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5486,
+      "completionTokens": 99,
+      "costUsd": 0.011962
+    },
+    "latencyMs": 143247
+  }
+}

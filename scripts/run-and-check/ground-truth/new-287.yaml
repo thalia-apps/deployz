@@ -1,0 +1,124 @@
+id: new-287
+repository: Pushword/Pushword
+commit: f8222d92547ebdf5f4a8a0a1596ee530e402cc49
+summary: >
+  Pushword is a Symfony (PHP) CMS, published as a monorepo of about 20 Composer packages. The repository root is a
+  development monorepo, not a deployable site: a site is made with `composer create-project pushword/new`. The
+  packages/dev-app directory is the Symfony application used for development and tests (DATABASE_URL defaults to SQLite
+  in var/app.db). packages/dev-app/docker-skeleton holds a FrankenPHP Dockerfile (stages pushword_base, pushword_dev,
+  pushword_prod) and compose files that `pw:docker:init` copies into a project; the Dockerfile copies composer.* and a
+  Caddyfile that do not exist next to it. The database is SQLite by default, with PostgreSQL through DATABASE_URL
+  (pdo_pgsql is installed in the image and a PostgreSQL compose overlay exists). The schema is created by
+  `doctrine:schema:update --force` in the entrypoint. Uploaded media go to the local directory media/ (Flysystem local
+  adapter).
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The CMS is one HTTP application (FrankenPHP serving public/ on port 80) with PostgreSQL support through DATABASE_URL
+    and no Redis or worker. But the repository has no Dockerfile that builds an application from the repository: the
+    only Dockerfile is a template in docker-skeleton that needs a project's composer.json, Caddyfile and sources
+    around it. The uploaded media and the generated image derivatives are written to local directories through the
+    Flysystem local adapter only, so on stateless containers they are lost and an S3 adapter must be configured in the
+    repository. A contained change is needed: a Dockerfile at the dev-app level (or a generated project) and the media
+    storage moved to S3.
+dockerfile:
+  accept: []
+  reject:
+    - {path: packages/dev-app/docker-skeleton/Dockerfile, reason: "template copied into a project by pw:docker:init; its COPY steps need composer.* and a Caddyfile that are not in docker-skeleton"}
+  target: null
+  context: .
+  evidence:
+    - {path: packages/dev-app/docker-skeleton/Dockerfile, line: 3, quote: "# Pushword on FrankenPHP. Copied into your project by `php bin/console pw:docker:init`."}
+    - {path: packages/dev-app/docker-skeleton/Dockerfile, line: 42, quote: "COPY --link Caddyfile /etc/frankenphp/Caddyfile"}
+    - {path: packages/dev-app/docker-skeleton/Dockerfile, line: 74, quote: "COPY --link composer.* symfony.* ./"}
+runtime: {accept: [php]}
+port:
+  accept: [80]
+  evidence:
+    - {path: packages/dev-app/docker-skeleton/Dockerfile, line: 47, quote: "CADDY_SERVER_NAME=\":80\""}
+    - {path: packages/dev-app/Caddyfile, line: 47, quote: "{$CADDY_SERVER_NAME::0} {"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/dev-app/docker-skeleton/Dockerfile, line: 47, quote: "CADDY_SERVER_NAME=\":80\""}
+startCommand:
+  source: image
+  accept: ["frankenphp run --config /etc/frankenphp/Caddyfile"]
+  evidence:
+    - {path: packages/dev-app/docker-skeleton/Dockerfile, line: 50, quote: "CMD [\"frankenphp\", \"run\", \"--config\", \"/etc/frankenphp/Caddyfile\"]"}
+    - {path: packages/dev-app/docker-skeleton/Dockerfile, line: 49, quote: "ENTRYPOINT [\"docker-entrypoint\"]"}
+healthPath:
+  accept: ["/"]
+  # The image health check reads the Caddy admin /metrics on port 2019, which is not the public port.
+  evidence:
+    - {path: packages/dev-app/docker-skeleton/Dockerfile, line: 53, quote: "CMD php -r 'exit(false === @file_get_contents(\"http://localhost:2019/metrics\") ? 1 : 0);'"}
+database:
+  status: required
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: "postgresql://<user>:<password>@<host>:5432/<db>?serverVersion=16&charset=utf8"}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: packages/dev-app/.env, line: 5, quote: "DATABASE_URL=\"sqlite:///%kernel.project_dir%/var/app.db\""}
+    - {path: packages/dev-app/docker-skeleton/compose.postgresql.yaml, line: 8, quote: "DATABASE_URL: postgresql://pushword:${POSTGRES_PASSWORD:-pushword}@postgres:5432/pushword?serverVersion=17&charset=utf8"}
+    - {path: packages/dev-app/docker-skeleton/Dockerfile, line: 36, quote: "pdo_pgsql \\"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: packages/dev-app/docker-skeleton/docker/docker-entrypoint.sh, line: 28, quote: "php bin/console doctrine:schema:update --force --no-interaction"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/app/media, /app/public/media, /app/static]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: packages/core/src/Resources/config/packages/flysystem.php, line: 12, quote: "'directory' => '%pw.media_dir%',"}
+    - {path: packages/core/src/Resources/config/packages/flysystem.php, line: 17, quote: "'directory' => '%pw.media_cache_dir%',"}
+    - {path: packages/dev-app/docker-skeleton/compose.prod.yaml, line: 25, quote: "- media:/app/media"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL; the default is a SQLite file in var/"}
+    - {name: APP_SECRET, secret: true, buildTime: false, note: "Symfony secret; the .env value is a public test value"}
+  optional: [APP_ENV, CADDY_SERVER_NAME, PUSHWORD_ADMIN_EMAIL, PUSHWORD_ADMIN_PASSWORD, MAILER_DSN, LOCK_DSN]
+  buildTime: []
+  evidence:
+    - {path: packages/dev-app/.env, line: 4, quote: "APP_SECRET=pushword-skeleton-secret"}
+    - {path: packages/dev-app/.env, line: 6, quote: "MAILER_DSN=\"null://null\""}
+    - {path: packages/dev-app/docker-skeleton/compose.prod.yaml, line: 19, quote: "PUSHWORD_ADMIN_EMAIL: ${PUSHWORD_ADMIN_EMAIL:-admin@example.tld}"}
+blockers:
+  expected:
+    - "No Dockerfile builds a deployable application from this repository; the Dockerfile is a project template"
+    - "Uploaded media and image derivatives are written to local directories only"
+  mustNot:
+    - "SQLite as the default must not block: DATABASE_URL selects PostgreSQL"
+    - "The 20 packages under packages/ must not be read as several application services"
+    - "The Caddy server inside FrankenPHP is the web server of the one process; it is not a second service"
+vendorQuestions:
+  legitimate:
+    - "Which admin email and password? (PUSHWORD_ADMIN_EMAIL, PUSHWORD_ADMIN_PASSWORD, read on the first boot)"
+  unnecessary:
+    - "Is Redis or a worker needed? (no)"
+traps:
+  - "The root of the repository is a development monorepo; its composer.json is not a site (README.md:23 creates a site with composer create-project pushword/new)"
+  - "CADDY_SERVER_NAME set to a domain makes Caddy get its own TLS certificate; behind an ALB it must stay :80 (packages/dev-app/Caddyfile:47)"
+  - "The image health check uses the Caddy admin port 2019, not the public port (Dockerfile:53)"
+  - "The first boot creates a super admin with a random one-time password printed to the log when PUSHWORD_ADMIN_PASSWORD is empty (docker-entrypoint.sh:46-58)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'accept none: the only Dockerfile is a template that needs files from a generated project', evidence: 'packages/dev-app/docker-skeleton/Dockerfile:3,42,74'}
+  - {field: storage, change: 'required: media on the Flysystem local adapter only, so S3 needs a repository change', evidence: 'packages/core/src/Resources/config/packages/flysystem.php:12,17'}
+  - {field: all, change: verified, evidence: 24 citations checked}

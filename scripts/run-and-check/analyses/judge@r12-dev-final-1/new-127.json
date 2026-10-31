@@ -1,0 +1,50 @@
+{
+  "id": "new-127",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "The Laravel app can use managed MySQL or PostgreSQL, and Meilisearch appears to be an optional search add-on, so contained changes suffice.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7603,
+      "completionTokens": 203,
+      "costUsd": 0.03412728
+    },
+    "latencyMs": 4819
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares db (docker.io/library/mariadb:12.0) in docker-compose.production.yml; meilisearch (docker.io/getmeili/meilisearch:v1.16) in docker-compose.production.yml. Deployz did not find how the application uses it.",
+        "verdict": "stands",
+        "reason": "The production compose file declares MariaDB, which could map to managed MySQL, but it also declares Meilisearch, which Deployz does not provide, and none of the shown lines prove that search works without it.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6677,
+      "completionTokens": 101,
+      "costUsd": 0.014364
+    },
+    "latencyMs": 130879
+  }
+}

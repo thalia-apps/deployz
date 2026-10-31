@@ -1,0 +1,44 @@
+{
+  "id": "new-110",
+  "analyser": "judge@r12-parity-batch",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "no_application",
+      "reason": "The Dockerfile copies only the docker/ folder and plugins onto a prebuilt Kestra base image and runs no build of this source, so the image may be a released product image rather than this repository's application.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 1,
+          "quote": "ARG BASE_IMAGE=\"ghcr.io/kestra-io/kestra-base:latest-slim\""
+        },
+        {
+          "path": "Dockerfile",
+          "line": 6,
+          "quote": "COPY --chown=kestra:kestra docker /"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 17,
+          "quote": "CMD [\"--help\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5010,
+      "completionTokens": 232,
+      "costUsd": 0.01234
+    },
+    "latencyMs": 167667
+  },
+  "softReview": null
+}

@@ -1,0 +1,50 @@
+{
+  "id": "new-202",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Grist can store its SQLite documents in S3 through its external storage setting, so contained changes can make it run and DEPLOYABLE_WITH_CHANGES is not too lenient.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6437,
+      "completionTokens": 89,
+      "costUsd": 0.02725272
+    },
+    "latencyMs": 3604
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-persistent-volume",
+        "findingEvidence": "Unsupported storage: the app declares durable local state (GRIST_DATA_DIR=/persist/docs (Dockerfile)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory.",
+        "verdict": "stands",
+        "reason": "Grist stores each document as a SQLite file in GRIST_DATA_DIR, and none of the shown lines set up S3 or another external store for those documents, so they would be lost on every restart.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5507,
+      "completionTokens": 100,
+      "costUsd": 0.012014
+    },
+    "latencyMs": 130306
+  }
+}

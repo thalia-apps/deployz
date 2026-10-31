@@ -1,0 +1,50 @@
+{
+  "id": "new-176",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Cognee can use PostgreSQL with pgvector and Neo4j or external graph settings, so the outcome with changes is not too lenient.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7004,
+      "completionTokens": 75,
+      "costUsd": 0.02922084
+    },
+    "latencyMs": 2868
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume cognee_system:/cognee-storage/system (docker-compose.yml cognee), volume cognee_data:/cognee-storage/data (docker-compose.yml cognee)",
+        "verdict": "stands",
+        "reason": "The shown lines do not prove that the data and system directories are replaced by managed services, because the compose file defaults to embedded SQLite and local storage, and no shown setting selects S3 or an external graph or vector store for them.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7492,
+      "completionTokens": 108,
+      "costUsd": 0.016064
+    },
+    "latencyMs": 143030
+  }
+}

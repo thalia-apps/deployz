@@ -1,0 +1,119 @@
+id: new-306
+repository: Sync-in/server
+commit: 00b22a44ca492ffbcdb480948398184414163cf9
+summary: >
+  Sync-in is a self-hosted file storage, synchronization and collaboration platform (NestJS backend, Angular frontend,
+  WebDAV, sync clients). The root Dockerfile builds the app from source with npm and runs it on port 8080 through an
+  entrypoint that waits for the database, runs the migrations and then starts `node server/main.js`. The database is
+  MySQL or MariaDB (mysql.url, required); the example compose file uses MariaDB 11. All user files are stored as normal
+  files in applications.files.dataPath, which the image sets to /app/data. There is no S3 or other object-store option.
+  Optional document editors (Collabora, OnlyOffice, Euro-Office, draw.io) are separate containers.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The product is a file platform whose core data (the files of the users, with quotas, trash and indexes) lives on the
+    local file system in dataPath. The README says it keeps files readable on the filesystem. The configuration has no S3
+    or object-store option, Deployz has no persistent volume, and Fargate task storage is ephemeral. The MySQL database
+    alone holds only the metadata. Core data only on local disk makes the repository not deployable, even though the
+    database part fits Deployz.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 5, quote: "RUN npm ci && \\"}
+    - {path: Dockerfile, line: 26, quote: "EXPOSE 8080"}
+    - {path: Dockerfile, line: 29, quote: "ENTRYPOINT [\"./entrypoint.sh\"]"}
+    - {path: Dockerfile, line: 30, quote: "CMD [\"./sync-in-server.sh\"]"}
+runtime: {accept: [node]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: Dockerfile, line: 26, quote: "EXPOSE 8080"}
+    - {path: environment/environment.dist.yaml, line: 5, quote: "port: 8080"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: environment/environment.dist.yaml, line: 3, quote: "host: 0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["./sync-in-server.sh", "node server/main.js"]
+  evidence:
+    - {path: Dockerfile, line: 30, quote: "CMD [\"./sync-in-server.sh\"]"}
+    - {path: scripts/docker-sync-in-server.sh, line: 60, quote: "exec node server/main.js"}
+healthPath:
+  accept: ["/healthz/ready"]
+  evidence:
+    - {path: Dockerfile, line: 25, quote: "ENV SYNC_IN_HEALTHCHECK_URL=http://127.0.0.1:8080/healthz/ready"}
+database:
+  status: required
+  engines: [mysql]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {SYNCIN_MYSQL_URL: "mysql://<user>:<password>@<host>:3306/<db>"}
+  connectionVars: [SYNCIN_MYSQL_URL]
+  evidence:
+    - {path: environment/environment.dist.yaml, line: 40, quote: "url: 'mysql://root:MySQLRootPassword@localhost:3306/database'"}
+    - {path: docker/docker-compose.yaml, line: 39, quote: "image: mariadb:11"}
+    - {path: scripts/docker-sync-in-server.sh, line: 14, quote: "if OUTPUT=$(node server/infrastructure/database/scripts/check-db.js 2>&1); then"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: scripts/docker-sync-in-server.sh, line: 35, quote: "if ! node server/infrastructure/database/scripts/migrate.js; then"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: scripts/docker-sync-in-server.sh, line: 60, quote: "exec node server/main.js"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/app/data]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: environment/environment.dist.yaml, line: 345, quote: "dataPath: /home/sync-in"}
+    - {path: scripts/docker-entrypoint.sh, line: 23, quote: "export SYNCIN_APPLICATIONS_FILES_DATAPATH=/app/data"}
+    - {path: docker/docker-compose.yaml, line: 25, quote: "- data:/app/data"}
+env:
+  required:
+    - {name: SYNCIN_MYSQL_URL, secret: true, buildTime: false, note: "MySQL URL; Deployz supplies it. The environment.yaml in the compose example holds a root password for the MariaDB container"}
+    - {name: SYNCIN_AUTH_TOKEN_ACCESS_SECRET, secret: true, buildTime: false, note: "random secret for access tokens (auth.token.access.secret, required)"}
+    - {name: SYNCIN_AUTH_TOKEN_REFRESH_SECRET, secret: true, buildTime: false, note: "a different random secret for refresh tokens (auth.token.refresh.secret, required)"}
+  optional: [SYNCIN_SERVER_PUBLICURL, SYNCIN_AUTH_ENCRYPTIONKEY, INIT_ADMIN, INIT_ADMIN_LOGIN, INIT_ADMIN_PASSWORD, PUID, PGID, FORCE_PERMISSIONS]
+  buildTime: []
+  evidence:
+    - {path: docker/environment.yaml, line: 6, quote: "url: 'mysql://root:MySQLRootPassword@mariadb:3306/sync_in'"}
+    - {path: docker/environment.yaml, line: 14, quote: "# Required. Use a long, randomly generated secret."}
+    - {path: docker/environment.yaml, line: 17, quote: "# Required. Use a different long, randomly generated secret."}
+    - {path: docker/docker-compose.yaml, line: 16, quote: "- INIT_ADMIN"}
+blockers:
+  expected:
+    - "All user files are stored on the local file system in dataPath (/app/data); there is no S3 or object-store option and Fargate task storage is ephemeral"
+  mustNot:
+    - "MariaDB or MySQL must not be reported as the blocker: Deployz provides MySQL 8"
+    - "The optional document editors (Collabora, OnlyOffice, Euro-Office, draw.io) must not be read as required services"
+    - "docker/docker-compose.yaml (the app plus MariaDB) must not be read as several application services"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (MySQL or MariaDB through mysql.url)"
+    - "Is a worker or Redis needed? (no)"
+    - "Which port? (8080)"
+traps:
+  - "The docker entrypoint exports SYNCIN_APPLICATIONS_FILES_DATAPATH=/app/data, so the data path is a fixed local directory in the image (scripts/docker-entrypoint.sh:23)"
+  - "The first start (no .init file) waits for the database, runs the migration and may create the admin user; the .init marker is a file in /app, which is lost with the task (scripts/docker-sync-in-server.sh:4,35,48)"
+  - "Database and secrets are set by a YAML file or by SYNCIN_* variables, not by one DATABASE_URL (backend/src/configuration/config.loader.ts:65)"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: 'none: MySQL fits Deployz, but the files of the users are on local disk with no S3 option, which is the durable local state case (new-267)', evidence: 'environment/environment.dist.yaml:345; scripts/docker-entrypoint.sh:23'}
+  - {field: all, change: verified, evidence: 22 citations checked}

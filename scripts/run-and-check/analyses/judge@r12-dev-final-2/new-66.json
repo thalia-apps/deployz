@@ -1,0 +1,44 @@
+{
+  "id": "new-66",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Appsmith runs several application services together under supervisord (a Java server, the editor client, an RTS Node server and an MCP server), and Deployz runs only one web process per image.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 34,
+          "quote": "COPY ./app/client/packages/rts/dist rts/"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 37,
+          "quote": "COPY ./app/client/packages/mcp/dist mcp/"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 68,
+          "quote": "CMD [\"/usr/bin/supervisord\", \"-n\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5819,
+      "completionTokens": 226,
+      "costUsd": 0.02751804
+    },
+    "latencyMs": 6068
+  },
+  "softReview": null
+}

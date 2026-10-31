@@ -1,0 +1,66 @@
+{
+  "id": "new-238",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Fathom Lite is a single Go web app that supports PostgreSQL or MySQL by setting, so the outcome DEPLOYABLE_WITH_CHANGES is not too lenient.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5523,
+      "completionTokens": 93,
+      "costUsd": 0.02371248
+    },
+    "latencyMs": 3012
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares mysql (mysql:5) in docker-compose.yml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "The mysql service is a MySQL database that the app selects with the FATHOM_DATABASE_DRIVER setting, and Deployz provides managed MySQL or PostgreSQL for it.",
+        "evidence": [
+          {
+            "path": "docker-compose.yml",
+            "line": 11,
+            "quote": "- \"FATHOM_DATABASE_DRIVER=mysql\""
+          },
+          {
+            "path": "docker-compose.yml",
+            "line": 23,
+            "quote": "image: \"mysql:5\""
+          },
+          {
+            "path": ".env.example",
+            "line": 3,
+            "quote": "FATHOM_DATABASE_DRIVER="
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4769,
+      "completionTokens": 228,
+      "costUsd": 0.011818
+    },
+    "latencyMs": 143360
+  }
+}

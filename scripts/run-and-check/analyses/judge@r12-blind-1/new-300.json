@@ -1,0 +1,50 @@
+{
+  "id": "new-300",
+  "analyser": "judge@r12-blind-1",
+  "from": "ai@r12-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Uploads (avatars, backgrounds, attachments) can move to S3 with a contained change while core data stays in PostgreSQL.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5232,
+      "completionTokens": 73,
+      "costUsd": 0.011194
+    },
+    "latencyMs": 138696
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /app/public/user-avatars (Dockerfile), VOLUME /app/public/project-background-images (Dockerfile), VOLUME /app/private/attachments (Dockerfile), volume user-avatars:/app/public/user-avatars (docker-compose.yml 4gaBoards), volume project-background-images:/app/public/project-background-images (docker-compose.yml 4gaBoards), volume attachments:/app/private/attachments (docker-compose.yml 4gaBoards)",
+        "verdict": "stands",
+        "reason": "The production image declares volumes for user avatars, project background images and attachments, and no shown setting moves these uploads to S3, so they would be lost on every restart.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5452,
+      "completionTokens": 88,
+      "costUsd": 0.011784
+    },
+    "latencyMs": 138695
+  }
+}

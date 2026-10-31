@@ -1,0 +1,115 @@
+id: new-286
+repository: matrix-construct/tuwunel
+commit: 8ed90a27d6f49c93a9713a46e071fb03042fa308
+summary: >
+  Tuwunel is a Matrix homeserver written in Rust (a conduwuit fork). It serves the Matrix client and federation HTTP
+  APIs and stores all its state, including media, in an embedded RocksDB database in one directory (database_path,
+  default /var/lib/tuwunel). There is no PostgreSQL or MySQL backend, no S3 backend for the main data, and no Redis.
+  The repository has no root Dockerfile; docker/ holds Docker Bake building blocks (Dockerfile.cargo, .install, .source
+  and others) that are layers of one build graph, not one buildable file. The published image jevolk/tuwunel is built
+  from them with docker/bake.sh.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The core data (accounts, rooms, events, keys, media) lives only in an embedded RocksDB directory on local disk.
+    The config comment says that directory is the only place where the server saves data. There is no option to use
+    PostgreSQL, MySQL or S3 for it. Fargate containers have no persistent volume in the Deployz model, so every task
+    replacement would lose the server identity and all data. The Dockerfiles are Bake layers that need the bake files,
+    not a single file that builds the app.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/Dockerfile.install, reason: "one layer of the Bake graph; copies a binary built by an earlier target (COPY --from=bins)"}
+    - {path: docker/Dockerfile.cargo, reason: "dependency build layer (cargo-chef); not a runnable image"}
+    - {path: docker/Dockerfile.source, reason: "source layer of the Bake graph; adds the source to an input target"}
+    - {path: docker/Dockerfile.rocksdb, reason: "builds the RocksDB library layer"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile.install, line: 3, quote: "FROM input AS install"}
+    - {path: docker/Dockerfile.install, line: 13, quote: "COPY --from=bins $src_path $dst_path"}
+    - {path: docker/Dockerfile.source, line: 3, quote: "FROM input AS source"}
+    - {path: docker/README.md, line: 8, quote: "All Docker images for the project are built here. All images are"}
+runtime: {accept: [rust]}
+port:
+  accept: [8008, 6167]
+  evidence:
+    - {path: src/core/config/mod.rs, line: 5864, quote: "fn default_port() -> ListeningPort { ListeningPort { ports: Left(8008) } }"}
+    - {path: docs/deploying/docker-compose.yml, line: 21, quote: "TUWUNEL_PORT: 6167"}
+bindAllInterfaces:
+  value: true
+  # The default address is loopback; the compose example sets TUWUNEL_ADDRESS to 0.0.0.0.
+  evidence:
+    - {path: docs/deploying/docker-compose.yml, line: 29, quote: "TUWUNEL_ADDRESS: 0.0.0.0"}
+startCommand:
+  source: explicit
+  accept: ["tuwunel"]
+  evidence:
+    - {path: docker/Dockerfile.install, line: 12, quote: "ENV dst_path=\"${install_prefix}/bin/tuwunel\""}
+healthPath:
+  accept: ["/_matrix/client/versions"]
+  evidence:
+    - {path: src/api/client/versions.rs, line: 13, quote: "/// # `GET /_matrix/client/versions`"}
+database:
+  status: required
+  engines: [rocksdb]
+  default: rocksdb
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: src/core/config/mod.rs, line: 136, quote: "/// This is the only directory where tuwunel will save its data, including"}
+    - {path: src/core/config/mod.rs, line: 141, quote: "pub database_path: PathBuf,"}
+    - {path: Cargo.toml, line: 442, quote: "[workspace.dependencies.rust-rocksdb]"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: docs/deploying/docker-compose.yml, line: 9, quote: "# The first boot after an upgrade can run a database migration that must not be"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/var/lib/tuwunel]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: src/core/config/mod.rs, line: 5858, quote: "fn default_database_path() -> PathBuf { \"/var/lib/tuwunel\".to_owned().into() }"}
+    - {path: docs/deploying/docker-compose.yml, line: 16, quote: "- db:/var/lib/tuwunel"}
+env:
+  required:
+    - {name: TUWUNEL_SERVER_NAME, secret: false, buildTime: false, note: "the Matrix server name; it cannot change after the first start"}
+  optional: [TUWUNEL_DATABASE_PATH, TUWUNEL_PORT, TUWUNEL_ADDRESS, TUWUNEL_ALLOW_REGISTRATION, TUWUNEL_REGISTRATION_TOKEN, TUWUNEL_ALLOW_FEDERATION, TUWUNEL_TRUSTED_SERVERS, TUWUNEL_CONFIG]
+  buildTime: []
+  evidence:
+    - {path: docs/deploying/docker-compose.yml, line: 19, quote: "TUWUNEL_SERVER_NAME: your.server.name # EDIT THIS"}
+    - {path: src/core/config/mod.rs, line: 76, quote: "pub(crate) const ENV_PREFIXES: [&str; 3] = [\"CONDUIT_\", \"CONDUWUIT_\", \"TUWUNEL_\"];"}
+blockers:
+  expected:
+    - "All server data, including media, is only in an embedded RocksDB directory on local disk; there is no PostgreSQL, MySQL or S3 option"
+  mustNot:
+    - "The existence of Dockerfiles under docker/ must not make the case deployable: they are layers of a Bake graph"
+    - "The published image jevolk/tuwunel is not application source in this repository and must not be used as the answer"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (RocksDB only, local disk)"
+traps:
+  - "docker/Dockerfile.* are Docker Bake layers; none builds the application alone (docker/Dockerfile.install:13)"
+  - "The server name is part of the data identity; a task replacement with an empty directory creates a new server with no history"
+  - "Only the compose example sets the listen address to 0.0.0.0; the default is loopback"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: 'NOT_DEPLOYABLE: the core data is only a local RocksDB directory with no remote backend', evidence: 'src/core/config/mod.rs:136,141,5858'}
+  - {field: dockerfile, change: 'none: no Dockerfile in the repository builds the whole app alone', evidence: 'docker/Dockerfile.install:3,13'}
+  - {field: all, change: verified, evidence: 19 citations checked}

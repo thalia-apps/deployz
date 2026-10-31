@@ -1,0 +1,44 @@
+{
+  "id": "new-136",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "change",
+      "verdict": "needs_changes",
+      "category": null,
+      "reason": "The Dockerfile needs a GO_VERSION build argument that has no usable default (its placeholder gives an invalid base image tag), and by default it skips the UI build, so the image cannot be built from the source archive without a repository change.",
+      "evidence": [
+        {
+          "path": "docker/Dockerfile",
+          "line": 3,
+          "quote": "ARG GO_VERSION=PLEASE_PROVIDE_GO_VERSION"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 29,
+          "quote": "FROM --platform=${BUILDPLATFORM} gotify/build:${GO_VERSION}-${__TARGETPLATFORM_GO_NOTATION} AS builder"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 15,
+          "quote": "ARG BUILD_JS=0"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5070,
+      "completionTokens": 287,
+      "costUsd": 0.0257598
+    },
+    "latencyMs": 4569
+  },
+  "softReview": null
+}

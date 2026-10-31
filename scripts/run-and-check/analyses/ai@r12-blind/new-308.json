@@ -1,0 +1,530 @@
+{
+  "id": "new-308",
+  "commit": "b0e79bc0be98b4f680938d0d14d67c8474ad4fcf",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "rust",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/usr/bin/panel-rs\"]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AIO_BASE_WINGS_CONFIGURATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_BLOCKED_CIDRS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_BLOCKED_CIDRS",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_DEBUG",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_DISABLE_EXTENSION_MANAGEMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_DISABLE_EXTENSION_MANAGEMENT",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_DISABLE_FRONTEND",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_DISABLE_FRONTEND",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_ENABLE_WINGS_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_ENABLE_WINGS_PROXY",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_ENCRYPTION_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares APP_ENCRYPTION_KEY",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "APP_LOG_DIRECTORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_PRIMARY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_PRIMARY",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_REQUEST_LOG_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_REQUEST_LOG_LIMIT",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_TRUSTED_PROXIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_USE_DECRYPTION_CACHE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_USE_DECRYPTION_CACHE",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_USE_INTERNAL_CACHE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_USE_INTERNAL_CACHE",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BIND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_MIGRATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_MIGRATE",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_URL",
+            "read in shared/src/env.rs",
+            "read in database/src/globals/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_URL_PRIMARY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_DIRECTORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in database/src/globals/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in database/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PORT",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_KEY_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SENTINELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SENTINEL_CLUSTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_URL",
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_TRACING_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in shared/src/env.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPERVISOR_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bins/heavy-supervisor/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05285016,
+        "promptTokens": 11271,
+        "completionTokens": 415
+      },
+      "latencyMs": 6112
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "healthPath",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 6113,
+    "questions": 2,
+    "generatedAt": "2026-10-31T06:59:42.712Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02117016,
+      "promptTokens": 4846,
+      "completionTokens": 100
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "The DEPLOYABLE_WITH_CHANGES outcome already covers the Dockerfile that copies a prebuilt binary from a CI-only .docker directory, which a source-building Dockerfile would fix.",
+      "verdict": "keep",
+      "category": null,
+      "decision": "none",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "latencyMs": 2656,
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "health-check",
+      "title": "Give Deployz a way to check your app",
+      "fixClass": "SETTING",
+      "technicalEvidence": "No health endpoint or container health check was found (no /health-style route, no HEALTHCHECK instruction).",
+      "confidence": "likely"
+    },
+    {
+      "id": "migration-command-needs-input",
+      "title": "Choose how Deployz runs database migrations",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "The AI Analysis could not tell how this app migrates its database.",
+      "confidence": "needs_confirmation"
+    }
+  ]
+}

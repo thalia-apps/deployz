@@ -1,0 +1,178 @@
+{
+  "id": "new-145",
+  "commit": "d799b8faac0c81d0993f52a6a8b5cfed2902086c",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "php",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/var/www/html/startup.sh\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/health.php",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DEMO_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in login.php",
+            "read in totp.php",
+            "read in includes/header.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSSL_CONF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in includes/webpush_helper.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSRF_ALLOWLIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in includes/ssrf_helper.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TZ",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in endpoints/cronjobs/settimezone.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLOS_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in screenshots/capture_screenshots.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "WALLOS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in screenshots/capture_screenshots.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WALLOS_USERNAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in screenshots/capture_screenshots.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported database: includes/connect.php opens a SQLite database file. Deployz hosts PostgreSQL and MySQL only.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database: includes/connect.php opens a SQLite database file. Deployz hosts PostgreSQL and MySQL only."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: WALLOS_PASSWORD, WALLOS_USERNAME. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "NOT_DEPLOYABLE",
+  "findings": [
+    {
+      "id": "unsupported-database-sqlite",
+      "title": "Your database needs a supported engine",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Unsupported database: includes/connect.php opens a SQLite database file. Deployz hosts PostgreSQL and MySQL only.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "local-file-storage",
+      "title": "Files stored on local disk",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Durable local filesystem state declared: volume ./db:/var/www/html/db (docker-compose.yaml wallos), volume ./logos:/var/www/html/images/uploads/logos (docker-compose.yaml wallos)",
+      "confidence": "confirmed"
+    }
+  ]
+}

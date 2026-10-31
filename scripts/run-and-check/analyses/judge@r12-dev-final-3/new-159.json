@@ -1,0 +1,75 @@
+{
+  "id": "new-159",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Laravel invoicing app with MySQL/PostgreSQL and S3 support; the s6 supervisor split into web and worker is a contained change.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6513,
+      "completionTokens": 77,
+      "costUsd": 0.02731608
+    },
+    "latencyMs": 2913
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported container setup: docker/production/Dockerfile runs s6-overlay with a web server and a worker service (scheduler) in one container. Deployz runs one web process and declared workers as separate services.",
+        "verdict": "stands",
+        "reason": "The shown lines do not prove the bundled scheduler is disabled in production; the compose comment only describes an option, and a comment is not proof.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares database (mariadb:10) in docker/production/docker-compose.mysql.yml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "The declared service is a MariaDB/MySQL database that the app selects through DB_CONNECTION, and Deployz provides managed MySQL for it.",
+        "evidence": [
+          {
+            "path": "docker/production/docker-compose.mysql.yml",
+            "line": 9,
+            "quote": "image: mariadb:10"
+          },
+          {
+            "path": "docker/production/docker-compose.mysql.yml",
+            "line": 37,
+            "quote": "- DB_CONNECTION=mariadb"
+          },
+          {
+            "path": ".env.example",
+            "line": 10,
+            "quote": "DB_CONNECTION="
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 8171,
+      "completionTokens": 284,
+      "costUsd": 0.019182
+    },
+    "latencyMs": 143529
+  }
+}

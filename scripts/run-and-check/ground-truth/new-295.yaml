@@ -1,0 +1,151 @@
+id: new-295
+repository: opf/openproject
+commit: a2a30493dcd2e0d15c6e6fa5179779737dd5dd3f
+summary: >
+  OpenProject is a Ruby on Rails project-management application (Puma, a good_job background worker, PostgreSQL only).
+  The production Dockerfile is docker/prod/Dockerfile with several targets: `slim` (the web process, CMD
+  ./docker/prod/web, port 8080, external PostgreSQL, intended for production), `slim-bim`, and `all-in-one`
+  (supervisord with Apache, an embedded PostgreSQL, memcached and a bundled Hocuspocus server; a quick-start image).
+  The web script migrates at start when MIGRATE=true; ./docker/prod/worker runs good_job (and with --seed runs the
+  seeder first). Attachments default to /var/openproject/assets/files and switch to S3 through the fog settings in
+  environment variables. The Rails cache defaults to file_store. Collaborative editing (Hocuspocus), memcached and the
+  IMAP cron script are optional extras.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The `slim` target of docker/prod/Dockerfile builds the Rails app from the clone and runs one web process on 8080 with
+    an external PostgreSQL (DATABASE_URL). Settings alone give a working deployment: target slim, SECRET_KEY_BASE,
+    OPENPROJECT_HOST__NAME, MIGRATE=true on the web service, a second service from the same image with the command
+    ./docker/prod/worker --seed, and the OPENPROJECT_ATTACHMENTS__STORAGE=fog plus OPENPROJECT_FOG_* values for S3
+    (fog-aws is in the Gemfile). The case is not fully clear because the image needs a worker and a first-run seed, and
+    because the default attachment path is a volume; DEPLOYABLE_WITH_CHANGES is accepted for an analysis that asks for
+    S3 or a worker command as a repository change, but no code change is needed.
+dockerfile:
+  accept: [docker/prod/Dockerfile]
+  reject: [docker/dev/backend/Dockerfile, docker/ci/Dockerfile, .oss-scanner/Dockerfile]
+  target: slim
+  context: .
+  evidence:
+    - {path: docker/prod/Dockerfile, line: 121, quote: "FROM app-runtime-slim AS slim"}
+    - {path: docker/prod/Dockerfile, line: 124, quote: "EXPOSE 8080"}
+    - {path: docker/prod/Dockerfile, line: 125, quote: "CMD [\"./docker/prod/web\"]"}
+    - {path: docker/prod/Dockerfile, line: 144, quote: "FROM app-runtime AS all-in-one"}
+runtime: {accept: [ruby]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: docker/prod/Dockerfile, line: 124, quote: "EXPOSE 8080"}
+    - {path: docker/prod/web, line: 4, quote: "PORT=\"${PORT:=8080}\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/prod/web, line: 3, quote: "BIND=\"${BIND:=0.0.0.0}\""}
+startCommand:
+  source: image
+  accept: ["./docker/prod/web"]
+  evidence:
+    - {path: docker/prod/Dockerfile, line: 125, quote: "CMD [\"./docker/prod/web\"]"}
+    - {path: docker/prod/web, line: 24, quote: "exec bundle exec rails server -u puma -b $BIND -p $PORT"}
+healthPath:
+  accept: ["/health_check"]
+  # OK Computer route. With the default OPENPROJECT_HTTPS=true and HSTS on, the app redirects plain HTTP to HTTPS; set OPENPROJECT_HSTS=false so the load balancer probe is not redirected.
+  evidence:
+    - {path: config/routes.rb, line: 47, quote: "get \"/health_check\" => \"ok_computer/ok_computer#show\", check: \"web\""}
+    - {path: config/environments/production.rb, line: 93, quote: "config.force_ssl = OpenProject::Configuration.https?"}
+    - {path: config/environments/production.rb, line: 100, quote: "return true unless OpenProject::Configuration.hsts_enabled?"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: "<postgres url>"}
+  connectionVars: [DATABASE_URL, OPENPROJECT_DB_URL, OPENPROJECT_DB_SSLMODE]
+  evidence:
+    - {path: config/database.production.yml, line: 65, quote: "'url' => ENV['DATABASE_URL'],"}
+    - {path: config/database.production.yml, line: 73, quote: "adapter: postgresql"}
+    - {path: Gemfile, line: 407, quote: "gem \"pg\", \"~> 1.7.0\""}
+    - {path: docker/prod/Dockerfile, line: 147, quote: "ENV DATABASE_URL=postgres://openproject:openproject@127.0.0.1/openproject"}
+migrations:
+  mode: startup
+  accept: ["bundle exec rake db:migrate", "./docker/prod/migrate"]
+  # MIGRATE=true on the web service migrates before Puma starts. ./docker/prod/seeder migrates and seeds.
+  evidence:
+    - {path: docker/prod/web, line: 6, quote: "MIGRATE=\"${MIGRATE:=\"false\"}\""}
+    - {path: docker/prod/web, line: 17, quote: "bundle exec rake db:migrate"}
+    - {path: docker/prod/seeder, line: 10, quote: "bundle exec rake db:seed"}
+redis:
+  status: none
+  selectBy: {}
+  # redis is a Gemfile dependency of the cache group; the default cache is file_store and the all-in-one image uses memcached.
+  evidence:
+    - {path: docker/prod/Dockerfile, line: 44, quote: "ENV OPENPROJECT_RAILS__CACHE__STORE=file_store"}
+    - {path: Gemfile, line: 179, quote: "gem \"dalli\", \"~> 5.2.2\""}
+workers:
+  status: independent
+  commands: ["./docker/prod/worker", "./docker/prod/worker --seed", "bundle exec good_job start"]
+  evidence:
+    - {path: docker/prod/worker, line: 8, quote: "exec bundle exec good_job start"}
+    - {path: docker/prod/worker, line: 5, quote: "$APP_PATH/docker/prod/seeder \"$@\""}
+    - {path: Gemfile, line: 123, quote: "gem \"good_job\", \"~> 4.19.3\" # update should be done manually in sync with saas-openproject version."}
+scheduledJobs:
+  status: none
+  items: []
+  # The IMAP mail import loop in docker/prod/cron is optional and runs only when IMAP is configured.
+  evidence:
+    - {path: docker/prod/cron, line: 12, quote: "if [ \"$IMAP_ENABLED\" = \"true\" ]; then"}
+storage:
+  local: conditional
+  paths: [/var/openproject/assets]
+  s3: native
+  s3SelectBy: {OPENPROJECT_ATTACHMENTS__STORAGE: fog, OPENPROJECT_FOG_DIRECTORY: "<bucket>", OPENPROJECT_FOG_CREDENTIALS_PROVIDER: AWS, OPENPROJECT_FOG_CREDENTIALS_REGION: "<region>"}
+  # Without the fog settings attachments go to the local volume. fog-aws and aws-sdk-s3 are installed.
+  evidence:
+    - {path: docker/prod/Dockerfile, line: 43, quote: "ENV OPENPROJECT_ATTACHMENTS__STORAGE__PATH=$APP_DATA_PATH/files"}
+    - {path: docker/prod/Dockerfile, line: 127, quote: "VOLUME [\"$APP_DATA_PATH\"]"}
+    - {path: docs/installation-and-operations/installation/docker/README.md, line: 698, quote: "OPENPROJECT_ATTACHMENTS__STORAGE: \"fog\""}
+    - {path: docs/installation-and-operations/installation/docker/README.md, line: 700, quote: "OPENPROJECT_FOG_CREDENTIALS_PROVIDER: \"AWS\""}
+    - {path: config/initializers/carrierwave.rb, line: 75, quote: "unless OpenProject::Configuration.fog_credentials.empty?"}
+    - {path: Gemfile, line: 200, quote: "gem \"fog-aws\""}
+env:
+  required:
+    - {name: SECRET_KEY_BASE, secret: true, buildTime: false, note: "random value, fixed across starts; the image default OVERWRITE_ME is refused"}
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL; Deployz binds it"}
+    - {name: OPENPROJECT_HOST__NAME, secret: false, buildTime: false, note: "public host name used in links and mails"}
+    - {name: MIGRATE, secret: false, buildTime: false, note: "true on the web service so the schema is created and migrated at start"}
+  optional: [OPENPROJECT_HTTPS, OPENPROJECT_HSTS, OPENPROJECT_ATTACHMENTS__STORAGE, OPENPROJECT_FOG_DIRECTORY, OPENPROJECT_FOG_CREDENTIALS_PROVIDER, OPENPROJECT_FOG_CREDENTIALS_REGION, OPENPROJECT_FOG_CREDENTIALS_AWS__ACCESS__KEY__ID, OPENPROJECT_FOG_CREDENTIALS_AWS__SECRET__ACCESS__KEY, OPENPROJECT_COLLABORATIVE__EDITING__HOCUSPOCUS__URL, OPENPROJECT_COLLABORATIVE__EDITING__HOCUSPOCUS__SECRET, IMAP_ENABLED]
+  buildTime: []
+  evidence:
+    - {path: docker/prod/Dockerfile, line: 34, quote: "ENV SECRET_KEY_BASE=OVERWRITE_ME"}
+    - {path: docker/prod/web, line: 15, quote: "if [ \"$MIGRATE\" = \"true\" ]; then"}
+    - {path: docs/installation-and-operations/installation/docker/README.md, line: 121, quote: "-e OPENPROJECT_HOST__NAME=localhost:8080 \\"}
+blockers:
+  expected: []
+  mustNot:
+    - "The all-in-one target (supervisord, embedded PostgreSQL, Apache, bundled Hocuspocus) must not be read as the production path or as a supervisor blocker: the slim target is the web process"
+    - "The Hocuspocus collaborative-editing server is optional and must not be reported as a required second application service"
+    - "The attachments volume must not block: OPENPROJECT_ATTACHMENTS__STORAGE=fog moves files to S3 with settings only"
+    - "memcached, the cron IMAP loop and the dev and CI Dockerfiles must not be reported as required services"
+    - "The root docker-compose.yml is a development stack and must not be read as the deployment"
+vendorQuestions:
+  legitimate:
+    - "What is the public host name? (OPENPROJECT_HOST__NAME)"
+    - "Is the S3 bucket for attachments the Deployz bucket? (OPENPROJECT_FOG_* values)"
+  unnecessary:
+    - "Which database? (PostgreSQL only)"
+    - "Is Redis needed? (no)"
+    - "Which port? (8080)"
+traps:
+  - "The Dockerfile is in docker/prod and has several targets; the last target is the all-in-one image. The slim target is the one for an external database (docker/prod/Dockerfile:121)"
+  - "The all-in-one target keeps PostgreSQL data in a volume and starts Apache and supervisord; it is the quick-start image and not the production path (docker/prod/Dockerfile:144-172)"
+  - "MIGRATE defaults to false: without MIGRATE=true the schema is not created (docker/prod/web:6,15)"
+  - "The first run needs db:seed for the admin user and default data; ./docker/prod/worker --seed runs the seeder before good_job (docker/prod/worker:3-8)"
+  - "SECRET_KEY_BASE defaults to OVERWRITE_ME and the app refuses weak values (docker/prod/Dockerfile:34)"
+  - "OPENPROJECT_HTTPS is on by default and the app redirects plain HTTP; the load balancer probe needs OPENPROJECT_HSTS=false or an HTTPS forwarded header (config/environments/production.rb:93-100)"
+  - "The default Rails cache is file_store in the container, so each task has its own cache (docker/prod/Dockerfile:44)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: docker/prod/Dockerfile target slim is the web image for an external database; the other Dockerfiles are dev, CI and scanner files', evidence: 'docker/prod/Dockerfile:121,144'}
+  - {field: database / migrations, change: 'none: PostgreSQL only; MIGRATE=true migrates at start, the seeder (or the worker with --seed) seeds', evidence: 'config/database.production.yml:73; docker/prod/web:15-18; docker/prod/worker:3-6'}
+  - {field: storage, change: 'none: fog settings send attachments to S3', evidence: 'docs/installation-and-operations/installation/docker/README.md:698-703; config/initializers/carrierwave.rb:75'}
+  - {field: outcome, change: 'none: settings only, with a worker service from the same image', evidence: 'docker/prod/worker:8'}
+  - {field: all, change: verified, evidence: 34 citations checked}

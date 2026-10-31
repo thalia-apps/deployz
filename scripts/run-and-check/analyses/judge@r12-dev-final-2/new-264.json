@@ -1,0 +1,44 @@
+{
+  "id": "new-264",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r11-blind",
+  "storedOutcome": "NOT_DEPLOYABLE",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "skipped",
+    "reason": "not_deployable",
+    "promptVersion": 4
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "NOT_DEPLOYABLE",
+    "reviews": [
+      {
+        "findingId": "unsupported-database-sqlite",
+        "findingEvidence": "Unsupported database: SQLite driver better-sqlite3. Deployz hosts PostgreSQL and MySQL only; an embedded file database does not survive in the container model.",
+        "verdict": "stands",
+        "reason": "The shown files do not reveal where better-sqlite3 is used, so they do not prove that the production app avoids SQLite.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /elk/data (Dockerfile), volume ./elk-storage:/elk/data (docker-compose.yaml elk)",
+        "verdict": "stands",
+        "reason": "The production image points its storage at /elk/data on local disk and declares it as a persistent volume, and the only alternative drivers (Cloudflare or Vercel) are not storage Deployz provides.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5414,
+      "completionTokens": 168,
+      "costUsd": 0.012508
+    },
+    "latencyMs": 147562
+  }
+}

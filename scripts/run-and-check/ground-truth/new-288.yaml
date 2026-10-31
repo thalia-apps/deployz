@@ -1,0 +1,116 @@
+id: new-288
+repository: itflow-org/itflow
+commit: a7bff0c188336bebf65ae86db8fe38b13f390445
+summary: >
+  ITFlow is a PHP service-desk and documentation application for managed service providers (tickets, client
+  documentation, contracts, billing, a client portal). It needs PHP 8.2 or later with mysqli and a MariaDB or MySQL
+  database. The repository has no Dockerfile and no environment-variable configuration: the app reads one generated
+  config.php in the web root, which the web wizard (setup/index.php) or `php scripts/setup_cli.php` writes after it
+  loads db.sql. Files (client files, document images, backups) go to local directories under uploads/. Background work
+  (mail queue, email-to-ticket parser, SLA timers, nightly invoices, refreshers) is done by `php cron/cron.php`, which the
+  operator must put in a crontab to run every minute.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    Ambiguous. A reviewer can count it as a contained change: add a Dockerfile (PHP with Apache or PHP-FPM and nginx),
+    write config.php at start from environment values with scripts/setup_cli.php, run cron/cron.php in a loop as a worker
+    command, and move uploads/ to S3 in code. A reviewer can also count it as not deployable because the config file is
+    written to the container disk by a wizard, the engine is MariaDB or MySQL only, uploaded files and backups are only
+    on local disk, and the minute-by-minute cron dispatcher is a required second process. No repository code supports
+    S3 or environment configuration, so the change is larger than a Dockerfile.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 140, quote: "| **Database** | MariaDB or MySQL |"}
+    - {path: README.md, line: 141, quote: "| **Web server** | Apache with mod_php, or nginx with PHP-FPM |"}
+runtime: {accept: [php]}
+port:
+  # No Dockerfile; Apache or nginx listens on 80 by convention.
+  accept: [80, 8080]
+  evidence:
+    - {path: README.md, line: 141, quote: "| **Web server** | Apache with mod_php, or nginx with PHP-FPM |"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: README.md, line: 141, quote: "| **Web server** | Apache with mod_php, or nginx with PHP-FPM |"}
+startCommand:
+  source: explicit
+  accept: ["apache2-foreground", "php-fpm", "apache2ctl -D FOREGROUND"]
+  evidence:
+    - {path: README.md, line: 141, quote: "| **Web server** | Apache with mod_php, or nginx with PHP-FPM |"}
+healthPath:
+  accept: ["/login.php", "/"]
+  evidence:
+    - {path: index.php, line: 29, quote: "header(\"Location: /login.php\");"}
+    - {path: index.php, line: 9, quote: "header(\"Location: /setup\");"}
+database:
+  status: required
+  engines: [mysql]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {}
+  connectionVars: []
+  # The connection settings live in config.php, written by the wizard or by scripts/setup_cli.php.
+  evidence:
+    - {path: README.md, line: 140, quote: "| **Database** | MariaDB or MySQL |"}
+    - {path: setup/index.php, line: 211, quote: "if (@file_put_contents(\"../config.php\", $new_config) !== false && file_exists('../config.php')) {"}
+    - {path: scripts/setup_cli.php, line: 21, quote: "*   php setup_cli.php --host=localhost --username=itflow --password=secret --database=itflow \\"}
+migrations:
+  mode: command
+  accept: ["php scripts/setup_cli.php", "php scripts/update_cli.php"]
+  evidence:
+    - {path: scripts/setup_cli.php, line: 1, quote: "#!/usr/bin/env php"}
+    - {path: README.md, line: 158, quote: "sudo -u www-data php scripts/update_cli.php"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: independent
+  commands: ["php cron/cron.php"]
+  evidence:
+    - {path: cron/cron.php, line: 8, quote: "* * * * * php /path/to/itflow/cron/cron.php >/dev/null"}
+scheduledJobs:
+  status: required
+  items: ["php cron/cron.php every minute"]
+  evidence:
+    - {path: cron/cron.php, line: 10, quote: "* It wakes once a minute, works out which jobs are due, and runs them. The jobs themselves"}
+storage:
+  local: required
+  paths: [uploads/clients, uploads/documents, uploads/backups]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: agent/post/file.php, line: 27, quote: "$client_dir = \"../uploads/clients/$client_id\";"}
+    - {path: agent/post/document.php, line: 82, quote: "\"uploads/documents/\","}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "No Dockerfile and no environment configuration: config.php is written to the web root by a wizard"
+    - "Uploaded client files, document images and backups are only on local disk"
+    - "The cron dispatcher must run every minute as a second process"
+  mustNot:
+    - "MariaDB or MySQL must not be rejected: MySQL 8 is supported"
+    - "The libs/ directory (vendored PHP libraries, with composer.json files) must not be read as several applications"
+vendorQuestions:
+  legitimate:
+    - "Company name, country, first administrator email and password (setup wizard or setup_cli.php options)"
+  unnecessary:
+    - "Is Redis needed? (no)"
+traps:
+  - "config.php is the only configuration; the web server denies it (.htaccess:2) and a replaced container loses it unless it is regenerated at start"
+  - "A new install needs an empty database; the wizard stops when the database already has tables (setup/index.php:204)"
+  - "libs/ contains vendored composer.json files that are not the application"
+  - "cron/cron.php tracks due jobs in the cron_jobs table, so two running dispatchers claim jobs before they run (cron/cron.php:30-34)"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: 'accept two: contained change (Dockerfile, config.php at start, cron worker, S3 for uploads) or too many missing parts', evidence: 'setup/index.php:211; cron/cron.php:8; agent/post/file.php:27'}
+  - {field: dockerfile, change: 'none: the repository has no Dockerfile; README documents Apache or nginx on a Linux server', evidence: 'README.md:134-141'}
+  - {field: all, change: verified, evidence: 17 citations checked}

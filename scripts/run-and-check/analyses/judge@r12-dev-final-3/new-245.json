@@ -1,0 +1,66 @@
+{
+  "id": "new-245",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "HedgeDoc 2 consists of separate backend and frontend servers built from different images that must run together behind a proxy, and Deployz runs only one web service per deployment.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 42,
+          "quote": "HedgeDoc 2 will be split in two components. The backend and the frontend. Both are present in this repository."
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 6,
+          "quote": "image: ghcr.io/hedgedoc/hedgedoc/backend:develop"
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 12,
+          "quote": "image: ghcr.io/hedgedoc/hedgedoc/frontend:develop"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7355,
+      "completionTokens": 255,
+      "costUsd": 0.0341748
+    },
+    "latencyMs": 6688
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker/docker-compose.yml defines 2 application services (backend, frontend). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "HedgeDoc 2 production needs both a backend and a separate frontend image behind a proxy, and nothing shown proves the frontend is optional, so the multi-service finding holds.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 8610,
+      "completionTokens": 98,
+      "costUsd": 0.0182
+    },
+    "latencyMs": 143313
+  }
+}

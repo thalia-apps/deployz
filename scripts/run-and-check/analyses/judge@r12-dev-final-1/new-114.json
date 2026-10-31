@@ -1,0 +1,66 @@
+{
+  "id": "new-114",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "no_application",
+      "reason": "The application source (api and front) lives only in git submodules that the source archive does not include, so the Dockerfile cannot build from this repository.",
+      "evidence": [
+        {
+          "path": ".gitmodules",
+          "line": 2,
+          "quote": "\tpath = api"
+        },
+        {
+          "path": ".gitmodules",
+          "line": 5,
+          "quote": "\tpath = front"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 62,
+          "quote": "COPY ./api ./api"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6035,
+      "completionTokens": 167,
+      "costUsd": 0.0272052
+    },
+    "latencyMs": 3825
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /data (docker/Dockerfile), volume lago_redis_data:/data (docker-compose.yml redis), volume lago_storage_data:/app/storage (docker-compose.yml api), volume lago_storage_data:/app/storage (docker-compose.yml api-worker)",
+        "verdict": "stands",
+        "reason": "The production Dockerfile declares VOLUME /data and installs postgresql-17 and redis-server inside the image, and the shown compose settings default LAGO_USE_AWS_S3 to false, so no shown line proves that the app does not need durable local storage.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6988,
+      "completionTokens": 122,
+      "costUsd": 0.015196
+    },
+    "latencyMs": 131513
+  }
+}

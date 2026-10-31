@@ -1,0 +1,50 @@
+{
+  "id": "new-227",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "SFTPGo can run with PostgreSQL/MySQL and S3 storage backends via configuration, so a contained change is plausible.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6172,
+      "completionTokens": 73,
+      "costUsd": 0.02588652
+    },
+    "latencyMs": 2494
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-persistent-volume",
+        "findingEvidence": "Unsupported storage: the app declares durable local state (users_base_dir = /srv/sftpgo/data (Dockerfile)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory.",
+        "verdict": "stands",
+        "reason": "The Dockerfile sets users_base_dir to /srv/sftpgo/data for user files on the local filesystem, and no shown line selects S3 or another supported store in its place, so the finding holds.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5242,
+      "completionTokens": 103,
+      "costUsd": 0.011514
+    },
+    "latencyMs": 147669
+  }
+}

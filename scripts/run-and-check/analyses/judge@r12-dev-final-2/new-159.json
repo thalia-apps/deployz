@@ -1,0 +1,75 @@
+{
+  "id": "new-159",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "InvoiceShelf is a Laravel web app on MySQL/PostgreSQL; the s6 supervisor with its scheduler can be split into a web process and a worker, which is a contained change.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6513,
+      "completionTokens": 92,
+      "costUsd": 0.02761308
+    },
+    "latencyMs": 3260
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported container setup: docker/production/Dockerfile runs s6-overlay with a web server and a worker service (scheduler) in one container. Deployz runs one web process and declared workers as separate services.",
+        "verdict": "stands",
+        "reason": "The shown lines do not prove the scheduler can be disabled in the production image; the compose comment only suggests a SCHEDULER_ENABLED setting, which is not proof.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares database (mariadb:10) in docker/production/docker-compose.mysql.yml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "The declared service is a MariaDB/MySQL database that the app selects through DB_CONNECTION, and Deployz provides managed MySQL 8 for it.",
+        "evidence": [
+          {
+            "path": "docker/production/docker-compose.mysql.yml",
+            "line": 9,
+            "quote": "image: mariadb:10"
+          },
+          {
+            "path": "docker/production/docker-compose.mysql.yml",
+            "line": 37,
+            "quote": "- DB_CONNECTION=mariadb"
+          },
+          {
+            "path": "docker/production/docker-compose.mysql.yml",
+            "line": 38,
+            "quote": "- DB_HOST=database"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 8171,
+      "completionTokens": 313,
+      "costUsd": 0.019472
+    },
+    "latencyMs": 146617
+  }
+}

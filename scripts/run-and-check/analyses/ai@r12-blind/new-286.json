@@ -1,0 +1,214 @@
+{
+  "id": "new-286",
+  "commit": "8ed90a27d6f49c93a9713a46e071fb03042fa308",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "rust",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile.mas"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: exec tuwunel",
+      "port": 8008
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "CARGO_CRATE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/macros/utils.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLAYWRIGHT_NETWORK",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in docker/lib/playwright.tuwunel.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported storage: the app declares durable local state (database_path = /database (nix/pkgs/complement/config.toml)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory.",
+      "Final review: Tuwunel stores all homeserver data in an embedded RocksDB database on local disk, and it has no PostgreSQL or MySQL option, so Deployz's stateless containers cannot hold the product's core data."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported storage: the app declares durable local state (database_path = /database (nix/pkgs/complement/config.toml)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Final review: Tuwunel stores all homeserver data in an embedded RocksDB database on local disk, and it has no PostgreSQL or MySQL option, so Deployz's stateless containers cannot hold the product's core data."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: PLAYWRIGHT_NETWORK. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.06922476,
+        "promptTokens": 14996,
+        "completionTokens": 497
+      },
+      "latencyMs": 7165
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 7166,
+    "questions": 2,
+    "generatedAt": "2026-10-31T06:57:44.684Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.03056328,
+      "promptTokens": 6563,
+      "completionTokens": 231
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "Tuwunel stores all homeserver data in an embedded RocksDB database on local disk, and it has no PostgreSQL or MySQL option, so Deployz's stateless containers cannot hold the product's core data.",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "decision": "block",
+      "evidence": [
+        {
+          "line": 20,
+          "path": "docker/Dockerfile.mas",
+          "quote": "database_path = \"/database\""
+        },
+        {
+          "line": 31,
+          "path": "docker/Dockerfile.mas",
+          "quote": "rocksdb_parallelism_threads = 2"
+        },
+        {
+          "line": 9,
+          "path": "nix/pkgs/complement/config.toml",
+          "quote": "database_path = \"/database\""
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 4147,
+    "promptVersion": 5
+  },
+  "softReview": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02438964,
+      "promptTokens": 5659,
+      "completionTokens": 100
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "reason": "The selected Dockerfile also configures tuwunel to store its RocksDB database under /database on local disk, and no setting moves that data to a managed database or S3, so durable local storage is still required.",
+        "verdict": "stands",
+        "evidence": [],
+        "question": false,
+        "findingId": "unsupported-persistent-volume",
+        "checkReasons": [],
+        "findingEvidence": "Unsupported storage: the app declares durable local state (database_path = /database (nix/pkgs/complement/config.toml)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory."
+      }
+    ],
+    "latencyMs": 3975,
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "unsupported-persistent-volume",
+      "title": "Needs a persistent disk volume",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported storage: the app declares durable local state (database_path = /database (nix/pkgs/complement/config.toml)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "final-review-unsupported",
+      "title": "Keeps its core data on local disk",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Final review: Tuwunel stores all homeserver data in an embedded RocksDB database on local disk, and it has no PostgreSQL or MySQL option, so Deployz's stateless containers cannot hold the product's core data. Evidence: docker/Dockerfile.mas:20 \"database_path = \"/database\"\"; docker/Dockerfile.mas:31 \"rocksdb_parallelism_threads = 2\"; nix/pkgs/complement/config.toml:9 \"database_path = \"/database\"\".",
+      "confidence": "likely"
+    }
+  ]
+}

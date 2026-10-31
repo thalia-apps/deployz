@@ -1,0 +1,114 @@
+id: new-283
+repository: Ombi-app/Ombi
+commit: 697d35647bf8cef8e11f334e0d4e775e1f9f30b0
+summary: >
+  Ombi is a media request manager written in ASP.NET Core 8 with an Angular client. The Dockerfile is src/dockerfile
+  (build context src): a three-stage build with yarn for the client and dotnet publish for the server, ENTRYPOINT
+  dotnet Ombi.dll on port 5000 (default URL http://*:5000). The database engine is chosen only by a database.json file
+  in the storage path (Sqlite default, MySQL or Postgres); the setup wizard writes that file. No environment variable
+  selects the engine. Quartz jobs run inside the web process. No Redis, no S3.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The app builds and listens on 0.0.0.0:5000 from a Dockerfile, and Postgres is supported, but the engine is read
+    only from database.json on local disk. Without that file the app uses SQLite files in the storage path. The wizard
+    writes database.json to the container disk, which is lost at each restart or task replacement, so the app falls back
+    to an empty SQLite database. A contained repository change is needed (read the engine and connection string from
+    environment values, or an entrypoint that writes database.json). The migrations also need a separate
+    `dotnet Ombi.dll --migrate` run.
+dockerfile:
+  accept: [src/dockerfile]
+  reject: []
+  target: null
+  context: src
+  evidence:
+    - {path: src/dockerfile, line: 7, quote: "RUN yarn --cwd Ombi/ClientApp run build"}
+    - {path: src/dockerfile, line: 33, quote: "RUN dotnet publish Ombi/Ombi.csproj -c Release --no-restore -o /app/publish"}
+    - {path: src/dockerfile, line: 43, quote: "ENTRYPOINT [\"dotnet\", \"Ombi.dll\"]"}
+runtime: {accept: [dotnet]}
+port:
+  accept: [5000]
+  evidence:
+    - {path: src/dockerfile, line: 38, quote: "EXPOSE 5000"}
+    - {path: src/Ombi/Program.cs, line: 103, quote: "Value = \"http://*:5000\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: src/Ombi/Program.cs, line: 406, quote: "\"The protocol (http:// or https://) must be included with each URL. Supported formats vary between servers.\", Default = \"http://*:5000\")]"}
+startCommand:
+  source: image
+  accept: ["dotnet Ombi.dll"]
+  evidence:
+    - {path: src/dockerfile, line: 43, quote: "ENTRYPOINT [\"dotnet\", \"Ombi.dll\"]"}
+healthPath:
+  accept: ["/health"]
+  evidence:
+    - {path: src/Ombi/Startup.cs, line: 197, quote: "endpoints.MapHealthChecks(\"/health\", new HealthCheckOptions"}
+database:
+  status: required
+  engines: [sqlite, mysql, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: []
+  # The engine and the connection string are read from database.json in the storage path; no environment value selects them.
+  evidence:
+    - {path: src/Ombi/Extensions/DatabaseExtensions.cs, line: 93, quote: "var databaseFileLocation = Path.Combine(i.StoragePath, \"database.json\");"}
+    - {path: src/Ombi/Extensions/DatabaseExtensions.cs, line: 29, quote: "public const string PostgresDatabase = \"Postgres\";"}
+    - {path: src/Ombi/Extensions/DatabaseExtensions.cs, line: 46, quote: "case var type when type.Equals(PostgresDatabase, StringComparison.InvariantCultureIgnoreCase):"}
+    - {path: src/Ombi.Core/Models/DatabaseConfiguration.cs, line: 16, quote: "OmbiDatabase = new PerDatabaseConfiguration(SqliteDatabase, $\"Data Source={Path.Combine(defaultSqlitePath, \"Ombi.db\")}\");"}
+migrations:
+  mode: command
+  accept: ["dotnet Ombi.dll --migrate"]
+  evidence:
+    - {path: src/Ombi/Program.cs, line: 418, quote: "[Option(\"migrate\", Required = false, HelpText = \"Will run the migrations then exit the application\")]"}
+    - {path: src/Ombi/Program.cs, line: 83, quote: "migrationTasks.Add(settingsDb.Database.MigrateAsync());"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: src/Ombi/Startup.cs, line: 124, quote: "serviceProvider.UseQuartz().GetAwaiter().GetResult();"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/opt/ombi]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: src/Ombi/Program.cs, line: 409, quote: "[Option(\"storage\", Required = false, HelpText = \"Storage path, where we save the logs and database\")]"}
+    - {path: src/Ombi/Extensions/DatabaseExtensions.cs, line: 93, quote: "var databaseFileLocation = Path.Combine(i.StoragePath, \"database.json\");"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The database engine is chosen only by database.json on local disk; no environment value selects PostgreSQL"
+  mustNot:
+    - "The SQLite default must not alone be read as not deployable: PostgreSQL is supported"
+    - "The Quartz jobs are in-process; they must not be read as a worker or an EventBridge schedule"
+    - "The build context is src, not the repository root"
+vendorQuestions:
+  legitimate:
+    - "Which media servers (Plex, Emby, Jellyfin) and request sources should Ombi use? (set in the web wizard)"
+  unnecessary:
+    - "Which port? (5000)"
+    - "Is Redis or S3 needed? (no)"
+traps:
+  - "The Dockerfile is src/dockerfile (lower case) and COPY paths assume the context src (src/dockerfile:14)"
+  - "database.json is written by the setup wizard to the container disk; it is lost when the task is replaced (src/Ombi.Core/Services/DatabaseConfigurationService.cs:35)"
+  - "Migrations are not applied at a normal start; the --migrate option runs them and exits (src/Ombi/Program.cs:77)"
+  - "The client is served by the same ASP.NET process from ClientApp/dist, so no separate static server is needed (src/Ombi/Startup.cs:113)"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: 'WITH_CHANGES: the PostgreSQL engine is only selectable by a file on local disk, not by environment values', evidence: 'src/Ombi/Extensions/DatabaseExtensions.cs:93-105'}
+  - {field: dockerfile, change: 'none: only src/dockerfile exists; context src', evidence: 'src/dockerfile:14,33'}
+  - {field: all, change: verified, evidence: 16 citations checked}

@@ -1,0 +1,620 @@
+{
+  "id": "new-294",
+  "commit": "6b8037538e00b4465bafc9b57118a79b82b56e41",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "npm run generate --workspace=@routr/pgdata && lerna run build && npm run bundle",
+      "context": ".",
+      "missingSources": [
+        "mods/edgeport/libs"
+      ]
+    },
+    "web": {
+      "command": "CMD: [\"/bin/sh\", \"-c\", \"OUT=$(su-exec $USER node ./dist/print_env) || exit 1;    eval \\\"$OUT\\\";    if [ \\\"$START_INTERNAL_DB\\\" = \\\"true\\\" ]; then      su-exec postgres /service/init-postgres.sh;      su-exec postgres pg_ctl start -D /var/lib/postgresql/data --options='-h 0.0.0.0';    fi;    if [ -n \\\"$HEPLIFY_OPTIONS\\\" ]; then      heplify $HEPLIFY_OPTIONS &    fi;    /opt/prisma-cli/node_modules/.bin/prisma migrate deploy --schema=/service/schema.prisma;    sed -i \\\"s|keyStorePassword:.*|keyStorePassword: $PKCS12_PASSWORD|g\\\" config/edgeport.yaml;    sed -i \\\"s|trustStorePassword:.*|trustStorePassword: $PKCS12_PASSWORD|g\\\" config/edgeport.yaml;    su-exec $USER ./convert-to-p12.sh $PATH_TO_CERTS $PKCS12_PASSWORD;    su-exec $USER node ./dist/runner\"  ]",
+      "port": 5060
+    },
+    "health": {
+      "path": "/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "API_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/connect/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BIND_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/connect/src/envs.ts",
+            "read in mods/echo/src/envs.ts",
+            "read in mods/one/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COLORFGBG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/ctl/src/trace/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONFIG_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mods/dispatcher/src/envs.ts",
+            "read in mods/location/src/envs.ts",
+            "read in mods/location/src/runner.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CONNECT_VERIFIER_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/connect/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONNECT_VERIFIER_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/connect/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONNECT_VERIFIER_PUBLIC_KEY_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/connect/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "Dockerfile declares DATABASE_URL",
+            "read in mods/pgdata/schema.prisma"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "EDGEPORT_RUNNER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/one/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_REPOSITORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .scripts/release-card/release-card.mjs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCATION_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/connect/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCATION_CACHE_PARAMETERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/one/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCATION_CACHE_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/one/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGS_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .scripts/echo-test.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENTYPE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .scripts/readme-banner.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_EXPORTER_OTLP_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/common/src/tracer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/common/src/tracer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_METRIC_EXPORT_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/common/src/tracer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_SDK_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/common/src/tracer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_SERVICE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/common/src/tracer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POD_NAMESPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/common/src/config/resolve_secret_refs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/one.example.yaml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "RECORD_MESSAGES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/one/src/recording.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RECORD_MESSAGES_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/one/src/recording.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RECORD_MESSAGES_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/one/src/recording.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REGISTER_DEFAULT_EXPIRES",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mods/connect/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ROUTR_ONE_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/one/src/config/load_one_config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ROUTR_SECRETS_DIR",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mods/common/src/config/resolve_secret_refs.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RTPENGINE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/one/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RTPENGINE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/one/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RTPRELAY_CONFIG_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/one/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRUSTED_EDGEPORTS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mods/connect/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TRUSTED_EDGEPORT_ADDRESSES",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mods/connect/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "UNTRUSTED_HEADERS_TO_STRIP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mods/connect/src/envs.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VAR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/one.example.yaml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported architecture: compose.yaml defines 7 application services (edgeport01, dispatcher, location, connect, apiserver, requester, registry). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (mods/common/package.json, mods/connect/package.json, mods/ctl/package.json), and no Dockerfile builds an application.",
+      "Unsupported container setup: the start command of Dockerfile runs then      heplify $HEPLIFY_OPTIONS in the background next to fi in one container. Deployz runs one web process and declared workers as separate services.",
+      "Unsupported architecture: mods/ holds the Dockerfiles of 11 component images (connect, dispatcher, echo, edgeport, location, pgdata), so the app is a stack of cooperating services. Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: compose.yaml defines 7 application services (edgeport01, dispatcher, location, connect, apiserver, requester, registry). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (mods/common/package.json, mods/connect/package.json, mods/ctl/package.json), and no Dockerfile builds an application."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: the start command of Dockerfile runs then      heplify $HEPLIFY_OPTIONS in the background next to fi in one container. Deployz runs one web process and declared workers as separate services."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: mods/ holds the Dockerfiles of 11 component images (connect, dispatcher, echo, edgeport, location, pgdata), so the app is a stack of cooperating services. Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies mods/edgeport/libs, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: CONFIG_PATH, REGISTER_DEFAULT_EXPIRES, TRUSTED_EDGEPORTS, TRUSTED_EDGEPORT_ADDRESSES. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 5,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07158096,
+        "promptTokens": 14766,
+        "completionTokens": 662
+      },
+      "latencyMs": 9394
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [
+          "config/edgeport.yaml:9 names the service dispatcher",
+          "config/one.example.yaml:67 names the service location",
+          "config/registry.yaml:5 names the service apiserver",
+          "settings.gradle:3 names the service requester",
+          "mods/registry/src/config/schema.ts:26 names the service registry"
+        ],
+        "subject": "docker-compose-multi-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": "/healthz",
+        "answer": "value",
+        "reasons": [],
+        "subject": "healthPath",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 9418,
+    "questions": 2,
+    "generatedAt": "2026-10-31T06:58:36.317Z",
+    "failedChecks": 1,
+    "promptVersion": 20
+  },
+  "judge": {
+    "reason": "not_deployable",
+    "status": "skipped",
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "unsupported-multi-service",
+      "title": "Runs as several services",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported architecture: compose.yaml defines 7 application services (edgeport01, dispatcher, location, connect, apiserver, requester, registry). Deployz runs ONE web process per deployment plus declared background workers.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "unsupported-library-repository",
+      "title": "Is a library, not an application",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (mods/common/package.json, mods/connect/package.json, mods/ctl/package.json), and no Dockerfile builds an application.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "unsupported-multi-service",
+      "title": "Runs as several services",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported container setup: the start command of Dockerfile runs then      heplify $HEPLIFY_OPTIONS in the background next to fi in one container. Deployz runs one web process and declared workers as separate services.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "unsupported-multi-service",
+      "title": "Runs as several services",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported architecture: mods/ holds the Dockerfiles of 11 component images (connect, dispatcher, echo, edgeport, location, pgdata), so the app is a stack of cooperating services. Deployz runs ONE web process per deployment plus declared background workers.",
+      "confidence": "confirmed"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "id": "new-296",
+  "analyser": "judge@r12-blind-3",
+  "from": "ai@r12-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "Nginx Proxy Manager is a reverse proxy gateway that must receive raw traffic on ports 80 and 443 and terminate its own SSL, and it keeps its proxy config and certificates on local disk, so Deployz's single-HTTP-port stateless containers cannot run it.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 49,
+          "quote": "2. Add port forwarding for ports 80 and 443 to the server hosting this project"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 38,
+          "quote": "EXPOSE 80 81 443"
+        },
+        {
+          "path": "README.md",
+          "line": 72,
+          "quote": "      - ./letsencrypt:/etc/letsencrypt"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5605,
+      "completionTokens": 255,
+      "costUsd": 0.01376
+    },
+    "latencyMs": 123812
+  },
+  "softReview": null
+}

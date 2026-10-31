@@ -1,0 +1,50 @@
+{
+  "id": "new-299",
+  "analyser": "judge@r12-blind-2",
+  "from": "ai@r12-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "HomeBox supports PostgreSQL by setting and its storage connection string can point at S3, so the change is contained.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6417,
+      "completionTokens": 66,
+      "costUsd": 0.013494
+    },
+    "latencyMs": 126571
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /data (Dockerfile)",
+        "verdict": "stands",
+        "reason": "The production image keeps uploaded files on local disk through HBOX_STORAGE_CONN_STRING=file:///, and its default SQLite database lives under /data, so /data holds durable state and no shown line moves that data to a supported service.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5522,
+      "completionTokens": 115,
+      "costUsd": 0.012194
+    },
+    "latencyMs": 126570
+  }
+}

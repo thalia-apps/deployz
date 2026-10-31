@@ -34,6 +34,7 @@ pnpm runcheck:fixtures [--no-observe]
 pnpm runcheck:fetch --run <run id>       # results of a runcheck-exam.yml run
 pnpm runcheck:judge --from <ai@ dir> --out <judge@ dir> [--repo <id>]  # the final judge only, on stored AI analyses
 pnpm runcheck:judge --score <judge@ dir>  # wrong, not sure, too strict and fixed against the ground truth
+pnpm runcheck:judge --parity <judge@ dir A> --parity <judge@ dir B>  # ids whose verdict, decision or outcome differ
 pnpm runcheck:stability --a <dir> --b <dir>  # claims that differ between two analyses
 ```
 
@@ -51,8 +52,17 @@ no new main Analysis. It reads the README, `.gitmodules`, the selected
 Dockerfile and the named files through the snapshot fetch. The exam
 workflow mode `judge` runs it on a runner with the gateway secrets (inputs
 `from`, the stored `ai@…` folder, and `analysis`, the `judge@…` output
-folder) and uploads one artifact with every result file. A "not sure" is
-not counted as a wrong outcome.
+folder) and uploads one artifact with every result file. `--transport batch`
+(input `transport`) sends all calls as one Anthropic Message Batch with
+`ANTHROPIC_API_KEY`. `runcheck:fetch` downloads the judge artifact into
+`analyses/<folder>/`. The same run makes the soft review when only soft
+findings make the stored outcome. An analysis file from before version 82
+has no findings: `--rules <rules@ dir>` (input `rules`) gives the findings
+of a rules analysis of the same commit when it reaches the same outcome,
+and `--strict-from <judge@ dir>` (input `strict_from`, several folders
+allowed) reuses stored final judge records, so only the soft review calls
+the model. A "not sure" (a judge question or a soft finding the vendor
+must confirm) is not counted as a wrong outcome.
 
 ### Three modes
 

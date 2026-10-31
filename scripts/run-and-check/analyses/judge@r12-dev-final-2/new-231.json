@@ -1,0 +1,39 @@
+{
+  "id": "new-231",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "several_services",
+      "reason": "Woodpecker appears to need separate agent processes that reach the server over a second gRPC port (9000), but Deployz routes HTTP to only one port, and the shown lines do not prove the agents are required.",
+      "evidence": [
+        {
+          "path": "docker/Dockerfile.server.multiarch.rootless",
+          "line": 29,
+          "quote": "EXPOSE 8000 9000 80 443"
+        },
+        {
+          "path": "README.md",
+          "line": 50,
+          "quote": "It requires around 100 MB of RAM (Server) and 30 MB (Agent) at runtime in idle mode."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5745,
+      "completionTokens": 503,
+      "costUsd": 0.0327096
+    },
+    "latencyMs": 8553
+  },
+  "softReview": null
+}

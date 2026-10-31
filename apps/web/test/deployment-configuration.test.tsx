@@ -588,6 +588,23 @@ describe('Vendor blocker disputes', () => {
     expect(byTestId('readiness-finding-dispute-unsupported-gpu')).toBeNull();
   });
 
+  it('offers it on a required repository change only while the final review asks to confirm it', async () => {
+    const volume = (confidence: 'likely' | 'needs_confirmation') =>
+      finding({ id: 'unsupported-persistent-volume', category: 'storage', title: 'Keeps data on a volume', blocking: false, fixClass: 'CODE_CHANGE', confidence });
+
+    currentReadiness = readinessFixture({ findings: [volume('likely')] });
+    await act(async () => {
+      root.render(<DeploymentConfiguration />);
+    });
+    expect(byTestId('readiness-finding-dispute-unsupported-persistent-volume')).toBeNull();
+
+    currentReadiness = readinessFixture({ findings: [volume('needs_confirmation')] });
+    await act(async () => {
+      root.render(<DeploymentConfiguration />);
+    });
+    expect(byTestId('readiness-finding-dispute-unsupported-persistent-volume')?.textContent).toBe('Not used in production');
+  });
+
   it('sends the evidence the vendor saw and refreshes the page', async () => {
     currentReadiness = readinessFixture({ findings: [MONGO] });
     mocks.disputeBlocker.mockResolvedValue(undefined);

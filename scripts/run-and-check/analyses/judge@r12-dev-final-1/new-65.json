@@ -1,0 +1,91 @@
+{
+  "id": "new-65",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "several_services",
+      "reason": "Baserow appears to need a Django backend and a separate web-frontend server running together; the Heroku Dockerfile only works because it reuses the released all-in-one image, which runs both servers under a supervisor rather than building this source.",
+      "evidence": [
+        {
+          "path": "docker-compose.yml",
+          "line": 8,
+          "quote": "# This compose file runs every service separately using a Caddy reverse proxy to route"
+        },
+        {
+          "path": "docker-compose.yml",
+          "line": 9,
+          "quote": "# requests to the backend or web-frontend, handle websockets and to serve uploaded files"
+        },
+        {
+          "path": "heroku.Dockerfile",
+          "line": 1,
+          "quote": "ARG FROM_IMAGE=baserow/baserow:2.4.1"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6600,
+      "completionTokens": 753,
+      "costUsd": 0.0410454
+    },
+    "latencyMs": 10575
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker-compose.yml defines 3 application services (backend, web-frontend, volume-permissions-fixer). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "The shown lines do not prove that the production image avoids several services; the heroku.Dockerfile builds on the all-in-one baserow image, which runs several processes under supervisor, so this needs vendor confirmation.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares redis (redis:6) in docker-compose.yml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "The declared service is Redis, which Deployz provides, and the configuration lets the app use an external Redis through the REDIS_* settings.",
+        "evidence": [
+          {
+            "path": "docker-compose.yml",
+            "line": 62,
+            "quote": "# Set these if you want to use an external redis instead of the redis service below."
+          },
+          {
+            "path": "docker-compose.yml",
+            "line": 66,
+            "quote": "REDIS_URL:"
+          },
+          {
+            "path": "heroku.Dockerfile",
+            "line": 6,
+            "quote": "RUN apt-get remove -y \"postgresql-$POSTGRES_VERSION\" redis-server"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7453,
+      "completionTokens": 324,
+      "costUsd": 0.018146
+    },
+    "latencyMs": 127761
+  }
+}

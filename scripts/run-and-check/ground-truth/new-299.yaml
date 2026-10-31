@@ -1,0 +1,142 @@
+id: new-299
+repository: sysadminsmedia/homebox
+commit: 6255a24111cdc32e1f93ac41b3b56703a836256a
+summary: >
+  Homebox is a self-hosted home inventory manager written in Go with a Nuxt frontend that is embedded in the binary. The
+  root Dockerfile builds the Nuxt UI with pnpm, builds the Go API (CGO off) and runs /app/api from an Alpine image on
+  port 7745. The image defaults to SQLite in /data and file storage in /data; the same binary supports PostgreSQL
+  (HBOX_DATABASE_DRIVER=postgres with HBOX_DATABASE_HOST, _PORT, _USERNAME, _PASSWORD, _DATABASE, _SSL_MODE) and an
+  S3 bucket for attachments (HBOX_STORAGE_CONN_STRING=s3://bucket?region=...). Goose migrations run at start. The event
+  bus, the purge task and the scheduled jobs run inside the one process. No Redis. The binary refuses to start without
+  HBOX_AUTH_API_KEY_PEPPER of at least 32 bytes.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One Go web process from the root Dockerfile. Settings pick PostgreSQL (HBOX_DATABASE_DRIVER=postgres plus the
+    connection parts), S3 for attachments (HBOX_STORAGE_CONN_STRING) and the required pepper secret. Migrations run at
+    start, background jobs are goroutines of the web process, there is no Redis and no worker. With PostgreSQL and S3
+    selected the container keeps no durable local state, so no repository change is needed. SQLite and the /data volume
+    are only the image defaults.
+dockerfile:
+  accept: [Dockerfile]
+  reject: [Dockerfile.hardened, Dockerfile.rootless, .devcontainer/Dockerfile]
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 22, quote: "RUN pnpm build"}
+    - {path: Dockerfile, line: 54, quote: "COPY --from=frontend-builder /app/.output/public ./app/api/static/public"}
+    - {path: Dockerfile, line: 63, quote: "echo $TARGETOS $TARGETARCH; CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build \\"}
+    - {path: Dockerfile, line: 100, quote: "ENTRYPOINT [ \"/app/api\" ]"}
+runtime: {accept: [go]}
+port:
+  accept: [7745]
+  evidence:
+    - {path: Dockerfile, line: 89, quote: "EXPOSE 7745"}
+    - {path: backend/internal/sys/config/conf.go, line: 160, quote: "Port string `yaml:\"port\" conf:\"default:7745\"`"}
+bindAllInterfaces:
+  value: true
+  # HBOX_WEB_HOST is empty by default and the server listens on host:port, so all interfaces.
+  evidence:
+    - {path: backend/internal/sys/config/conf.go, line: 161, quote: "Host string `yaml:\"host\"`"}
+    - {path: backend/app/api/main.go, line: 267, quote: "Addr:         fmt.Sprintf(\"%s:%s\", cfg.Web.Host, cfg.Web.Port),"}
+startCommand:
+  source: image
+  accept: ["/app/api"]
+  evidence:
+    - {path: Dockerfile, line: 100, quote: "ENTRYPOINT [ \"/app/api\" ]"}
+    - {path: Dockerfile, line: 101, quote: "CMD [ \"/data/config.yml\" ]"}
+healthPath:
+  accept: ["/api/v1/status"]
+  evidence:
+    - {path: Dockerfile, line: 94, quote: "CMD [ \"wget\", \"--no-verbose\", \"--tries=1\", \"-O\", \"-\", \"http://localhost:7745/api/v1/status\" ]"}
+    - {path: backend/app/api/routes.go, line: 95, quote: "r.Get(\"/status\", chain.ToHandlerFunc(v1Ctrl.HandleBase(func() bool { return true }, v1.Build{"}
+database:
+  status: required
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {HBOX_DATABASE_DRIVER: postgres, HBOX_DATABASE_HOST: "<host>", HBOX_DATABASE_PORT: "5432", HBOX_DATABASE_USERNAME: "<user>", HBOX_DATABASE_PASSWORD: "<password>", HBOX_DATABASE_DATABASE: "<db>"}
+  connectionVars: [HBOX_DATABASE_DRIVER, HBOX_DATABASE_HOST, HBOX_DATABASE_PORT, HBOX_DATABASE_USERNAME, HBOX_DATABASE_PASSWORD, HBOX_DATABASE_DATABASE, HBOX_DATABASE_SSL_MODE]
+  # The image sets HBOX_DATABASE_SQLITE_PATH to /data/homebox.db; it is ignored when the driver is postgres. SSL mode defaults to require.
+  evidence:
+    - {path: backend/internal/sys/config/conf_database.go, line: 24, quote: "Driver           string `yaml:\"driver\"             conf:\"default:sqlite3\"`"}
+    - {path: backend/internal/sys/config/conf_database.go, line: 30, quote: "SslMode          string `yaml:\"ssl_mode\"           conf:\"default:require\"`"}
+    - {path: backend/app/api/setup.go, line: 75, quote: "case config.DriverPostgres:"}
+    - {path: backend/app/api/setup.go, line: 140, quote: "databaseURL = fmt.Sprintf(\"host=%s port=%s dbname=%s sslmode=%s\", cfg.Database.Host, cfg.Database.Port, cfg.Database.Database, cfg.Database.SslMode)"}
+    - {path: Dockerfile, line: 73, quote: "ENV HBOX_DATABASE_SQLITE_PATH=/data/homebox.db?_pragma=busy_timeout=2000&_pragma=journal_mode=WAL&_fk=1&_time_format=sqlite"}
+    - {path: docs/src/content/docs/en/quick-start/configure/database.mdx, line: 45, quote: "- `HBOX_DATABASE_DRIVER=postgres`"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: backend/app/api/setup.go, line: 64, quote: "if err := runMigrations(c, driver); err != nil {"}
+    - {path: backend/app/api/setup.go, line: 95, quote: "if err := goose.Up(c.Sql(), driver); err != nil {"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # The event bus and the recurring tasks are goroutines of the web process.
+  evidence:
+    - {path: backend/app/api/recurring.go, line: 20, quote: "runner.AddFunc(\"eventbus\", app.bus.Run)"}
+    - {path: backend/app/api/recurring.go, line: 34, quote: "runner.AddPlugin(NewTask(\"purge-tokens\", 24*time.Hour, func(ctx context.Context) {"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/data]
+  s3: native
+  s3SelectBy: {HBOX_STORAGE_CONN_STRING: "s3://<bucket>?region=<region>"}
+  # Attachments use gocloud blob storage. The image default is the local /data folder; the S3 connection string moves them to a bucket. AWS credentials come from the SDK default chain (task role) or AWS_ACCESS_KEY_ID.
+  evidence:
+    - {path: Dockerfile, line: 71, quote: "ENV HBOX_STORAGE_CONN_STRING=file:///?no_tmp_dir=true"}
+    - {path: Dockerfile, line: 97, quote: "VOLUME [ \"/data\" ]"}
+    - {path: docs/src/content/docs/en/quick-start/configure/storage.mdx, line: 28, quote: "You can use S3 storage by setting the `HBOX_STORAGE_CONN_STRING` to `s3://my-bucket?region=region-name`."}
+    - {path: backend/internal/sys/config/conf_database.go, line: 13, quote: "ConnString string `yaml:\"conn_string\" conf:\"default:file:///./\"`"}
+env:
+  required:
+    - {name: HBOX_AUTH_API_KEY_PEPPER, secret: true, buildTime: false, note: "random secret of at least 32 bytes, fixed across restarts; the binary refuses to start without it"}
+    - {name: HBOX_DATABASE_DRIVER, secret: false, buildTime: false, note: "postgres; the default is sqlite3"}
+    - {name: HBOX_DATABASE_HOST, secret: false, buildTime: false, note: "PostgreSQL host"}
+    - {name: HBOX_DATABASE_PORT, secret: false, buildTime: false, note: "5432"}
+    - {name: HBOX_DATABASE_USERNAME, secret: false, buildTime: false, note: "database user"}
+    - {name: HBOX_DATABASE_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: HBOX_DATABASE_DATABASE, secret: false, buildTime: false, note: "database name"}
+    - {name: HBOX_STORAGE_CONN_STRING, secret: false, buildTime: false, note: "s3://bucket?region=...; the image default is a local folder under /data"}
+  optional: [HBOX_DATABASE_SSL_MODE, HBOX_STORAGE_PREFIX_PATH, HBOX_OPTIONS_ALLOW_REGISTRATION, HBOX_LOG_LEVEL, HBOX_WEB_MAX_UPLOAD_SIZE, HBOX_MAILER_HOST]
+  buildTime: []
+  evidence:
+    - {path: backend/app/api/main.go, line: 121, quote: "if len(cfg.Auth.APIKeyPepper) < 32 {"}
+    - {path: docs/src/content/docs/en/quick-start/configure/index.mdx, line: 54, quote: "HBOX_AUTH_API_KEY_PEPPER"}
+    - {path: docs/src/content/docs/en/quick-start/configure/index.mdx, line: 41, quote: "HBOX_OPTIONS_ALLOW_REGISTRATION"}
+blockers:
+  expected: []
+  mustNot:
+    - "The SQLite default and the /data volume must not block: HBOX_DATABASE_DRIVER=postgres and the S3 connection string replace them"
+    - "The embedded event bus and recurring tasks must not be read as a worker or an EventBridge schedule"
+    - "Dockerfile.hardened, Dockerfile.rootless and the dev docker-compose.yml must not be read as extra services"
+    - "The mem:// pub/sub default must not be read as a missing broker"
+vendorQuestions:
+  legitimate:
+    - "Should self-registration stay open? (HBOX_OPTIONS_ALLOW_REGISTRATION defaults to true)"
+  unnecessary:
+    - "Which database? (HBOX_DATABASE_DRIVER=postgres with the connection parts)"
+    - "Is Redis or a worker needed? (no)"
+    - "Which port? (7745)"
+traps:
+  - "HBOX_AUTH_API_KEY_PEPPER is required: the binary stops at start when it is shorter than 32 bytes, and the dev compose file uses a dev-only value (backend/app/api/main.go:121; docker-compose.yml:17)"
+  - "The database is set by separate HBOX_DATABASE_* parts, not by one URL; the SSL mode defaults to require (backend/internal/sys/config/conf_database.go:30)"
+  - "The image sets HBOX_DATABASE_SQLITE_PATH and HBOX_STORAGE_CONN_STRING to /data values; with PostgreSQL the sqlite path is unused, but the storage string must be replaced for S3 (Dockerfile:71,73)"
+  - "The CMD passes /data/config.yml, a path that need not exist; the settings come from HBOX_* environment variables (Dockerfile:101)"
+  - "The storage prefix path (HBOX_STORAGE_PREFIX_PATH=data in the image) comes after the bucket name in an S3 string (Dockerfile:72; storage.mdx:30)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the root Dockerfile builds the Nuxt UI and the Go binary; Dockerfile.hardened and Dockerfile.rootless are variants', evidence: 'Dockerfile:22,54,63,100'}
+  - {field: database, change: 'none: sqlite3 default, postgres by HBOX_DATABASE_DRIVER with separate connection parts', evidence: 'backend/internal/sys/config/conf_database.go:24; backend/app/api/setup.go:75,140'}
+  - {field: storage, change: 'none: gocloud blob connection string; s3:// moves attachments to a bucket', evidence: 'storage.mdx:28; Dockerfile:71'}
+  - {field: outcome, change: 'none: DEPLOYABLE with settings only', evidence: 'backend/app/api/main.go:121; backend/app/api/recurring.go:20,34'}
+  - {field: all, change: verified, evidence: 29 citations checked}

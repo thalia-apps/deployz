@@ -1,0 +1,61 @@
+{
+  "id": "new-274",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r11-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "The svix server is a single Rust HTTP service using PostgreSQL and Redis, which Deployz provides; choosing the server Dockerfile is a contained change, so DEPLOYABLE_WITH_CHANGES is not too lenient.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7937,
+      "completionTokens": 109,
+      "costUsd": 0.03358872
+    },
+    "latencyMs": 3567
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares redis (docker.io/redis:7-alpine) in server/docker-compose.yml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "The declared service is Redis, which Deployz provides as a managed datastore, and it belongs to the server compose stack rather than the bridge image selected for production.",
+        "evidence": [
+          {
+            "path": "server/docker-compose.yml",
+            "line": 57,
+            "quote": "image: \"docker.io/redis:7-alpine\""
+          },
+          {
+            "path": "server/docker-compose.yml",
+            "line": 14,
+            "quote": "SVIX_REDIS_DSN: \"redis://redis:6379\""
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7011,
+      "completionTokens": 189,
+      "costUsd": 0.015912
+    },
+    "latencyMs": 129649
+  }
+}

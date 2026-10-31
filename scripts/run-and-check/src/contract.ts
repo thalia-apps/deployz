@@ -412,6 +412,12 @@ export const analysisResultFileSchema = z
     ai: z.record(z.string(), z.unknown()).nullable().optional(),
     /** The final judge record (`detected_metadata.aiJudge`): skipped, fallback, or the outcome it reviewed and its judgement. */
     judge: z.record(z.string(), z.unknown()).nullable().optional(),
+    /** The soft-finding review record (`detected_metadata.aiSoftReview`), when it ran. */
+    softReview: z.record(z.string(), z.unknown()).nullable().optional(),
+    /** The required readiness findings (id, title, fix class, evidence); absent in files from before them. */
+    findings: z
+      .array(z.object({ id: z.string(), title: z.string(), fixClass: z.string().optional(), technicalEvidence: z.string(), confidence: z.string() }).strict())
+      .optional(),
   })
   .strict();
 export type AnalysisResultFile = z.infer<typeof analysisResultFileSchema>;

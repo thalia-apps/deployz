@@ -1,0 +1,70 @@
+{
+  "id": "new-154",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Outcome DEPLOYABLE_WITH_CHANGES is not too lenient: the dbgate web client is an HTTP app, and the compose proxy service is for testing only.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5660,
+      "completionTokens": 88,
+      "costUsd": 0.024156
+    },
+    "latencyMs": 3066
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker-compose.yaml defines 2 application services (dbgate, proxy). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "probably_wrong",
+        "reason": "The compose file is a local test stack, and the production Dockerfile builds and starts only the single dbgate web process.",
+        "evidence": [
+          {
+            "path": "docker/Dockerfile",
+            "line": 22,
+            "quote": "CMD [\"/home/dbgate-docker/entrypoint.sh\"]"
+          },
+          {
+            "path": "docker-compose.yaml",
+            "line": 31,
+            "quote": "build: test/nginx"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      },
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /root/.dbgate (docker/Dockerfile), volume dbgate-data:/root/.dbgate (docker-compose.yaml dbgate)",
+        "verdict": "stands",
+        "reason": "The Dockerfile declares a volume at /root/.dbgate, and no shown setting moves the connections and settings stored there to a managed datastore.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4790,
+      "completionTokens": 240,
+      "costUsd": 0.01198
+    },
+    "latencyMs": 143668
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "id": "new-182",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r11-final",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Huly is a stack of many cooperating application services (account, front, collaborator, stream, media, preview, link-preview and more) built from separate images, which Deployz cannot run as one web process.",
+      "evidence": [
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 21,
+          "quote": "    image: 'hardcoreeng/media'"
+        },
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 32,
+          "quote": "    image: 'hardcoreeng/preview'"
+        },
+        {
+          "path": "dev/docker-compose.yaml",
+          "line": 44,
+          "quote": "    image: 'hardcoreeng/link-preview'"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6797,
+      "completionTokens": 230,
+      "costUsd": 0.03147012
+    },
+    "latencyMs": 5360
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: pods/ holds the Dockerfiles of 11 component images (account, backup, collaborator, front, fulltext, link-preview), so the app is a stack of cooperating services. Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "The repository is a multi-service platform with many component images, and the shown lines do not prove that the selected stream service runs on its own in production.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares cockroach (cockroachdb/cockroach:latest-v24.3) in dev/docker-compose.yaml; redpanda (docker.redpanda.com/redpandadata/redpanda:v24.3.6) in dev/docker-compose.yaml; elastic (elasticsearch:7.14.2) in dev/docker-compose.yaml; redis (redis:8.0.2-alpine3.21) in dev/docker-compose.yaml. Deployz did not find how the application uses it.",
+        "verdict": "stands",
+        "reason": "The services are declared in a dev compose file, but the shown lines do not prove that the production app needs none of them; for example, the stream service reads a queue configuration that may point to redpanda, and CockroachDB is not a supported datastore.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5881,
+      "completionTokens": 181,
+      "costUsd": 0.013572
+    },
+    "latencyMs": 128522
+  }
+}

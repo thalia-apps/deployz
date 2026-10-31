@@ -1,0 +1,66 @@
+{
+  "id": "new-101",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Open WebUI runs as one uvicorn web process with PostgreSQL and S3 options, and the bundled Ollama is off by default, so a contained change is at most needed.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8995,
+      "completionTokens": 85,
+      "costUsd": 0.0373032
+    },
+    "latencyMs": 3669
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported container setup: the start script backend/start.sh runs 2 long-running servers in the background (ollama serve, uvicorn open_webui.main:app) in one container. Deployz runs one web process and declared workers as separate services.",
+        "verdict": "probably_wrong",
+        "reason": "The start script runs ollama serve only when USE_OLLAMA_DOCKER is true, and the Dockerfile defaults USE_OLLAMA to false, so production runs only the uvicorn web server.",
+        "evidence": [
+          {
+            "path": "Dockerfile",
+            "line": 5,
+            "quote": "ARG USE_OLLAMA=false"
+          },
+          {
+            "path": "Dockerfile",
+            "line": 80,
+            "quote": "USE_OLLAMA_DOCKER=${USE_OLLAMA} \\"
+          },
+          {
+            "path": "backend/start.sh",
+            "line": 54,
+            "quote": "if [[ \"${USE_OLLAMA_DOCKER,,}\" == \"true\" ]]; then"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 9371,
+      "completionTokens": 261,
+      "costUsd": 0.021352
+    },
+    "latencyMs": 142695
+  }
+}

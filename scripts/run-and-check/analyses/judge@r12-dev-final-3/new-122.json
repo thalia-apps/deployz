@@ -1,0 +1,66 @@
+{
+  "id": "new-122",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "unsupported_service",
+      "reason": "Sentry's core event ingestion and querying need Snuba, ClickHouse, Kafka and Relay, which Deployz does not provide, and the product runs as several services.",
+      "evidence": [
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 20,
+          "quote": "LABEL org.opencontainers.image.description=\"Sentry runtime image\""
+        },
+        {
+          "path": "self-hosted/Dockerfile",
+          "line": 22,
+          "quote": "LABEL org.opencontainers.image.documentation=\"https://develop.sentry.dev/self-hosted/\""
+        },
+        {
+          "path": "README.md",
+          "line": 14,
+          "quote": "Sentry is the debugging platform that helps every developer detect, trace, and fix issues. Code breaks, fix it faster."
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6859,
+      "completionTokens": 276,
+      "costUsd": 0.03262644
+    },
+    "latencyMs": 5745
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /data (self-hosted/Dockerfile), VOLUME /data (self-hosted/Dockerfile)",
+        "verdict": "stands",
+        "reason": "The Dockerfile declares VOLUME /data with /data/files for uploaded files, and no shown configuration routes that file storage to S3, so durable local disk state is not disproven.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5965,
+      "completionTokens": 97,
+      "costUsd": 0.0129
+    },
+    "latencyMs": 140244
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "id": "new-180",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "The repository builds the AppFlowy Flutter desktop application (a GTK Linux desktop binary), not a web server that Deployz can serve over HTTP.",
+      "evidence": [
+        {
+          "path": "frontend/scripts/docker-buildfiles/Dockerfile",
+          "line": 35,
+          "quote": "RUN flutter config --enable-linux-desktop"
+        },
+        {
+          "path": "frontend/scripts/docker-buildfiles/Dockerfile",
+          "line": 85,
+          "quote": "CMD [\"./AppFlowy\"]"
+        },
+        {
+          "path": "README.md",
+          "line": 55,
+          "quote": "- [Download AppFlowy Desktop (macOS, Windows, and Linux)](https://github.com/AppFlowy-IO/AppFlowy/releases)"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6381,
+      "completionTokens": 274,
+      "costUsd": 0.03069396
+    },
+    "latencyMs": 4905
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume $HOME/.Xauthority:/root/.Xauthority:rw (frontend/scripts/docker-buildfiles/docker-compose.yml app), volume /dev/dri:/dev/dri (frontend/scripts/docker-buildfiles/docker-compose.yml app)",
+        "verdict": "probably_wrong",
+        "reason": "These volumes do not hold app data: they pass the host X server credentials and the GPU device into a desktop GUI app, so they say nothing about durable storage (the app is a GTK desktop client and may not be deployable as a web service at all).",
+        "evidence": [
+          {
+            "path": "frontend/scripts/docker-buildfiles/docker-compose.yml",
+            "line": 23,
+            "quote": "- $HOME/.Xauthority:/root/.Xauthority:rw"
+          },
+          {
+            "path": "frontend/scripts/docker-buildfiles/docker-compose.yml",
+            "line": 25,
+            "quote": "- /dev/dri:/dev/dri"
+          },
+          {
+            "path": "frontend/scripts/docker-buildfiles/docker-compose.yml",
+            "line": 20,
+            "quote": "- DISPLAY=$DISPLAY"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6070,
+      "completionTokens": 297,
+      "costUsd": 0.01511
+    },
+    "latencyMs": 142689
+  }
+}

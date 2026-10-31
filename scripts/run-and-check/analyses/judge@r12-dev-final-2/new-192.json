@@ -1,0 +1,39 @@
+{
+  "id": "new-192",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "question",
+      "verdict": "not_sure",
+      "category": "no_application",
+      "reason": "The production Dockerfile defaults to installing the released Airflow package version from PyPI rather than building this source, and Airflow also needs separate scheduler/api-server processes, so the shown lines do not prove it builds and serves from this repository as-is.",
+      "evidence": [
+        {
+          "path": "Dockerfile",
+          "line": 51,
+          "quote": "ARG AIRFLOW_VERSION=\"3.3.2\""
+        },
+        {
+          "path": "Dockerfile",
+          "line": 50,
+          "quote": "# latest released version here"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6071,
+      "completionTokens": 188,
+      "costUsd": 0.02776356
+    },
+    "latencyMs": 3846
+  },
+  "softReview": null
+}

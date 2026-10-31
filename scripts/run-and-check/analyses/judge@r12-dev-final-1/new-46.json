@@ -1,0 +1,50 @@
+{
+  "id": "new-46",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Homepage is a stateless-capable Next.js dashboard whose YAML config can be baked into the image, so DEPLOYABLE_WITH_CHANGES is appropriate.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5607,
+      "completionTokens": 89,
+      "costUsd": 0.02396592
+    },
+    "latencyMs": 3103
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-persistent-volume",
+        "findingEvidence": "Unsupported storage: the app declares durable local state (HOMEPAGE_CONFIG_DIR (runtime source)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory.",
+        "verdict": "stands",
+        "reason": "No shown line points HOMEPAGE_CONFIG_DIR at a supported datastore, and the Dockerfile only creates a local config directory, so whether the app needs durable local configuration stays open for the vendor to confirm.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4677,
+      "completionTokens": 113,
+      "costUsd": 0.010484
+    },
+    "latencyMs": 130833
+  }
+}

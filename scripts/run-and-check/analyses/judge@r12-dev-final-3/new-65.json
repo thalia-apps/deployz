@@ -1,0 +1,86 @@
+{
+  "id": "new-65",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Baserow needs a separate Django backend server and a Nuxt web-frontend server running together behind a Caddy proxy, and Deployz runs only one web process per deployment.",
+      "evidence": [
+        {
+          "path": "docker-compose.yml",
+          "line": 8,
+          "quote": "# This compose file runs every service separately using a Caddy reverse proxy to route"
+        },
+        {
+          "path": "docker-compose.yml",
+          "line": 9,
+          "quote": "# requests to the backend or web-frontend, handle websockets and to serve uploaded files"
+        },
+        {
+          "path": "heroku.Dockerfile",
+          "line": 1,
+          "quote": "ARG FROM_IMAGE=baserow/baserow:2.4.1"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6600,
+      "completionTokens": 570,
+      "costUsd": 0.037422
+    },
+    "latencyMs": 7842
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker-compose.yml defines 3 application services (backend, web-frontend, volume-permissions-fixer). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "The production Dockerfile uses the all-in-one baserow image, and the shown lines do not prove that it runs as a single web process without the separate frontend and backend services.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "unconfirmed-declared-service",
+        "findingEvidence": "Unconfirmed service: the repository declares redis (redis:6) in docker-compose.yml. Deployz did not find how the application uses it.",
+        "verdict": "probably_wrong",
+        "reason": "The declared service is Redis, which Deployz provides, and the configuration lets the app use an external Redis through REDIS_* settings.",
+        "evidence": [
+          {
+            "path": "docker-compose.yml",
+            "line": 62,
+            "quote": "# Set these if you want to use an external redis instead of the redis service below."
+          },
+          {
+            "path": "heroku.Dockerfile",
+            "line": 6,
+            "quote": "RUN apt-get remove -y \"postgresql-$POSTGRES_VERSION\" redis-server"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 7453,
+      "completionTokens": 274,
+      "costUsd": 0.017646
+    },
+    "latencyMs": 141563
+  }
+}

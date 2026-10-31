@@ -1,0 +1,50 @@
+{
+  "id": "new-269",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r11-blind",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Label Studio supports PostgreSQL and S3-backed storage, so moving local data off disk is a contained change.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6656,
+      "completionTokens": 66,
+      "costUsd": 0.02766456
+    },
+    "latencyMs": 2629
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: volume ./mydata:/label-studio/data:rw (docker-compose.yml nginx), volume ./mydata:/label-studio/data:rw (docker-compose.yml app)",
+        "verdict": "stands",
+        "reason": "The data directory holds uploaded files as well as the database, and no shown setting moves those uploads to S3, so the files would be lost on every restart.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6988,
+      "completionTokens": 84,
+      "costUsd": 0.014816
+    },
+    "latencyMs": 142381
+  }
+}

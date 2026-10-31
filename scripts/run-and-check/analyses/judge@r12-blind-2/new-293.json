@@ -1,0 +1,44 @@
+{
+  "id": "new-293",
+  "analyser": "judge@r12-blind-2",
+  "from": "ai@r12-blind",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "GoAccess is a log analyzer CLI (terminal tool emitting HTML reports plus a WebSocket feed), not a web application serving HTTP on a port; the start command only prints help.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 5,
+          "quote": "GoAccess is an open source, real-time web log analyzer and interactive viewer"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 40,
+          "quote": "ENTRYPOINT [\"/usr/bin/goaccess\"]"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 41,
+          "quote": "CMD [\"--help\"]"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4986,
+      "completionTokens": 225,
+      "costUsd": 0.012222
+    },
+    "latencyMs": 126641
+  },
+  "softReview": null
+}

@@ -1,0 +1,257 @@
+{
+  "id": "new-181",
+  "commit": "8cef09e1dd62b47a3cbc9f352aa10b3a90c75d34",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".render",
+      "runtime": "rust",
+      "framework": null,
+      "dockerfilePath": ".render/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/usr/local/bin/render-start.sh\"]",
+      "port": 3010
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_USERNAME",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AFFINE_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/backend/server/src/prelude.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/backend/server/schema.prisma"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".docker/dev/.env.example declares DB_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".docker/dev/.env.example declares DB_USERNAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEPLOYMENT_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend/server/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NAPI_RS_ENFORCE_VERSION_CHECK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/frontend/native/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NAPI_RS_FORCE_WASI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/frontend/native/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NAPI_RS_NATIVE_LIBRARY_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/frontend/native/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/backend/server/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp",
+      "sentry"
+    ],
+    "unsupported": [
+      "Unconfirmed service: the repository declares redis (redis) in .docker/selfhost/compose.yml. Deployz did not find how the application uses it.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares redis (redis) in .docker/selfhost/compose.yml. Deployz did not find how the application uses it."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "findings": [
+    {
+      "id": "unconfirmed-declared-service",
+      "title": "Declares a service that Deployz could not confirm",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unconfirmed service: the repository declares redis (redis) in .docker/selfhost/compose.yml. Deployz did not find how the application uses it.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "local-file-storage",
+      "title": "Files stored on local disk",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Durable local filesystem state declared: volume ./data/storage:/root/.affine/storage (.docker/selfhost/compose.yml affine)",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "migration-command-needs-input",
+      "title": "Choose how Deployz runs database migrations",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "The package script \"data-migration\" (cross-env NODE_ENV=development SERVER_FLAVOR=script r ./src/index.ts) changes the database, but nothing runs it when the application starts and it is no deploy-safe migration command.",
+      "confidence": "needs_confirmation"
+    }
+  ]
+}

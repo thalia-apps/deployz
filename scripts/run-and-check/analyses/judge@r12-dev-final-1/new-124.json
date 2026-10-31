@@ -1,0 +1,86 @@
+{
+  "id": "new-124",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "not_http",
+      "reason": "This repository is the ClickHouse database server (the selected image runs ClickHouse Keeper, a coordination server on port 2181), not a web application, and the image installs a released package instead of building this source.",
+      "evidence": [
+        {
+          "path": "docker/keeper/Dockerfile",
+          "line": 42,
+          "quote": "ARG PACKAGES=\"clickhouse-keeper\""
+        },
+        {
+          "path": "docker/keeper/Dockerfile",
+          "line": 40,
+          "quote": "ARG REPOSITORY=\"https://packages.clickhouse.com/tgz/${REPO_CHANNEL}\""
+        },
+        {
+          "path": "README.md",
+          "line": 19,
+          "quote": "curl https://clickhouse.com/ | sh"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7724,
+      "completionTokens": 257,
+      "costUsd": 0.03567564
+    },
+    "latencyMs": 4667
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME \"${DEFAULT_DATA_DIR}\" (docker/keeper/Dockerfile), VOLUME /var/lib/clickhouse (docker/keeper/Dockerfile)",
+        "verdict": "stands",
+        "reason": "The ClickHouse Keeper image stores coordination logs and snapshots in its data directory, and no shown setting moves that state to a managed service.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "localhost-binding",
+        "findingEvidence": "Server binds only to a loopback address: listen(PORT, '127.0.0.1', () (.claude/skills/diff-review/server.mjs)",
+        "verdict": "probably_wrong",
+        "reason": "The loopback bind is in a Claude skill helper script, not in the production image, which starts ClickHouse Keeper through /entrypoint.sh.",
+        "evidence": [
+          {
+            "path": "docker/keeper/Dockerfile",
+            "line": 42,
+            "quote": "ARG PACKAGES=\"clickhouse-keeper\""
+          },
+          {
+            "path": "docker/keeper/Dockerfile",
+            "line": 29,
+            "quote": "COPY entrypoint.sh /entrypoint.sh"
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6379,
+      "completionTokens": 267,
+      "costUsd": 0.015428
+    },
+    "latencyMs": 123365
+  }
+}

@@ -1,0 +1,261 @@
+{
+  "id": "new-281",
+  "commit": "ca9b963961abcffed8256029afd75f32ecfdea81",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "ruby",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"bin/boot\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/up",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": "redis-server config/redis.conf"
+    },
+    "workers": [
+      {
+        "id": "redis",
+        "command": "redis-server config/redis.conf",
+        "source": "Procfile"
+      },
+      {
+        "id": "workers",
+        "command": "FORK_PER_JOB=false INTERVAL=0.1 bundle exec resque-pool",
+        "source": "Procfile"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "BENCH_ITERATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bench/message_hot_paths.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BENCH_LABELS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in bench/message_hot_paths.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CAMPFIRE_RESPONSE_CACHE_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/models/response_cache.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MRSK_REGISTRY_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.erb declares MRSK_REGISTRY_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PIDFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "RAILS_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/environments/production.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_MASTER_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.erb declares RAILS_MASTER_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RAILS_MAX_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml",
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_MIN_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/cable.yml",
+            "read in config/initializers/resque.rb"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VAPID_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/vapid.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VAPID_PUBLIC_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/vapid.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WEB_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported database: config/database.yml configures only the sqlite3 adapter. Deployz hosts PostgreSQL and MySQL only."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database: config/database.yml configures only the sqlite3 adapter. Deployz hosts PostgreSQL and MySQL only."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: BENCH_LABELS. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "NOT_DEPLOYABLE",
+  "findings": [
+    {
+      "id": "unsupported-database-sqlite",
+      "title": "Your database needs a supported engine",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Unsupported database: config/database.yml configures only the sqlite3 adapter. Deployz hosts PostgreSQL and MySQL only.",
+      "confidence": "confirmed"
+    }
+  ]
+}

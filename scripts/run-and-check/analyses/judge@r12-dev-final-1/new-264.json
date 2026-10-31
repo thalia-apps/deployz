@@ -1,0 +1,44 @@
+{
+  "id": "new-264",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r11-blind",
+  "storedOutcome": "NOT_DEPLOYABLE",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "skipped",
+    "reason": "not_deployable",
+    "promptVersion": 4
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "NOT_DEPLOYABLE",
+    "reviews": [
+      {
+        "findingId": "unsupported-database-sqlite",
+        "findingEvidence": "Unsupported database: SQLite driver better-sqlite3. Deployz hosts PostgreSQL and MySQL only; an embedded file database does not survive in the container model.",
+        "verdict": "stands",
+        "reason": "The shown files do not show where better-sqlite3 is used or that a setting replaces it, so the finding cannot be ruled out from these lines.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      },
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /elk/data (Dockerfile), volume ./elk-storage:/elk/data (docker-compose.yaml elk)",
+        "verdict": "stands",
+        "reason": "The image sets the fs storage base to the /elk/data volume, which holds account configs, and no shown setting selects a supported datastore instead.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5414,
+      "completionTokens": 156,
+      "costUsd": 0.012388
+    },
+    "latencyMs": 131240
+  }
+}

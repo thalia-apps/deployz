@@ -1,0 +1,50 @@
+{
+  "id": "new-197",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "The registry is an HTTP service whose storage driver can be switched to S3 by configuration, so DEPLOYABLE_WITH_CHANGES is appropriate.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5823,
+      "completionTokens": 84,
+      "costUsd": 0.02472228
+    },
+    "latencyMs": 6161
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /var/lib/registry (Dockerfile)",
+        "verdict": "stands",
+        "reason": "The image loads cmd/registry/config-dev.yml, which is not shown, so nothing proves that blob storage uses S3 instead of the /var/lib/registry volume.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4908,
+      "completionTokens": 95,
+      "costUsd": 0.010766
+    },
+    "latencyMs": 145273
+  }
+}

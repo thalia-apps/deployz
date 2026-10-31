@@ -1,0 +1,50 @@
+{
+  "id": "new-202",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Grist can keep documents in S3-compatible storage with PostgreSQL for the home database, so the contained-change outcome stands.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 6437,
+      "completionTokens": 71,
+      "costUsd": 0.02689632
+    },
+    "latencyMs": 2473
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-persistent-volume",
+        "findingEvidence": "Unsupported storage: the app declares durable local state (GRIST_DATA_DIR=/persist/docs (Dockerfile)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory.",
+        "verdict": "stands",
+        "reason": "Grist stores each document as a SQLite file under GRIST_DATA_DIR, and none of the shown lines configures S3 or another external store for those documents, so the finding is not shown to be wrong.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 5507,
+      "completionTokens": 103,
+      "costUsd": 0.012044
+    },
+    "latencyMs": 142839
+  }
+}

@@ -1,0 +1,351 @@
+{
+  "id": "new-267",
+  "commit": "6c3f5d78ec6010044b324e810a2a9aa9040383bd",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "apps/server",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "apps/server/Dockerfile"
+    },
+    "build": {
+      "command": "tsx scripts/build.ts",
+      "context": ".",
+      "missingSources": [
+        "dist"
+      ]
+    },
+    "web": {
+      "command": "CMD: [ \"sh\", \"./start-docker.sh\" ]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "APPDATA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/data_dir.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BETTERSQLITE3_NATIVE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/sql_provider.ts",
+            "read in apps/server/src/services/database_validation.ts",
+            "read in apps/server/src/share/sql.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/routes/assets.ts",
+            "read in apps/server/src/share/share_provider.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_ANONYMIZED_DB_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/data_dir.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_BACKUP_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/data_dir.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_CONFIG_INI_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/data_dir.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_DATA_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/data_dir.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_DOCUMENT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/data_dir.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/utils.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/host.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_IMAGE_WORKER_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/image_provider.ts",
+            "read in apps/server/src/services/image_worker.ts",
+            "read in apps/server/src/services/image_worker_pool.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_INTEGRATION_TEST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/core_init.ts",
+            "read in apps/server/src/sql_provider.ts",
+            "read in apps/server/src/routes/routes.ts",
+            "read in apps/server/src/share/sql.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_LOG_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/data_dir.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_OCR_CACHE_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/data_dir.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/port.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_PROFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/cpu_profiler.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_RESOURCES_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/data_dir.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_RESOURCE_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/utils.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_SAFE_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/routes/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRILIUM_TMP_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/services/data_dir.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VITEST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/log_provider.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported database: SQLite driver better-sqlite3. Deployz hosts PostgreSQL and MySQL only; an embedded file database does not survive in the container model.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database: SQLite driver better-sqlite3. Deployz hosts PostgreSQL and MySQL only; an embedded file database does not survive in the container model."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies dist, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "NOT_DEPLOYABLE",
+  "findings": [
+    {
+      "id": "unsupported-database-sqlite",
+      "title": "Your database needs a supported engine",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Unsupported database: SQLite driver better-sqlite3. Deployz hosts PostgreSQL and MySQL only; an embedded file database does not survive in the container model.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "local-file-storage",
+      "title": "Files stored on local disk",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Durable local filesystem state declared: volume ./trilium-data:/home/node/trilium-data (docker-compose.yml trilium)",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "health-check",
+      "title": "Give Deployz a way to check your app",
+      "fixClass": "SETTING",
+      "technicalEvidence": "No health endpoint or container health check was found (no /health-style route, no HEALTHCHECK instruction).",
+      "confidence": "likely"
+    }
+  ]
+}

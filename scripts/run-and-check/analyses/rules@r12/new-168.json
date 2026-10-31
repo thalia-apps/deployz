@@ -1,0 +1,378 @@
+{
+  "id": "new-168",
+  "commit": "60a3cff9c08183760355b07bd60f5223d8916d6b",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 5005
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "PGUSER",
+          "kind": "username"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AWS_ENDPOINT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in rasa/nlu/persistor.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_ACCOUNT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in rasa/nlu/persistor.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_ACCOUNT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in rasa/nlu/persistor.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_CONTAINER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in rasa/nlu/persistor.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASE_IMAGE_HASH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "Dockerfile build arg BASE_IMAGE_HASH selects the base image; the build fails without it"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in rasa/nlu/persistor.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FORCE_JSON_LOGGING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in rasa/utils/log_utils.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_BASE_NAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "Dockerfile build arg IMAGE_BASE_NAME selects the base image; the build fails without it"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MAX_NUMBER_OF_PREDICTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in rasa/core/processor.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PGUSER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "tests_deployment/.env.example declares PGUSER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "tests_deployment/.env.example declares POSTGRES_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "tests_deployment/.env.example declares POSTGRES_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "RABBITMQ_SSL_CA_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in rasa/core/brokers/pika.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_SSL_CLIENT_CERTIFICATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in rasa/core/brokers/pika.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_SSL_CLIENT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in rasa/core/brokers/pika.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_SSL_KEY_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in rasa/core/brokers/pika.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RASA_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in rasa/core/brokers/kafka.py",
+            "read in rasa/core/brokers/pika.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TICKET_LOCK_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in rasa/core/lock_store.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TIMES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares TIMES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "externalServices": [
+      "sentry",
+      "twilio"
+    ],
+    "unsupported": [
+      "Unsupported architecture: docker/docker-compose.yml defines 3 application services (rasa, action_server, duckling). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker/docker-compose.yml defines 3 application services (rasa, action_server, duckling). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: BASE_IMAGE_HASH, IMAGE_BASE_NAME. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "findings": [
+    {
+      "id": "unsupported-multi-service",
+      "title": "Runs as several services",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported architecture: docker/docker-compose.yml defines 3 application services (rasa, action_server, duckling). Deployz runs ONE web process per deployment plus declared background workers.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "start-command-missing",
+      "title": "Tell Deployz how to start your app",
+      "fixClass": "SETTING",
+      "technicalEvidence": "The Dockerfile has no CMD or ENTRYPOINT instruction and no \"start\" script was found in any package.json.",
+      "confidence": "confirmed"
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+id: new-310
+repository: ente/ente
+commit: 23412c64b091dafcbfb57bb1e2048a62ba7d1fd0
+summary: >
+  The ente/ente monorepo holds the apps of Ente (end-to-end encrypted photos, auth and others): mobile, desktop, web, CLI
+  and Rust code, and the server called Museum in server/. Museum is one Go binary (server/Dockerfile, build context
+  server/) that serves the API on port 8080 (/ping is the health route). It needs PostgreSQL (db.* settings; the schema is
+  migrated at start with golang-migrate) and S3-compatible object storage with fixed bucket names in the config
+  (b2-eu-cen, wasabi-eu-central-2-v3, scw-eu-fr-v3, and an optional derived bucket); every file the users upload is stored
+  there. The image copies configurations/ (local.yaml is the default, ENVIRONMENT selects another file), and every value
+  can be set with ENTE_* environment variables (viper with a "." and "-" to "_" key replacer), or with museum.yaml and
+  credentials.yaml files. Cron jobs run inside the process. The web apps are a separate image (web/Dockerfile) and
+  are not needed for the API; the mobile and desktop apps talk to Museum.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    One Go web process built from server/Dockerfile, PostgreSQL through ENTE_DB_* values, S3 storage through ENTE_S3_*
+    values, migrations and cron jobs inside the process, no Redis, no local data. Every required value has an environment
+    name, so settings alone can deploy it: DEPLOYABLE. The case is not fully clear because the S3 configuration has three
+    fixed bucket names with a key, secret, endpoint, region and bucket each (the sample compose file uses a config file),
+    and the default config holds public example secrets that must be replaced; a vendor who bakes a museum.yaml into the
+    image would be a repository change (DEPLOYABLE_WITH_CHANGES). The web apps are optional clients, not a second service
+    that must run.
+dockerfile:
+  accept: [server/Dockerfile]
+  reject:
+    - {path: web/Dockerfile, reason: "image for the web apps (static sites); a client of Museum, not the API server"}
+    - {path: cli/Dockerfile, reason: "image for the ente command-line tool, not a web service"}
+    - {path: infra/copycat-db/Dockerfile, reason: "database backup helper for the hosted service, not the application"}
+  target: null
+  context: server
+  evidence:
+    - {path: server/Dockerfile, line: 12, quote: "go build -trimpath -o museum cmd/museum/main.go"}
+    - {path: server/Dockerfile, line: 16, quote: "COPY configurations configurations"}
+    - {path: server/Dockerfile, line: 17, quote: "COPY migrations migrations"}
+    - {path: server/Dockerfile, line: 24, quote: "CMD [\"./museum\"]"}
+runtime: {accept: [go]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: server/cmd/museum/main.go, line: 1158, quote: "port := 8080"}
+    - {path: server/compose.yaml, line: 10, quote: "- 8080:8080 # API"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/cmd/museum/main.go, line: 1166, quote: "server.Run(fmt.Sprintf(\":%d\", port))"}
+startCommand:
+  source: image
+  accept: ["./museum"]
+  evidence:
+    - {path: server/Dockerfile, line: 24, quote: "CMD [\"./museum\"]"}
+healthPath:
+  accept: ["/ping"]
+  evidence:
+    - {path: server/cmd/museum/main.go, line: 584, quote: "publicAPI.GET(\"/ping\", timeout.New("}
+    - {path: server/RUNNING.md, line: 34, quote: "curl http://localhost:8080/ping"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {ENTE_DB_HOST: "<host>", ENTE_DB_PORT: "5432", ENTE_DB_NAME: "<db>", ENTE_DB_USER: "<user>", ENTE_DB_PASSWORD: "<password>", ENTE_DB_SSLMODE: "require"}
+  connectionVars: [ENTE_DB_HOST, ENTE_DB_PORT, ENTE_DB_NAME, ENTE_DB_USER, ENTE_DB_PASSWORD, ENTE_DB_SSLMODE]
+  # No DATABASE_URL: the db.* keys of the config file, each with an ENTE_DB_* environment name. The default sslmode is disable.
+  evidence:
+    - {path: server/configurations/local.yaml, line: 126, quote: "sslmode: disable"}
+    - {path: server/configurations/local.yaml, line: 128, quote: "# as ENTE_DB_USER and ENTE_DB_PASSWORD."}
+    - {path: server/pkg/utils/config/config.go, line: 15, quote: "viper.SetEnvPrefix(\"ENTE\")"}
+    - {path: server/pkg/utils/config/config.go, line: 16, quote: "viper.SetEnvKeyReplacer(strings.NewReplacer(\".\", \"_\", \"-\", \"_\"))"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: server/cmd/museum/main.go, line: 1224, quote: "if err := m.Up(); err != nil && err != migrate.ErrNoChange {"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  # Cron jobs (cleanup, replication, deletions) run in the museum process unless jobs.cron.skip is set.
+  status: embedded
+  commands: []
+  evidence:
+    - {path: server/cmd/museum/main.go, line: 1315, quote: "if viper.GetBool(\"jobs.cron.skip\") {"}
+    - {path: server/cmd/museum/main.go, line: 1322, quote: "c := cron.New()"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # All uploaded files and derived data are objects in the S3 buckets of the s3 section. The server writes no local files.
+  local: none
+  paths: []
+  s3: native
+  s3SelectBy: {ENTE_S3_B2_EU_CEN_KEY: "<access key>", ENTE_S3_B2_EU_CEN_SECRET: "<secret key>", ENTE_S3_B2_EU_CEN_ENDPOINT: "<s3 endpoint>", ENTE_S3_B2_EU_CEN_REGION: "<region>", ENTE_S3_B2_EU_CEN_BUCKET: "<bucket>"}
+  evidence:
+    - {path: server/configurations/local.yaml, line: 147, quote: "s3:"}
+    - {path: server/configurations/local.yaml, line: 154, quote: "b2-eu-cen:"}
+    - {path: server/configurations/local.yaml, line: 163, quote: "wasabi-eu-central-2-v3:"}
+    - {path: server/configurations/local.yaml, line: 176, quote: "scw-eu-fr-v3:"}
+env:
+  required:
+    - {name: ENTE_DB_HOST, secret: false, buildTime: false, note: "PostgreSQL host; the config default is localhost"}
+    - {name: ENTE_DB_USER, secret: false, buildTime: false, note: "database user; empty in the default config"}
+    - {name: ENTE_DB_PASSWORD, secret: true, buildTime: false, note: "database password; empty in the default config"}
+    - {name: ENTE_DB_SSLMODE, secret: false, buildTime: false, note: "set to require for an RDS database; the default is disable"}
+    - {name: ENTE_S3_B2_EU_CEN_KEY, secret: true, buildTime: false, note: "S3 access key of the primary hot bucket; the secret, endpoint, region and bucket values are needed too"}
+    - {name: ENTE_KEY_ENCRYPTION, secret: true, buildTime: false, note: "random key (go run tools/gen-random-keys/main.go); the default config holds a public example value"}
+    - {name: ENTE_KEY_HASH, secret: true, buildTime: false, note: "random key; the default config holds a public example value"}
+    - {name: ENTE_JWT_SECRET, secret: true, buildTime: false, note: "random JWT secret; the default config holds a public example value"}
+  optional: [ENVIRONMENT, ENTE_DB_NAME, ENTE_DB_PORT, ENTE_HTTP_PORT, ENTE_SMTP_HOST, ENTE_SMTP_PORT, ENTE_SMTP_USERNAME, ENTE_SMTP_PASSWORD, ENTE_JOBS_CRON_SKIP, ENTE_CREDENTIALS_FILE]
+  buildTime: []
+  evidence:
+    - {path: server/cmd/museum/main.go, line: 102, quote: "environment = \"local\""}
+    - {path: server/configurations/local.yaml, line: 248, quote: "encryption: yvmG/RnzKrbCb9L3mgsmoxXr9H7i2Z4qlbT0mL3ln4w="}
+    - {path: server/configurations/local.yaml, line: 256, quote: "secret: i2DecQmfGreG6q1vBj5tCokhlN41gcfS2cjOs9Po-u8="}
+    - {path: server/configurations/local.yaml, line: 129, quote: "user:"}
+blockers:
+  expected: []
+  mustNot:
+    - "The monorepo (mobile, desktop, web, CLI, Rust) must not be read as several services that must run together; only server/ is the deployed service"
+    - "The MinIO and socat containers in server/compose.yaml are a local test setup and must not be read as required services; Museum needs S3-compatible storage, which an AWS S3 bucket gives"
+    - "The Wasabi, Backblaze and Scaleway bucket names must not be read as three required providers: they are fixed config key names that can point to one S3 service"
+    - "web/Dockerfile (the web apps) must not be chosen as the application image"
+vendorQuestions:
+  legitimate:
+    - "Which S3 buckets, region and access keys does Museum use for its bucket entries?"
+    - "Which public URLs do the web apps use, if the web image is also run? (apps.* settings)"
+  unnecessary:
+    - "Which database? (PostgreSQL through ENTE_DB_* values)"
+    - "Is a worker, migration command or Redis needed? (no)"
+    - "Which port? (8080)"
+traps:
+  - "The default configuration (ENVIRONMENT empty gives local.yaml) contains public example values for key.encryption, key.hash and jwt.secret; a deployment that keeps them is insecure, so they must be replaced (server/configurations/local.yaml:247-256)"
+  - "The db.sslmode default is disable; an RDS database that needs TLS needs ENTE_DB_SSLMODE=require (server/configurations/local.yaml:126)"
+  - "The S3 buckets have fixed key names (b2-eu-cen, wasabi-eu-central-2-v3, scw-eu-fr-v3); the environment names derive from them with - turned into _ (server/pkg/utils/config/config.go:16)"
+  - "wasabi-eu-central-2-v3 has compliance: true by default, which is meant for a Wasabi object lock; for another S3 service it should be false (server/configurations/local.yaml:175)"
+openQuestions:
+  - "Whether every s3 sub-key can be overridden by an environment value when it is empty in local.yaml was read from the viper setup and not run"
+crossReview:
+  - {field: dockerfile, change: 'none: server/Dockerfile builds Museum from source with context server/; web/Dockerfile is the web apps', evidence: 'server/Dockerfile:12,16,17,24'}
+  - {field: database / storage, change: 'none: db.* and s3.* keys exist in local.yaml with empty values, which lets ENTE_* values override them', evidence: 'server/configurations/local.yaml:129,147-189; server/pkg/utils/config/config.go:14-16'}
+  - {field: outcome, change: 'none: DEPLOYABLE with settings; DEPLOYABLE_WITH_CHANGES accepted for the multi-bucket S3 config and the example secrets', evidence: 'server/cmd/museum/main.go:100-103'}
+  - {field: all, change: verified, evidence: 25 citations checked}

@@ -1,0 +1,875 @@
+{
+  "id": "repo-204",
+  "commit": "d012afd16a5d9a4d001c921d9bf9f411e9ffdc13",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "php",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/bin/sh\", \"./docker-entrypoint.sh\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ANONYMIZE_REMOTE_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTO_RESOLVE_TITLES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_NAMESPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CORS_ALLOW_CREDENTIALS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CORS_ALLOW_ORIGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CORS_MAX_AGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_DRIVER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: default \"sqlite\" stores data on the container disk — set \"postgres\" to use the managed PostgreSQL database",
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_UNIX_SOCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_USE_ENCRYPTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_BASE_URL_REDIRECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_INVALID_SHORT_URL_REDIRECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_REGULAR_404_REDIRECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_SHORT_CODES_LENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DELETE_SHORT_URL_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_IP_TRACKING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_REFERRER_TRACKING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_TRACKING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_TRACKING_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_TRACK_PARAM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_UA_TRACKING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOLITE_LICENSE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INITIAL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_HTTPS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGS_FORMAT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MATOMO_API_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MATOMO_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MATOMO_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MATOMO_SITE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMORY_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MERCURE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MERCURE_INTERNAL_HUB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MERCURE_JWT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "MERCURE_PUBLIC_HUB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MULTI_SEGMENT_SLUGS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_USE_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RABBITMQ_VHOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REAL_TIME_UPDATES_TOPICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIRECT_CACHE_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIRECT_CACHE_VISIBILITY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIRECT_EXTRA_PATH_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIRECT_STATUS_CODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PUB_SUB_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SENTINEL_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SERVERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SERVERS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SERVERS_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ROBOTS_ALLOW_ALL_SHORT_URLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ROBOTS_USER_AGENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHLINK_RUNTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/autoload/logger.global.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHORT_URL_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHORT_URL_TRAILING_SLASH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SKIP_INITIAL_GEOLITE_DOWNLOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TIMEZONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRACK_ORPHAN_VISITS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRUSTED_PROXIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in module/Core/src/Config/EnvVars.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: DB_DRIVER. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE",
+  "findings": [
+    {
+      "id": "health-check",
+      "title": "Give Deployz a way to check your app",
+      "fixClass": "SETTING",
+      "technicalEvidence": "No health endpoint or container health check was found (no /health-style route, no HEALTHCHECK instruction).",
+      "confidence": "likely"
+    }
+  ]
+}

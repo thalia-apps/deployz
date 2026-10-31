@@ -1,0 +1,230 @@
+{
+  "id": "new-292",
+  "commit": "411d7dbed640c198636eff6277b0c17fdd3ba204",
+  "analyser": "ai@r12-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "nuxt",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "nuxt build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/bin/sh\", \"/app/015.sh\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: the start script 015.sh runs 2 long-running servers in the background (/bin/backend, node /app/server/index.mjs) in one container. Deployz runs one web process and declared workers as separate services.",
+      "Persistent local filesystem storage is not supported",
+      "Final review: The product runs a separate Go API server and a Nuxt frontend server together behind Caddy, and Deployz runs only one web process per service."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: the start script 015.sh runs 2 long-running servers in the background (/bin/backend, node /app/server/index.mjs) in one container. Deployz runs one web process and declared workers as separate services."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Final review: The product runs a separate Go API server and a Nuxt frontend server together behind Caddy, and Deployz runs only one web process per service."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05544,
+        "promptTokens": 10880,
+        "completionTokens": 624
+      },
+      "latencyMs": 8835
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "unexplained-declared-service",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 9044,
+    "questions": 3,
+    "generatedAt": "2026-10-31T06:57:49.434Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02990196,
+      "promptTokens": 5261,
+      "completionTokens": 458
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "The product runs a separate Go API server and a Nuxt frontend server together behind Caddy, and Deployz runs only one web process per service.",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "decision": "block",
+      "evidence": [
+        {
+          "line": 2,
+          "path": "015.sh",
+          "quote": "/bin/backend &"
+        },
+        {
+          "line": 3,
+          "path": "015.sh",
+          "quote": "node /app/server/index.mjs &"
+        },
+        {
+          "line": 4,
+          "path": "015.sh",
+          "quote": "exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 6585,
+    "promptVersion": 5
+  },
+  "softReview": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.0215424,
+      "promptTokens": 4700,
+      "completionTokens": 148
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "reason": "The start script 015.sh launches the Go backend and the Nuxt server in the background alongside Caddy in one container, which matches the finding.",
+        "verdict": "stands",
+        "evidence": [],
+        "question": false,
+        "findingId": "unsupported-multi-service",
+        "checkReasons": [],
+        "findingEvidence": "Unsupported container setup: the start script 015.sh runs 2 long-running servers in the background (/bin/backend, node /app/server/index.mjs) in one container. Deployz runs one web process and declared workers as separate services."
+      },
+      {
+        "reason": "No shown configuration selects S3 or another store for uploads, so the /uploads volume appears to hold durable user files.",
+        "verdict": "stands",
+        "evidence": [],
+        "question": false,
+        "findingId": "local-file-storage",
+        "checkReasons": [],
+        "findingEvidence": "Durable local filesystem state declared: volume ./uploads:/uploads (docker-compose.yml app), volume ./uploads:/uploads (docker-compose.yml worker)"
+      }
+    ],
+    "latencyMs": 2949,
+    "promptVersion": 5
+  },
+  "findings": [
+    {
+      "id": "unsupported-multi-service",
+      "title": "Runs as several services",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported container setup: the start script 015.sh runs 2 long-running servers in the background (/bin/backend, node /app/server/index.mjs) in one container. Deployz runs one web process and declared workers as separate services.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "local-file-storage",
+      "title": "Files stored on local disk",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Durable local filesystem state declared: volume ./uploads:/uploads (docker-compose.yml app), volume ./uploads:/uploads (docker-compose.yml worker)",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "final-review-unsupported",
+      "title": "Runs as several services",
+      "fixClass": "CAPABILITY_GAP",
+      "technicalEvidence": "Final review: The product runs a separate Go API server and a Nuxt frontend server together behind Caddy, and Deployz runs only one web process per service. Evidence: 015.sh:2 \"/bin/backend &\"; 015.sh:3 \"node /app/server/index.mjs &\"; 015.sh:4 \"exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile\".",
+      "confidence": "likely"
+    }
+  ]
+}

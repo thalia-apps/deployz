@@ -1,0 +1,883 @@
+{
+  "id": "new-245",
+  "commit": "3e60fa14883333510292fe5553ff4adcf924259e",
+  "analyser": "rules@r12",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "@nestjs/core",
+      "dockerfilePath": "backend/docker/Dockerfile"
+    },
+    "build": {
+      "command": "dotenv -c production -- turbo run build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"dist/main.js\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "HD_DATABASE_NAME",
+          "kind": "database"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "HD_AUTH_ALLOW_CHOOSE_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_ALLOW_CHOOSE_USERNAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_ALLOW_PROFILE_EDITS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_ALLOW_PROFILE_EDITS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_BIND_CREDENTIALS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_BIND_CREDENTIALS"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_BIND_DN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_BIND_DN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_DISPLAY_NAME_FIELD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_DISPLAY_NAME_FIELD"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_EMAIL_FIELD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_EMAIL_FIELD"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_PROFILE_PICTURE_FIELD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_PROFILE_PICTURE_FIELD"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_PROVIDER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_PROVIDER_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_SEARCH_ATTRIBUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_SEARCH_ATTRIBUTES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_SEARCH_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_SEARCH_BASE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_SEARCH_FILTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_SEARCH_FILTER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_TLS_ALLOW_PARTIAL_TRUST_CHAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_TLS_ALLOW_PARTIAL_TRUST_CHAIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_TLS_MAX_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_TLS_MAX_VERSION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_TLS_MIN_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_TLS_MIN_VERSION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_TLS_REJECT_UNAUTHORIZED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_TLS_REJECT_UNAUTHORIZED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_TLS_SNI_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_TLS_SNI_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_MYLDAP_USER_ID_FIELD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_MYLDAP_USER_ID_FIELD"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LDAP_SERVERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LDAP_SERVERS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LOCAL_ENABLE_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LOCAL_ENABLE_LOGIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LOCAL_ENABLE_REGISTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_LOCAL_ENABLE_REGISTER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_LOCAL_MINIMAL_PASSWORD_STRENGTH",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares HD_AUTH_LOCAL_MINIMAL_PASSWORD_STRENGTH"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_AUTHORIZE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_AUTHORIZE_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_DISPLAY_NAME_FIELD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_DISPLAY_NAME_FIELD"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_EMAIL_FIELD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_EMAIL_FIELD"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_ENABLE_REGISTRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_ENABLE_REGISTRATION"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_END_SESSION_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_END_SESSION_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_ISSUER"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_PROFILE_PICTURE_FIELD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_PROFILE_PICTURE_FIELD"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_PROVIDER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_PROVIDER_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_SCOPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_SCOPE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_THEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_THEME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_TOKEN_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_TOKEN_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_USERINFO_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_USERINFO_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_USER_ID_FIELD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_USER_ID_FIELD"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_MYOIDC_USER_NAME_FIELD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_MYOIDC_USER_NAME_FIELD"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_OIDC_PROVIDERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_OIDC_PROVIDERS"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_SESSION_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_SESSION_LIFETIME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_AUTH_SESSION_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares HD_AUTH_SESSION_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "HD_AUTH_SYNC_SOURCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_AUTH_SYNC_SOURCE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_BACKEND_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_BACKEND_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_BASE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_BRANDING_CUSTOM_LOGO",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_BRANDING_CUSTOM_LOGO"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_BRANDING_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_BRANDING_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_DATABASE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_DATABASE_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "HD_DATABASE_TYPE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: default \"sqlite\" stores data on the container disk — set a PostgreSQL value to use the managed PostgreSQL database",
+            ".env.example declares HD_DATABASE_TYPE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HD_IMAGE_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_IMAGE_PROXY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_LOG_LEVEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_LOG_SHOW_TIMESTAMP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_LOG_SHOW_TIMESTAMP"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_MEDIA_BACKEND_FILESYSTEM_UPLOAD_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_MEDIA_BACKEND_FILESYSTEM_UPLOAD_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_MEDIA_BACKEND_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_MEDIA_BACKEND_TYPE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_MEDIA_MAX_UPLOAD_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_MEDIA_MAX_UPLOAD_SIZE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_NOTE_FORBIDDEN_ALIASES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_NOTE_FORBIDDEN_ALIASES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_NOTE_MAX_LENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_NOTE_MAX_LENGTH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_NOTE_PERMISSIONS_DEFAULT_EVERYONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_NOTE_PERMISSIONS_DEFAULT_EVERYONE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_NOTE_PERMISSIONS_DEFAULT_LOGGED_IN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_NOTE_PERMISSIONS_DEFAULT_LOGGED_IN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_NOTE_PERMISSIONS_MAX_GUEST_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_NOTE_PERMISSIONS_MAX_GUEST_LEVEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_NOTE_PERSIST_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_NOTE_PERSIST_INTERVAL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_NOTE_REVISION_RETENTION_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_NOTE_REVISION_RETENTION_DAYS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_PLANTUML_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_PLANTUML_SERVER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_RENDERER_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_RENDERER_BASE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_URLS_IMPRINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_URLS_IMPRINT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_URLS_PRIVACY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_URLS_PRIVACY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HD_URLS_TERMS_OF_USE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HD_URLS_TERMS_OF_USE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HEDGEDOC_TEST_DB_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/config/mock/database.config.mock.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported architecture: docker/docker-compose.yml defines 2 application services (backend, frontend). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker/docker-compose.yml defines 2 application services (backend, frontend). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: HD_DATABASE_TYPE. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "findings": [
+    {
+      "id": "unsupported-multi-service",
+      "title": "Runs as several services",
+      "fixClass": "CODE_CHANGE",
+      "technicalEvidence": "Unsupported architecture: docker/docker-compose.yml defines 2 application services (backend, frontend). Deployz runs ONE web process per deployment plus declared background workers.",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "health-check",
+      "title": "Give Deployz a way to check your app",
+      "fixClass": "SETTING",
+      "technicalEvidence": "No health endpoint or container health check was found (no /health-style route, no HEALTHCHECK instruction).",
+      "confidence": "likely"
+    }
+  ]
+}

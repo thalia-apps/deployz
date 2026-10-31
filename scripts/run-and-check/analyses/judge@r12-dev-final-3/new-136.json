@@ -1,0 +1,44 @@
+{
+  "id": "new-136",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "decision": "change",
+      "verdict": "needs_changes",
+      "category": null,
+      "reason": "The Dockerfile needs a GO_VERSION build argument, which Deployz does not pass, and its default placeholder yields an invalid gotify/build image tag, so the build fails without a repository change.",
+      "evidence": [
+        {
+          "path": "docker/Dockerfile",
+          "line": 3,
+          "quote": "ARG GO_VERSION=PLEASE_PROVIDE_GO_VERSION"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 29,
+          "quote": "FROM --platform=${BUILDPLATFORM} gotify/build:${GO_VERSION}-${__TARGETPLATFORM_GO_NOTATION} AS builder"
+        },
+        {
+          "path": "docker/Dockerfile",
+          "line": 15,
+          "quote": "ARG BUILD_JS=0"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 5070,
+      "completionTokens": 278,
+      "costUsd": 0.0255816
+    },
+    "latencyMs": 4668
+  },
+  "softReview": null
+}

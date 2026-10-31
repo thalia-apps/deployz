@@ -1,0 +1,114 @@
+id: new-292
+repository: keven1024/015
+commit: 411d7dbed640c198636eff6277b0c17fdd3ba204
+summary: >
+  015 is a self-hosted temporary file and text sharing site. It has a Nuxt 4 front end, a Go (Echo) API and a separate Go
+  (Asynq) worker, with Redis for share metadata and the queue. The root Dockerfile builds the front end and the API
+  and starts three processes through 015.sh (the API on 5001, the Nuxt server on 5000, and Caddy on 80 as the front
+  proxy). The worker has its own worker/Dockerfile and is not in the app image. The documented deployment is two
+  containers (app and worker) that share one local ./uploads directory, plus Redis, and a config.yaml file mounted
+  into both. Uploaded files live only on the local file system; the repository has no S3 or other object storage code.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The app stores every uploaded file on a local directory (upload.path) that the app container and the separate
+    worker container must both read and write. A stateless Fargate task has no shared persistent volume in the Deployz
+    model, and there is no S3 option, so uploads would be lost at each task replacement and the worker could not see them.
+    The worker is a second image from another Dockerfile, not a command of the app image, and the image already starts
+    three processes through a shell script. Several services must run together on shared local disk.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: worker/Dockerfile, reason: "worker image only (Asynq task handlers); no API or web server"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 12, quote: "RUN pnpm i && pnpm --filter=015-front build"}
+    - {path: Dockerfile, line: 24, quote: "RUN CGO_ENABLED=0 GOOS=linux go build -o backend-bin ./backend"}
+    - {path: Dockerfile, line: 48, quote: "CMD [\"/bin/sh\", \"/app/015.sh\"]"}
+    - {path: worker/Dockerfile, line: 24, quote: "RUN CGO_ENABLED=0 GOOS=linux go build -o worker-bin ./worker"}
+runtime: {accept: [node, go]}
+port:
+  accept: [80]
+  evidence:
+    - {path: Dockerfile, line: 46, quote: "EXPOSE 80"}
+    - {path: Caddyfile, line: 1, quote: ":80 {"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Caddyfile, line: 1, quote: ":80 {"}
+    - {path: Dockerfile, line: 42, quote: "ENV PORT=5000 HOST=0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["/bin/sh /app/015.sh"]
+  evidence:
+    - {path: Dockerfile, line: 48, quote: "CMD [\"/bin/sh\", \"/app/015.sh\"]"}
+    - {path: 015.sh, line: 4, quote: "exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"}
+healthPath:
+  accept: ["/"]
+  evidence:
+    - {path: Caddyfile, line: 6, quote: "reverse_proxy 127.0.0.1:5000"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # Share metadata is in Redis; files are on the local file system.
+  evidence:
+    - {path: README.md, line: 106, quote: "- **File Storage** - Local file system storage"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: config.example.yaml, line: 17, quote: "url: redis://redis:6379/0"}
+    - {path: docker-compose.yml, line: 22, quote: "redis:"}
+workers:
+  status: independent
+  commands: ["/bin/worker"]
+  evidence:
+    - {path: worker/Dockerfile, line: 29, quote: "ENTRYPOINT [\"/bin/worker\"]"}
+    - {path: docker-compose.yml, line: 14, quote: "image: fudaoyuanicu/015-worker:latest"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/uploads]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: config.example.yaml, line: 11, quote: "path: /upload"}
+    - {path: docker-compose.yml, line: 6, quote: "- ./uploads:/uploads"}
+    - {path: docker-compose.yml, line: 16, quote: "volumes:"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence:
+    - {path: config.example.yaml, line: 3, quote: "download_secret: your-secret-token"}
+blockers:
+  expected:
+    - "Uploaded files are stored only on a local directory shared by the app container and the worker container; no S3 option"
+    - "The worker is a separate image from worker/Dockerfile, not a command of the app image"
+  mustNot:
+    - "Caddy and the Nuxt server inside the app image must not be counted alone as the reason; the blocker is the shared local upload directory and the second image"
+    - "Redis must not be a blocker: Deployz provides it"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database? (none; Redis holds the metadata)"
+traps:
+  - "Configuration is the file config.yaml mounted at /app/config.yaml for the app and /config.yaml for the worker (docker-compose.yml:7,18)"
+  - "The app image alone does not process uploads: image compression and conversion run in the worker (README.md:128)"
+  - "015.sh starts the API and the Nuxt server in the background and Caddy in the foreground (015.sh:2-4)"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: 'NOT_DEPLOYABLE: shared local upload directory across two images, no S3', evidence: 'docker-compose.yml:6,17; config.example.yaml:11; README.md:106'}
+  - {field: all, change: verified, evidence: 16 citations checked}

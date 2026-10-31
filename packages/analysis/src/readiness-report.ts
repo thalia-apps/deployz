@@ -31,7 +31,7 @@
  * inside the web process until a worker command is configured).
  */
 
-import { appliedJudgement, type Judgement, type JudgeCategory } from './ai-analysis/judge.js';
+import { appliedJudgement, questionedFindings, type Judgement, type JudgeCategory, type SoftReviewItem } from './ai-analysis/judge.js';
 import type { AnalysisResult } from './analyser.js';
 import type { DetectorFinding } from './detectors.js';
 import type { RejectionFinding } from './rejection.js';
@@ -435,6 +435,27 @@ function judgeEvidence(judgement: Judgement): string {
   return `Final review: ${judgement.reason}${cited ? ` Evidence: ${cited}.` : ''}`;
 }
 
+/**
+ * The vendor question for a soft finding that the soft review found probably
+ * wrong. The finding stays; the vendor's "Not used in production" answer on
+ * it decides (docs/ai-analysis.md#vendor-disputes).
+ */
+function confirmFinding(finding: ReadinessFinding, review: SoftReviewItem): ReadinessFinding {
+  const cited = review.evidence.map((item) => `${item.path}:${item.line} "${item.quote}"`).join('; ');
+  return {
+    id: `final-review-confirm-${finding.id}`,
+    category: finding.category,
+    title: `Confirm: ${finding.title}`,
+    severity: 'recommended',
+    blocking: false,
+    plainEnglishExplanation: 'A final review found signs that this item may not apply to this app. Deployz keeps the item until you answer.',
+    whyItMatters: 'Deployz does not remove an item by itself. If the app does not need it in production, your answer removes it and Deployz analyses the app again.',
+    technicalEvidence: `Final review: ${review.reason}${cited ? ` Evidence: ${cited}.` : ''}`,
+    suggestedOutcome: 'Check the evidence. If the app does not need this in production, mark the item "Not used in production". If it does, make the change.',
+    confidence: 'needs_confirmation',
+  };
+}
+
 /** The finding the final judge adds, if any. It only ever adds a finding. */
 function judgeFinding(judgement: Judgement): ReadinessFinding | null {
   if (judgement.decision === 'block' && judgement.category !== null) {
@@ -569,6 +590,7 @@ const FIX_CLASSES: Record<string, FixClass> = {
   'unsupported-datastore-server': 'CAPABILITY_GAP',
   'final-review-unsupported': 'CAPABILITY_GAP',
   'final-review-changes': 'CODE_CHANGE',
+  'final-review-confirm': 'SETTING',
 };
 
 /**
@@ -584,7 +606,7 @@ function capabilityRequired(finding: ReadinessFinding, metadata: Record<string, 
 }
 
 function fixClassOf(finding: ReadinessFinding, metadata: Record<string, unknown>): FixClass {
-  const key = finding.id.startsWith('async-question-') ? 'async-question' : finding.id;
+  const key = finding.id.startsWith('async-question-') ? 'async-question' : finding.id.startsWith('final-review-confirm-') ? 'final-review-confirm' : finding.id;
   const fixClass = FIX_CLASSES[key] ?? 'CODE_CHANGE';
   if (fixClass === 'CAPABILITY_GAP' && !capabilityRequired(finding, metadata)) return 'CODE_CHANGE';
   // A migration the Analysis left unknown or the AI could not verify is a change to verify in the
@@ -596,6 +618,11 @@ function fixClassOf(finding: ReadinessFinding, metadata: Record<string, unknown>
 /** The readiness finding id that a detected rejection becomes. */
 export function rejectionFindingId(dependency: string): string {
   return rejectionCopy(dependency).id;
+}
+
+/** The `localhost-binding` finding's evidence text. */
+export function localhostBindingEvidence(finding: DetectorFinding): string {
+  return finding.details ?? 'The server binds to a loopback address.';
 }
 
 /** The `local-file-storage` finding's evidence text. */
@@ -805,7 +832,7 @@ export function buildReadinessReport(
         'This app accepts connections only from inside its own container, so Deployz cannot reach it.',
       whyItMatters:
         'Deployz sends customer traffic and health checks to the container over the network. A server bound to 127.0.0.1 or localhost never answers them, so every deployment would fail its health check.',
-      technicalEvidence: bind.details ?? 'The server binds to a loopback address.',
+      technicalEvidence: localhostBindingEvidence(bind),
       suggestedOutcome:
         'Bind the server to all network interfaces (0.0.0.0) instead of 127.0.0.1 or localhost.',
       // A loopback binding can sit behind a dev-only branch the static scan
@@ -989,6 +1016,16 @@ export function buildReadinessReport(
   const judgement = appliedJudgement(metadata['aiJudge']);
   const judged = judgement === null ? null : judgeFinding(judgement);
   if (judged !== null) findings.push(judged);
+  // A soft finding that the soft review found probably wrong stays required and asks the vendor; a judge block decides first.
+  if (judgement?.decision !== 'block') {
+    for (const review of questionedFindings(metadata['aiSoftReview'])) {
+      const index = findings.findIndex((f) => f.severity === 'required' && f.id === review.findingId && f.technicalEvidence === review.findingEvidence);
+      const questioned = findings[index];
+      if (questioned === undefined) continue;
+      findings[index] = { ...questioned, confidence: 'needs_confirmation' };
+      findings.push(confirmFinding(questioned, review));
+    }
+  }
 
   // ── Passed checks ─────────────────────────────────────────────────────────
   const passed: PassedCheck[] = result.findings

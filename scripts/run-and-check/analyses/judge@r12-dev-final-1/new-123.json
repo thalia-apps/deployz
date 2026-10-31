@@ -1,0 +1,66 @@
+{
+  "id": "new-123",
+  "analyser": "judge@r12-dev-1",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "none",
+      "verdict": "keep",
+      "category": null,
+      "reason": "Superset runs as one web image with Celery workers on PostgreSQL and Redis; the websocket and node services are optional or dev-only, so the outcome stands.",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 8128,
+      "completionTokens": 81,
+      "costUsd": 0.03379068
+    },
+    "latencyMs": 4995
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker-compose.yml defines 3 application services (superset, superset-websocket, superset-node). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "probably_wrong",
+        "reason": "The docker-compose.yml that lists these services is a development stack (DEV_MODE true, dev build target, source bind mounts) that the project states is not for production; the production Dockerfile builds the frontend into one image served by one web process.",
+        "evidence": [
+          {
+            "path": "docker-compose.yml",
+            "line": 19,
+            "quote": "# We don't support docker compose for production environments."
+          },
+          {
+            "path": "docker-compose.yml",
+            "line": 40,
+            "quote": "target: ${SUPERSET_BUILD_TARGET:-dev} # dev (default, live-reload); also `superset` (batteries-included) or `lean` (minimal)"
+          },
+          {
+            "path": "docker-compose.yml",
+            "line": 44,
+            "quote": "DEV_MODE: \"true\""
+          }
+        ],
+        "question": true,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6762,
+      "completionTokens": 274,
+      "costUsd": 0.016264
+    },
+    "latencyMs": 127221
+  }
+}

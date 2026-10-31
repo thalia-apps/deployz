@@ -1,0 +1,145 @@
+id: new-308
+repository: calagopus/panel
+commit: b0e79bc0be98b4f680938d0d14d67c8474ad4fcf
+summary: >
+  Calagopus Panel is a game server management panel (a Rust rewrite of Pterodactyl): an Axum backend that serves a
+  bundled React frontend and an API on one port (default 8000), PostgreSQL as the database (DATABASE_URL, required) and
+  an optional Redis or Valkey cache (REDIS_URL). The panel controls game servers through separate Wings daemons on the
+  user's own Docker hosts; Wings is another repository and is not part of the panel process. The repository has no root
+  Dockerfile. docker/Dockerfile and docker/Dockerfile.aio copy a pre-built binary from .docker/<arch>/; docker/Dockerfile.heavy
+  and docker/Dockerfile.heavy.aio build the frontend (pnpm) and the backend (cargo) from source with the repository root as
+  the build context. The heavy image starts a supervisor (heavy-supervisor) that runs the panel and can rebuild it for
+  extensions; a symlink /usr/local/bin/panel-rs points to the panel binary. The schema is migrated at start when
+  DATABASE_MIGRATE=true.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    One web process with PostgreSQL, an optional Redis and no worker: Deployz settings can supply DATABASE_URL,
+    REDIS_URL, APP_ENCRYPTION_KEY and PORT, and the vendor selects docker/Dockerfile.heavy, which builds from source.
+    That gives DEPLOYABLE. The case is not clear because there is no root Dockerfile and the only source build is the
+    heavy image with a supervisor entrypoint and a long Rust build; a vendor who changes the image to a plain release
+    build gives DEPLOYABLE_WITH_CHANGES. The Wings daemons run on the vendor's own game hosts, so they do not make the
+    panel a multi-service application.
+dockerfile:
+  accept: [docker/Dockerfile.heavy]
+  reject:
+    - {path: docker/Dockerfile, reason: "copies a pre-built ./.docker/<arch>/panel-rs binary that a CI job creates; it is not buildable from a plain clone"}
+    - {path: docker/Dockerfile.aio, reason: "pre-built panel-rs-aio binary; the all-in-one variant also embeds Wings"}
+    - {path: docker/Dockerfile.heavy.aio, reason: "all-in-one variant: panel plus the Wings daemon, which needs a Docker host"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 5, quote: "COPY ./.docker/${TARGETPLATFORM#linux/}/panel-rs /usr/bin/panel-rs"}
+    - {path: docker/Dockerfile.heavy, line: 37, quote: "COPY . /app/repo"}
+    - {path: docker/Dockerfile.heavy, line: 38, quote: "RUN cd frontend && pnpm install --frozen-lockfile && pnpm build:ci"}
+    - {path: docker/Dockerfile.heavy, line: 39, quote: "RUN cargo build --profile heavy-release -p panel-rs -p heavy-supervisor \\"}
+    - {path: docker/Dockerfile.heavy, line: 52, quote: "ENTRYPOINT [\"/app/heavy-supervisor\"]"}
+runtime: {accept: [rust]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: shared/src/env.rs, line: 278, quote: "port: std::env::var(\"PORT\")"}
+    - {path: .env.example, line: 6, quote: "PORT=8000"}
+    - {path: compose.yml, line: 27, quote: "- 8000:8000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: shared/src/env.rs, line: 275, quote: ".unwrap_or(\"0.0.0.0\".to_string())"}
+startCommand:
+  source: image
+  accept: ["/app/heavy-supervisor", "panel-rs"]
+  # The image entrypoint is the supervisor; the panel binary is also linked as panel-rs.
+  evidence:
+    - {path: docker/Dockerfile.heavy, line: 52, quote: "ENTRYPOINT [\"/app/heavy-supervisor\"]"}
+    - {path: docker/Dockerfile.heavy, line: 45, quote: "RUN ln -s /app/repo/target/heavy-release/panel-rs /usr/local/bin/panel-rs"}
+healthPath:
+  accept: ["/api/settings", "/"]
+  # No health route; /api/settings is a public GET and / serves the bundled frontend.
+  evidence:
+    - {path: backend/src/routes/api/mod.rs, line: 41, quote: ".nest(\"/settings\", settings::router(state))"}
+    - {path: backend/src/routes/mod.rs, line: 8, quote: ".nest(\"/api\", api::router(state))"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: "postgresql://<user>:<password>@<host>:5432/<db>"}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: shared/src/env.rs, line: 267, quote: ".context(\"DATABASE_URL is required\")?"}
+    - {path: .env.example, line: 3, quote: "DATABASE_URL=\"postgresql://postgres:password@localhost:5432/panel\""}
+    - {path: compose.yml, line: 9, quote: "- DATABASE_URL=postgresql://panel:panel@db/panel"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: .env.example, line: 5, quote: "DATABASE_MIGRATE=true"}
+    - {path: compose.yml, line: 10, quote: "- DATABASE_MIGRATE=true"}
+redis:
+  status: optional
+  selectBy: {REDIS_URL: "redis://<host>:6379"}
+  # With REDIS_URL unset the panel runs without Redis (RedisMode::Redis { redis_url: None }) and uses its in-process cache.
+  evidence:
+    - {path: shared/src/cache.rs, line: 213, quote: "if let Some(redis_url) = redis_url {"}
+    - {path: .env.example, line: 1, quote: "REDIS_URL=\"redis://localhost\""}
+    - {path: compose.yml, line: 8, quote: "- REDIS_URL=redis://cache"}
+workers:
+  # Background tasks (cleanup and similar) run in the primary web instance.
+  status: embedded
+  commands: []
+  evidence:
+    - {path: .env.example, line: 8, quote: "APP_PRIMARY=true # sets whether this panel instance is responsible for running background tasks (e.g. cleanup)"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # The upload storage driver is a database setting (filesystem path or S3 with access keys), chosen in the admin interface. The compose volume /var/lib/calagopus holds the filesystem driver data and extensions.
+  local: conditional
+  paths: [/var/lib/calagopus]
+  s3: native
+  s3SelectBy: {}
+  evidence:
+    - {path: shared/src/settings/mod.rs, line: 102, quote: "pub enum StorageDriver {"}
+    - {path: shared/src/settings/mod.rs, line: 107, quote: "S3 {"}
+    - {path: compose.yml, line: 24, quote: "- ./data:/var/lib/calagopus"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL; Deployz supplies it"}
+    - {name: APP_ENCRYPTION_KEY, secret: true, buildTime: false, note: "random key that encrypts stored secrets; the value CHANGEME makes the process exit"}
+    - {name: DATABASE_MIGRATE, secret: false, buildTime: false, note: "set to true so that the schema is migrated at start; the default is false"}
+  optional: [REDIS_URL, PORT, BIND, APP_PRIMARY, APP_DEBUG, APP_ENABLE_WINGS_PROXY, APP_LOG_DIRECTORY, APP_TRUSTED_PROXIES, APP_USE_DECRYPTION_CACHE, APP_USE_INTERNAL_CACHE, SENTRY_URL]
+  buildTime: []
+  evidence:
+    - {path: shared/src/env.rs, line: 163, quote: ".expect(\"APP_ENCRYPTION_KEY is required\")"}
+    - {path: shared/src/env.rs, line: 167, quote: "if app_encryption_key.to_lowercase() == \"changeme\" {"}
+    - {path: shared/src/env.rs, line: 261, quote: "database_migrate: std::env::var(\"DATABASE_MIGRATE\")"}
+blockers:
+  expected: []
+  mustNot:
+    - "The Wings daemons must not be read as a required second service: they run on the vendor's own Docker hosts and connect to the panel over the network"
+    - "The all-in-one images (panel plus Wings) must not be chosen or read as the main image"
+    - "Redis must not block: it is optional and Deployz provides single-node Redis"
+    - "The compose files with a PostgreSQL and a Valkey service must not be read as several application services"
+vendorQuestions:
+  legitimate:
+    - "Which Dockerfile? (docker/Dockerfile.heavy builds from source; the others need pre-built binaries)"
+    - "Where are the Wings nodes, and can they reach the panel URL?"
+  unnecessary:
+    - "Which database? (PostgreSQL only)"
+    - "Is a worker needed? (no, background tasks run in the primary web instance)"
+    - "Which port? (8000)"
+traps:
+  - "No root Dockerfile exists, and docker/Dockerfile copies a pre-built binary from .docker/<arch>/, so only docker/Dockerfile.heavy builds from a plain clone (docker/Dockerfile:5; docker/Dockerfile.heavy:39)"
+  - "docker/Dockerfile.heavy compiles the Rust workspace and the frontend in one build and uses the repository root as context; the build is long and large (docker/Dockerfile.heavy:37-40)"
+  - "The default APP_ENCRYPTION_KEY from the compose and env examples is CHANGEME, and the panel exits with it (shared/src/env.rs:167)"
+  - "DATABASE_MIGRATE defaults to false; without true the schema is not created (shared/src/env.rs:261)"
+  - "APP_PRIMARY decides which instance runs background tasks; with more than one task, only one may be primary (.env.example:8)"
+  - "The container entrypoint is a supervisor that can rebuild the panel for extensions; the panel binary is also available as panel-rs (docker/Dockerfile.heavy:45,52)"
+openQuestions:
+  - "The behavior of heavy-supervisor at start (stock binary or rebuild, state under /var/lib/calagopus) was not traced in full"
+crossReview:
+  - {field: dockerfile, change: 'none: docker/Dockerfile and docker/Dockerfile.aio copy pre-built binaries; the heavy variants build from source', evidence: 'docker/Dockerfile:5; docker/Dockerfile.heavy:37-39'}
+  - {field: redis, change: 'none: redis_url is an Option; without it the cache client is None', evidence: 'shared/src/cache.rs:211-217'}
+  - {field: outcome, change: 'none: PostgreSQL, optional Redis, one port; two outcomes accepted because of the heavy-image build and the supervisor entrypoint', evidence: 'docker/Dockerfile.heavy:52'}
+  - {field: all, change: verified, evidence: 28 citations checked}

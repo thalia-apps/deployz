@@ -1,0 +1,66 @@
+{
+  "id": "new-261",
+  "analyser": "judge@r12-dev-2",
+  "from": "ai@r10-heldout",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "several_services",
+      "reason": "Lemmy's product needs the Rust API backend plus a separate lemmy-ui frontend server (and pict-rs image server) running together from different images, and Deployz runs only one web service.",
+      "evidence": [
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 43,
+          "quote": "image: dessalines/lemmy-ui:nightly"
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 53,
+          "quote": "- LEMMY_UI_BACKEND=lemmy:8536"
+        },
+        {
+          "path": "docker/docker-compose.yml",
+          "line": 64,
+          "quote": "image: asonix/pictrs:0.5"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 7135,
+      "completionTokens": 233,
+      "costUsd": 0.032868
+    },
+    "latencyMs": 5290
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "unsupported-multi-service",
+        "findingEvidence": "Unsupported architecture: docker/docker-compose.yml defines 2 application services (lemmy, lemmy-ui). Deployz runs ONE web process per deployment plus declared background workers.",
+        "verdict": "stands",
+        "reason": "The compose file runs lemmy-ui as a separate frontend image beside the lemmy backend, and pictrs and nginx alongside them, and no shown line proves that production can run without the separate UI service.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 6100,
+      "completionTokens": 103,
+      "costUsd": 0.01323
+    },
+    "latencyMs": 146734
+  }
+}

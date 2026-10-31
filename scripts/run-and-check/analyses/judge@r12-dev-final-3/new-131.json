@@ -1,0 +1,61 @@
+{
+  "id": "new-131",
+  "analyser": "judge@r12-dev-3",
+  "from": "ai@r9-final2",
+  "storedOutcome": "DEPLOYABLE_WITH_CHANGES",
+  "outcome": "NOT_DEPLOYABLE",
+  "judge": {
+    "status": "ok",
+    "promptVersion": 4,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "decision": "block",
+      "verdict": "not_deployable",
+      "category": "local_disk_data",
+      "reason": "Shaarli is a database-free bookmarking service whose bookmarks and settings live only in a local data directory, and Deployz provides no persistent disk.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "line": 3,
+          "quote": "The personal, minimalist, super fast, database-free, bookmarking service."
+        },
+        {
+          "path": "Dockerfile",
+          "line": 73,
+          "quote": "VOLUME /var/www/shaarli/data"
+        }
+      ],
+      "checkReasons": []
+    },
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "promptTokens": 4673,
+      "completionTokens": 168,
+      "costUsd": 0.02183148
+    },
+    "latencyMs": 3781
+  },
+  "softReview": {
+    "status": "ok",
+    "promptVersion": 5,
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "reviews": [
+      {
+        "findingId": "local-file-storage",
+        "findingEvidence": "Durable local filesystem state declared: VOLUME /var/www/shaarli/data (Dockerfile), volume shaarli-data:/var/www/shaarli/data (docker-compose.yml shaarli)",
+        "verdict": "stands",
+        "reason": "Shaarli is a database-free bookmarking service that keeps its bookmarks and settings in /var/www/shaarli/data, and no shown setting moves that data to a managed datastore, so it needs durable disk that Deployz does not provide.",
+        "evidence": [],
+        "question": false,
+        "checkReasons": []
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "usage": {
+      "promptTokens": 4874,
+      "completionTokens": 117,
+      "costUsd": 0.010918
+    },
+    "latencyMs": 143920
+  }
+}
