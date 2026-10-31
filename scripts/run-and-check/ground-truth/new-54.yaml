@@ -9,11 +9,12 @@ summary: >
   `worker` service from the same image with `yarn worker:prod`; background jobs, cron jobs and mail/calendar sync run
   there. File storage is local by default (ephemeral on Fargate) and S3 is native, with the task role as credentials.
 outcome:
-  accept: [DEPLOYABLE_WITH_CHANGES]
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
   reason: >
     Works on Deployz with these non-default choices: build target `twenty`, PostgreSQL, Redis, STORAGE_TYPE=S_3 with
     STORAGE_S3_NAME and STORAGE_S3_REGION, and one extra worker service (`yarn worker:prod`) with
     DISABLE_DB_MIGRATIONS=true and DISABLE_CRON_JOBS_REGISTRATION=true. No second application container is needed.
+    These are settings, not repository changes, so DEPLOYABLE is also accepted, as for the same app in new-38.
 dockerfile:
   accept: [packages/twenty-docker/twenty/Dockerfile]
   reject:
