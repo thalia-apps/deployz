@@ -1027,6 +1027,13 @@ function DeploymentActions({
   // on that screen; for any other failure a changed value would not help.
   const failureCode = detail.deploymentStatus.failure?.code;
   const showConfiguration = !failureCode || isConfigurationFailure(failureCode);
+  const offeredRetention =
+    failureCode === 'DATABASE_CREATE_FAILED' && detail.backupRetention?.supported === true
+      ? detail.backupRetention
+      : null;
+  const savedRetentionDays = offeredRetention ? (offeredRetention.days ?? offeredRetention.defaultDays) : null;
+  const [chosenRetentionDays, setChosenRetentionDays] = useState<number | null>(null);
+  const retentionDays = chosenRetentionDays ?? savedRetentionDays;
   const previousIsCurrent =
     detail.previousReleaseId !== null && detail.previousReleaseId === detail.currentReleaseId;
   const hasPreviousRelease = detail.previousReleaseId !== null && !previousIsCurrent;
@@ -1043,6 +1050,13 @@ function DeploymentActions({
       <h2 id="actions" className="sr-only">
         Actions
       </h2>
+      {offeredRetention && retentionDays !== null ? (
+        <BackupRetentionField
+          retention={offeredRetention}
+          days={retentionDays}
+          onChange={setChosenRetentionDays}
+        />
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         {retryCtaKind === 'retry' || retryCtaKind === 'legacy' ? (
           <Button size="sm" onClick={() => setOpen(open === 'retryInstall' ? null : 'retryInstall')}>
@@ -1187,7 +1201,8 @@ function DeploymentActions({
         deploymentId={detail.id}
         applicationName={detail.applicationName}
         needsNewInstallLink={needsNewInstallLink}
-        backupRetention={failureCode === 'DATABASE_CREATE_FAILED' ? detail.backupRetention : undefined}
+        backupRetentionDays={retentionDays}
+        savedBackupRetentionDays={savedRetentionDays}
         onDone={() => {
           setOpen(null);
           onChanged();
@@ -1537,12 +1552,47 @@ function RestartDialog({
   );
 }
 
+function BackupRetentionField({
+  retention,
+  days,
+  onChange,
+}: {
+  retention: BackupRetention;
+  days: number;
+  onChange: (days: number) => void;
+}) {
+  return (
+    <div className="flex max-w-sm flex-col gap-2" data-testid="backup-retention-field">
+      <Label htmlFor="backup-retention-days">Backup retention period</Label>
+      <Select value={String(days)} onValueChange={(value) => onChange(Number(value))}>
+        <SelectTrigger id="backup-retention-days" className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Array.from({ length: retention.max - retention.min + 1 }, (_, index) => retention.min + index).map(
+            (value) => (
+              <SelectItem key={value} value={String(value)}>
+                {value} {value === 1 ? 'day' : 'days'}
+              </SelectItem>
+            ),
+          )}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">
+        How long the database keeps automated backups. An AWS free plan accepts fewer days than the default of{' '}
+        {retention.defaultDays}; choose a lower number, then select Retry deployment, or upgrade the AWS plan.
+      </p>
+    </div>
+  );
+}
+
 function RetryInstallDialog({
   open,
   deploymentId,
   applicationName,
   needsNewInstallLink,
-  backupRetention,
+  backupRetentionDays,
+  savedBackupRetentionDays,
   onDone,
   onCancel,
 }: {
@@ -1551,15 +1601,12 @@ function RetryInstallDialog({
   applicationName: string;
   /** The connector is disconnected or not registered: lead with the new link. */
   needsNewInstallLink: boolean;
-  /** Set only after a database creation failure on a deployment that can take the choice. */
-  backupRetention: BackupRetention | undefined;
+  /** The days chosen on the page, set only after a database creation failure on a deployment that can take the choice. */
+  backupRetentionDays: number | null;
+  savedBackupRetentionDays: number | null;
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const offeredRetention = backupRetention?.supported === true ? backupRetention : null;
-  const savedDays = offeredRetention ? (offeredRetention.days ?? offeredRetention.defaultDays) : null;
-  const [chosenDays, setChosenDays] = useState<number | null>(null);
-  const days = chosenDays ?? savedDays;
   const [action, setAction] = useState<'retry' | 'reconnect' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [relayRefused, setRelayRefused] = useState(false);
@@ -1570,7 +1617,9 @@ function RetryInstallDialog({
     setError(null);
     setRelayRefused(false);
     try {
-      if (days !== null && days !== savedDays) await setBackupRetention(deploymentId, days);
+      if (backupRetentionDays !== null && backupRetentionDays !== savedBackupRetentionDays) {
+        await setBackupRetention(deploymentId, backupRetentionDays);
+      }
       await retryInstall(deploymentId);
       toast.success('Retry requested');
       onDone();
@@ -1612,31 +1661,6 @@ function RetryInstallDialog({
             account, then the install runs again. No data is lost.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {offeredRetention && days !== null ? (
-          <div className="flex flex-col gap-2" data-testid="backup-retention-field">
-            <Label htmlFor="backup-retention-days">Backup retention period</Label>
-            <Select value={String(days)} onValueChange={(value) => setChosenDays(Number(value))}>
-              <SelectTrigger id="backup-retention-days" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from(
-                  { length: offeredRetention.max - offeredRetention.min + 1 },
-                  (_, index) => offeredRetention.min + index,
-                ).map((value) => (
-                  <SelectItem key={value} value={String(value)}>
-                    {value} {value === 1 ? 'day' : 'days'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              How long the database keeps automated backups. An AWS free plan accepts fewer days than
-              the default of {offeredRetention.defaultDays}; choose a lower number, or upgrade the AWS
-              plan.
-            </p>
-          </div>
-        ) : null}
         {relayDisconnected ? (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted-foreground">

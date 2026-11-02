@@ -664,6 +664,88 @@ describe('installApplicationStack', () => {
     expect(outcome.state).toBe('succeeded');
   });
 
+  it('creates in recovery mode when the stack deleted by recovery answers AccessDenied at the first describe', async () => {
+    // Real AWS, 2026-11-02 (staging): recovery deleted the failed stack, and
+    // the tag-scoped read of the now-missing stack answered AccessDenied.
+    const describeStackOutcome = vi
+      .fn<NonNullable<StackInstaller['describeStackOutcome']>>()
+      .mockResolvedValueOnce({ found: false, absent: false, errorCode: 'AccessDenied' })
+      .mockResolvedValue({ found: true, stack: complete() });
+    const installer = scriptedInstaller([], { describeStackOutcome });
+
+    const outcome = await installApplicationStack({
+      installer,
+      installationId: 'inst-1',
+      templateUrl: 'https://example.com/app.json',
+      createMode: 'recovery',
+      ...NEVER_SLEEP,
+    });
+
+    expect(installer.createCalls).toHaveLength(1);
+    expect(outcome.state).toBe('succeeded');
+  });
+
+  it('does not create in recovery mode on AccessDenied when recovery is no longer authorized', async () => {
+    const installer = scriptedInstaller([], {
+      describeStackOutcome: async () => ({ found: false, absent: false, errorCode: 'AccessDenied' }),
+    });
+
+    const outcome = await installApplicationStack({
+      installer,
+      installationId: 'inst-1',
+      templateUrl: 'https://example.com/app.json',
+      createMode: 'recovery',
+      authorizeRecoveryCreate: vi.fn().mockResolvedValue(false),
+      ...NEVER_SLEEP,
+    });
+
+    expect(installer.createCalls).toHaveLength(0);
+    expect(outcome.state === 'failed' && outcome.reason).toContain('no longer authorized');
+  });
+
+  it('creates in recovery mode when an adopted deletion finishes and the read answers AccessDenied', async () => {
+    const describeStackOutcome = vi
+      .fn<NonNullable<StackInstaller['describeStackOutcome']>>()
+      .mockResolvedValueOnce({ found: true, stack: { status: 'DELETE_IN_PROGRESS', outputs: {} } })
+      .mockResolvedValueOnce({ found: true, stack: { status: 'DELETE_IN_PROGRESS', outputs: {} } })
+      .mockResolvedValueOnce({ found: false, absent: false, errorCode: 'AccessDenied' }) // deletion finished
+      .mockResolvedValueOnce({ found: true, stack: { status: 'CREATE_IN_PROGRESS', outputs: {} } })
+      .mockResolvedValue({ found: true, stack: complete() });
+    const installer = scriptedInstaller([], { describeStackOutcome });
+
+    const outcome = await installApplicationStack({
+      installer,
+      installationId: 'inst-1',
+      templateUrl: 'https://example.com/app.json',
+      createMode: 'recovery',
+      ...NEVER_SLEEP,
+    });
+
+    expect(outcome.state).toBe('succeeded');
+    expect(installer.createCalls).toHaveLength(1);
+  });
+
+  it('does not recreate after an adopted deletion answers AccessDenied unless the mode is recovery', async () => {
+    for (const createMode of ['resume', 'fresh'] as const) {
+      const describeStackOutcome = vi
+        .fn<NonNullable<StackInstaller['describeStackOutcome']>>()
+        .mockResolvedValueOnce({ found: true, stack: { status: 'DELETE_IN_PROGRESS', outputs: {} } })
+        .mockResolvedValue({ found: false, absent: false, errorCode: 'AccessDenied' });
+      const installer = scriptedInstaller([], { describeStackOutcome });
+
+      const outcome = await installApplicationStack({
+        installer,
+        installationId: 'inst-1',
+        templateUrl: 'https://example.com/app.json',
+        createMode,
+        ...NEVER_SLEEP,
+      });
+
+      expect(installer.createCalls, createMode).toHaveLength(0);
+      expect(outcome.state, createMode).toBe('failed');
+    }
+  });
+
   it('never creates on AccessDenied when resuming an install', async () => {
     const installer = scriptedInstaller([], {
       describeStackOutcome: async () => ({ found: false, absent: false, errorCode: 'AccessDenied' }),

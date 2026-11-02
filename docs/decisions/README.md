@@ -1623,8 +1623,8 @@ Decision:
 - The compiled template declares `paramBackupRetentionPeriod` (number, default
   7). Every install keeps 7 days unless the vendor chose otherwise. Compiler
   version `dynamic-compiler-v2-8` is the first with the parameter.
-- After a `DATABASE_CREATE_FAILED` first install, the retry dialog offers 1 to 35
-  days (the RDS range). The choice is stored on the deployment
+- After a `DATABASE_CREATE_FAILED` first install, the deployment page shows a
+  backup retention dropdown of 1 to 35 days (the RDS range) above the retry button. The choice is stored on the deployment
   (`backup_retention_days`) and `buildInstallParameters` passes it only for a spec
   whose template declares the parameter (`specSupportsBackupRetention`).
 - A deployment whose frozen template is older keeps its fixed 7 days; the vendor
