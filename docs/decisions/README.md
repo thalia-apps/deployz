@@ -56,6 +56,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-27 | The MVP boundary expands to a customer page for each deployment, behind an emailed sign-in code; connector updates stay customer-run in AWS | Active |
 | 2026-10-27 | An app with a migration starts no task at install; a migration that fails on that first start is a failed environment (`FAILED`) | Active |
 | 2026-10-30 | A final AI judge reviews a DEPLOYABLE or DEPLOYABLE_WITH_CHANGES outcome and can only make it stricter or ask the vendor to confirm | Active |
+| 2026-10-30 | A vendor can lower the database backup retention after a database creation failure; the choice travels as a template parameter | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1608,3 +1609,27 @@ deployment, as for every dispute.
 What would change it: vendors who answer the questions wrongly often (then
 show the question without the answer action), or a "not sure" rate that
 makes the questions noise (then narrow `SOFT_FINDING_IDS`).
+
+## Backup retention after a database creation failure (2026-10-30)
+
+Context: the compiler fixed the RDS backup retention at 7 days. An AWS account
+on the free plan refuses that value: the DB instance fails with "The specified
+backup retention period exceeds the maximum available to free tier customers",
+and the install ends as `DATABASE_CREATE_FAILED`. The frozen compiled template
+cannot change in place, so a vendor could not fix a failed install.
+
+Decision:
+
+- The compiled template declares `paramBackupRetentionPeriod` (number, default
+  7). Every install keeps 7 days unless the vendor chose otherwise. Compiler
+  version `dynamic-compiler-v2-8` is the first with the parameter.
+- After a `DATABASE_CREATE_FAILED` first install, the retry dialog offers 1 to 35
+  days (the RDS range). The choice is stored on the deployment
+  (`backup_retention_days`) and `buildInstallParameters` passes it only for a spec
+  whose template declares the parameter (`specSupportsBackupRetention`).
+- A deployment whose frozen template is older keeps its fixed 7 days; the vendor
+  creates a new deployment to choose. The choice is accepted only while the first
+  install is failed, and a database that exists is never changed.
+
+What would change it: a setting for every new deployment (a creation-time field),
+or a free-plan check before the install starts.

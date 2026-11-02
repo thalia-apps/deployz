@@ -30,8 +30,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 // installation-scoped task families (the Family join and
 // `paramTaskFamilySuffix`) and the 300 s web health-check grace, and the
 // small-v2 profile (db.t3.micro + gp3), and the IAM role boundary
-// (`paramRoleBoundaryArn`), each changed every template.
-const POSTGRES_TEMPLATE_HASH_GOLDEN = '82904b5b7ab8699b90cceebb8974c4bdf9e67529484a933222d2168fbc3f5e77';
+// (`paramRoleBoundaryArn`), and the backup-retention parameter
+// (`paramBackupRetentionPeriod`), each changed every template.
+const POSTGRES_TEMPLATE_HASH_GOLDEN = '907b55febea6d7952f606c386674e8f76ee0299fa0727e1ba17b628467348f85';
 
 /** Evaluates the compiled `Family` join for one stack's suffix parameter value. */
 function familyFor(family: unknown, suffix: string): string {
@@ -661,7 +662,7 @@ describe('mysql database (phase 4b)', () => {
     expect(instance.properties['Engine']).toBe('mysql');
     expect(instance.properties['EngineVersion']).toBe('8.0');
     expect(instance.properties['StorageEncrypted']).toBe(true);
-    expect(instance.properties['BackupRetentionPeriod']).toBe(7);
+    expect(instance.properties['BackupRetentionPeriod']).toEqual({ Ref: 'paramBackupRetentionPeriod' });
     expect(instance.properties['DeletionProtection']).toBe(true);
     expect(instance.properties['PubliclyAccessible']).toBe(false);
   });
@@ -1416,7 +1417,10 @@ describe('rds az placement', () => {
     expect(db['MaxAllocatedStorage']).toBe(100);
     expect(db['StorageEncrypted']).toBe(true);
     expect(db['StorageType']).toBe('gp3');
-    expect(db['BackupRetentionPeriod']).toBe(7);
+    expect(db['BackupRetentionPeriod']).toEqual({ Ref: 'paramBackupRetentionPeriod' });
+    // The parameter's default is the 7 days Deployz has always kept; a vendor choice replaces it per install.
+    const retentionParameter = (template['Parameters'] as Record<string, { Type?: unknown; Default?: unknown }>)['paramBackupRetentionPeriod'];
+    expect(retentionParameter).toMatchObject({ Type: 'Number', Default: '7' });
     expect(db['PreferredBackupWindow']).toBe('03:00-05:00');
     expect(db['DeleteAutomatedBackups']).toBe(false);
     expect(db['DeletionProtection']).toBe(true);

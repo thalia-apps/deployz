@@ -242,7 +242,7 @@ execution role. Optional resources are composed from the IR:
 
 | Capability adds | Lifecycle on destroy |
 | --- | --- |
-| RDS PostgreSQL 16 instance (`db.t3.micro`, 20→100 GB, gp3, 7-day backups, deletion protection), subnet group, master secret + URL secret | **Retain** |
+| RDS PostgreSQL 16 instance (`db.t3.micro`, 20→100 GB, gp3, 7-day backups by default (a vendor can choose 1–35 days after a database creation failure), deletion protection), subnet group, master secret + URL secret | **Retain** |
 | RDS MySQL 8.0 instance (same class, storage type, backup and protection settings), subnet group, master secret + URL secret | **Retain** |
 | ElastiCache Valkey replication group (one `cache.t4g.micro` node, no Multi-AZ, TLS off), cache subnet group and security group | Delete |
 | SQS Standard queue (SSE-managed, TLS-only queue policy), plus an optional dead-letter queue (same capability, reached by a queue → queue redrive edge) | Delete |

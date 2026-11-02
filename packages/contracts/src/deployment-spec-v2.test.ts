@@ -8,6 +8,7 @@ import {
   oneShotTasksFromSpec,
   requirementsFromSpec,
   resourceChecksFromSpec,
+  specSupportsBackupRetention,
   taskFamilySuffix,
   taskFamilySuffixForSpec,
   workloadContainerCommand,
@@ -184,5 +185,17 @@ describe('deploymentOwnershipRecordSchema', () => {
     const legacy = taskRecord('web', 'WebService');
     expect(deploymentOwnershipRecordSchema.parse(legacy)).toEqual(legacy);
     expect(deploymentOwnershipRecordSchema.parse({ ...legacy, conditional: true }).conditional).toBe(true);
+  });
+});
+
+describe('backup retention parameter', () => {
+  const compiledBy = (compilerVersion: string | null) => ({ compilerVersion }) as unknown as DeploymentSpecV2;
+
+  it('is offered only for a template compiled by a version that declares the parameter', () => {
+    expect(specSupportsBackupRetention(compiledBy('dynamic-compiler-v2-8'))).toBe(true);
+    expect(specSupportsBackupRetention(compiledBy('dynamic-compiler-v2-12'))).toBe(true);
+    expect(specSupportsBackupRetention(compiledBy('dynamic-compiler-v2-7'))).toBe(false);
+    expect(specSupportsBackupRetention(compiledBy('dynamic-compiler-v2-2'))).toBe(false);
+    expect(specSupportsBackupRetention(compiledBy(null))).toBe(false);
   });
 });

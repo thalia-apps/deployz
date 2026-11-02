@@ -106,6 +106,8 @@ import {
   resetRelay,
   restartDeployment,
   retryInstall,
+  setBackupRetention,
+  type BackupRetention,
   rollbackDeployment,
   type ActivityEvent,
   type FleetDeploymentDetail,
@@ -1185,6 +1187,7 @@ function DeploymentActions({
         deploymentId={detail.id}
         applicationName={detail.applicationName}
         needsNewInstallLink={needsNewInstallLink}
+        backupRetention={failureCode === 'DATABASE_CREATE_FAILED' ? detail.backupRetention : undefined}
         onDone={() => {
           setOpen(null);
           onChanged();
@@ -1539,6 +1542,7 @@ function RetryInstallDialog({
   deploymentId,
   applicationName,
   needsNewInstallLink,
+  backupRetention,
   onDone,
   onCancel,
 }: {
@@ -1547,9 +1551,15 @@ function RetryInstallDialog({
   applicationName: string;
   /** The connector is disconnected or not registered: lead with the new link. */
   needsNewInstallLink: boolean;
+  /** Set only after a database creation failure on a deployment that can take the choice. */
+  backupRetention: BackupRetention | undefined;
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const offeredRetention = backupRetention?.supported === true ? backupRetention : null;
+  const savedDays = offeredRetention ? (offeredRetention.days ?? offeredRetention.defaultDays) : null;
+  const [chosenDays, setChosenDays] = useState<number | null>(null);
+  const days = chosenDays ?? savedDays;
   const [action, setAction] = useState<'retry' | 'reconnect' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [relayRefused, setRelayRefused] = useState(false);
@@ -1560,6 +1570,7 @@ function RetryInstallDialog({
     setError(null);
     setRelayRefused(false);
     try {
+      if (days !== null && days !== savedDays) await setBackupRetention(deploymentId, days);
       await retryInstall(deploymentId);
       toast.success('Retry requested');
       onDone();
@@ -1601,6 +1612,31 @@ function RetryInstallDialog({
             account, then the install runs again. No data is lost.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {offeredRetention && days !== null ? (
+          <div className="flex flex-col gap-2" data-testid="backup-retention-field">
+            <Label htmlFor="backup-retention-days">Backup retention period</Label>
+            <Select value={String(days)} onValueChange={(value) => setChosenDays(Number(value))}>
+              <SelectTrigger id="backup-retention-days" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from(
+                  { length: offeredRetention.max - offeredRetention.min + 1 },
+                  (_, index) => offeredRetention.min + index,
+                ).map((value) => (
+                  <SelectItem key={value} value={String(value)}>
+                    {value} {value === 1 ? 'day' : 'days'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              How long the database keeps automated backups. An AWS free plan accepts fewer days than
+              the default of {offeredRetention.defaultDays}; choose a lower number, or upgrade the AWS
+              plan.
+            </p>
+          </div>
+        ) : null}
         {relayDisconnected ? (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted-foreground">
