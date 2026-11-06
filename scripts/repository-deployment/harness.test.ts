@@ -875,6 +875,7 @@ function fakes(script: Script): { deps: DeployDeps; calls: string[]; puts: Recor
     id: 'dep-1',
     state: 'WAITING_FOR_RELAY',
     applicationId: 'app-1',
+    applicationName: 'App One',
     customerId: 'cust-1',
     installLinkId: 'link-1',
     installationId: null,
