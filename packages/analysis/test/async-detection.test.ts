@@ -10,8 +10,7 @@ import { planApplicationGraph } from '../src/planner.js';
 // only when a producer AND a consumer both resolve to a declared workload
 // with no ambiguity; a scheduled job only from an explicit deployment
 // declaration naming both a schedule and a command. Everything weaker
-// becomes a non-blocking `questions` entry — never a rejection. The pilot
-// rejects a repository that needs a queue or a scheduled job (rejection.ts).
+// becomes a non-blocking `questions` entry — never a rejection.
 
 const BASE: FileTree = {
   'Dockerfile': [
@@ -479,45 +478,5 @@ describe('async-detection — scheduled jobs', () => {
     const meta = metadata(tree);
     expect(meta['asyncScheduledJobs']).toEqual([]);
     expect(meta['asyncQuestions']).toEqual([]);
-  });
-});
-
-describe('async-detection — pilot support boundary', () => {
-  const asyncRejection = (tree: FileTree) =>
-    analyseRepo(tree).rejections.find((r) => r.dependency === 'async-workloads');
-
-  it('rejects a repository that needs a queue', () => {
-    const rejection = asyncRejection({
-      ...BASE,
-      'src/server.ts': [
-        ...BASE['src/server.ts']!.split('\n'),
-        "import { SendMessageCommand } from '@aws-sdk/client-sqs';",
-        "app.post('/orders', () => sqs.send(new SendMessageCommand({ QueueUrl: process.env.ORDERS_QUEUE_URL })));",
-      ].join('\n'),
-      'Procfile': 'web: node dist/server.js\nworker: node dist/worker.js\n',
-      'src/worker.ts': [
-        "import { ReceiveMessageCommand } from '@aws-sdk/client-sqs';",
-        'sqs.send(new ReceiveMessageCommand({ QueueUrl: process.env.ORDERS_QUEUE_URL }));',
-      ].join('\n'),
-    });
-    expect(rejection?.detected).toBe(true);
-    expect(rejection?.reason).toContain('a message queue');
-  });
-
-  it('rejects a repository that needs a scheduled job, even when the vendor dismisses the reason', () => {
-    const tree: FileTree = {
-      ...BASE,
-      'render.yaml': ['services:', '  - type: cron', '    name: cleanup', '    schedule: "0 3 * * *"', '    startCommand: node dist/cleanup.js', ''].join('\n'),
-      'src/cleanup.ts': 'console.log("cleanup");\n',
-    };
-    const rejection = asyncRejection(tree);
-    expect(rejection?.detected).toBe(true);
-    expect(rejection?.reason).toContain('a scheduled job');
-    const dismissed = analyseRepo(tree, { dismissedRejections: [rejection!.reason] });
-    expect(dismissed.rejections.find((r) => r.dependency === 'async-workloads')?.detected).toBe(true);
-  });
-
-  it('does not reject a repository with no queue or schedule', () => {
-    expect(asyncRejection(BASE)?.detected ?? false).toBe(false);
   });
 });

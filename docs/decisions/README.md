@@ -1692,6 +1692,21 @@ What would change it: a passing real-AWS certification of each shape
 ([`../testing/aws-e2e.md`](../testing/aws-e2e.md)). Then turn on the
 switch for that shape.
 
+## The pilot offers Medium, Large, queues and scheduled jobs again (2026-11-06)
+
+Context: the entry above limited the pilot to Small, with no queues and no
+scheduled jobs, because no real-AWS run had certified the other shapes.
+
+Decision: the owner turned both switches back on for the pilot.
+`SELECTABLE_SIZE_TIERS` offers Small, Medium and Large.
+`ASYNC_WORKLOADS_DEPLOYABLE` is `true`. Both switches stay in the code, so
+each shape can be turned off again. `ANALYSIS_VERSION` is 84, so stored v83
+rows that call a queue or schedule repository not deployable are analysed
+again.
+
+Still open: real-AWS certification of each size and shape
+([`../testing/aws-e2e.md`](../testing/aws-e2e.md#size-profiles)). The Region
+limit and the cost ranges in the entry above do not change.
 ## The control-plane database is encrypted at rest (2026-11-06)
 
 Context: the launch audit found that the control-plane database storage was

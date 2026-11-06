@@ -567,7 +567,9 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Version 83 (2026-11 pilot scope): a repository that needs a queue or a
 // scheduled job is not deployable while `ASYNC_WORKLOADS_DEPLOYABLE` is off.
 // Stored v82 rows can call such a repository deployable.
-export const ANALYSIS_VERSION = 83;
+// Version 84: queues and scheduled jobs are deployable again. Stored v83 rows
+// can call such a repository not deployable.
+export const ANALYSIS_VERSION = 84;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
