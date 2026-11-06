@@ -237,8 +237,8 @@ once. The rules are:
   `API_BROWSER_CERTIFICATE_ARN`.
 - `COOKIE_DOMAIN` starts with a dot, and the hosts of `API_URL` and `WEB_URL`
   are inside it.
-- A `COOKIE_DOMAIN` that covers `CLOUDFLARE_ZONE_NAME` gives a warning: the
-  session cookie then reaches every customer application.
+- `COOKIE_DOMAIN` does not cover `CLOUDFLARE_ZONE_NAME`. Otherwise the session
+  cookie reaches every customer application.
 - `DEPLOYZ_DEFAULT_HOSTNAME_PREFIX` is lowercase letters or digits and a
   trailing dash.
 - In the web deploy, `API_URL` starts with `https://` and carries no path, and

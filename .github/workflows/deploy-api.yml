@@ -438,10 +438,10 @@ jobs:
           done
           # Default customer hostnames are <prefix><id>.<zone>. A cookie domain
           # that covers the zone sends the dashboard session to every customer
-          # application. A warning until production moves its cookie domain.
+          # application, so the deploy refuses it.
           case "${CLOUDFLARE_ZONE_NAME}" in
             "${COOKIE_DOMAIN#.}"|*"${COOKIE_DOMAIN}")
-              echo "::warning::COOKIE_DOMAIN ${COOKIE_DOMAIN} covers the customer hostnames in ${CLOUDFLARE_ZONE_NAME}. Browsers send the session cookie to every customer application." ;;
+              problems+=("COOKIE_DOMAIN ${COOKIE_DOMAIN} covers the customer hostnames in ${CLOUDFLARE_ZONE_NAME}. Browsers would send the session cookie to every customer application.") ;;
           esac
           if ! printf '%s' "${DEPLOYZ_DEFAULT_HOSTNAME_PREFIX}" | grep -Eq '^[a-z0-9]+-$'; then
             problems+=("DEPLOYZ_DEFAULT_HOSTNAME_PREFIX must be lowercase letters or digits and a trailing dash.")
