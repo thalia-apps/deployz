@@ -251,7 +251,8 @@ reconciles any ACTIVE/PAST_DUE subscription not checked for an hour.
   (`GET /api/billing/account`, `GET /api/billing/invoices/:orderId`,
   `apps/api/src/billing-account.ts`). Orders are scoped by the
   organization's subscription id; an order of another subscription answers
-  404. Polar generates an invoice on request: the first download starts it
+  404. A credit for a deployment that stopped mid-period is a negative
+  order and is listed as "Credit". Polar generates an invoice on request: the first download starts it
   and answers 409 `INVOICE_NOT_READY`; a retry a moment later gets the PDF.
   A member sees that only an owner or admin can see payments and invoices.
   When Polar fails, the page shows an inline alert and keeps the rest.

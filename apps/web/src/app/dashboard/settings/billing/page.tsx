@@ -439,7 +439,12 @@ function InvoicesCard({ account }: { account: BillingAccount }) {
               </TableHeader>
               <TableBody>
                 {transactions.map((transaction) => {
-                  const status = TRANSACTION_STATUS_LABELS[transaction.status];
+                  // A deployment that stops mid-period is credited at once: a
+                  // negative order, shown as a credit rather than a payment.
+                  const status =
+                    Number(transaction.amount) < 0
+                      ? ({ label: 'Credit', variant: 'outline' } as const)
+                      : TRANSACTION_STATUS_LABELS[transaction.status];
                   return (
                     <TableRow key={transaction.id}>
                       <TableCell className="whitespace-nowrap">
