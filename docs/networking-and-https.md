@@ -130,17 +130,11 @@ signed-in user opens a customer application.
 
 - Staging is correct: `COOKIE_DOMAIN` is `.staging.deployz.dev`, and its
   applications are `s-<id>.deployz.dev`.
-- Production must use `COOKIE_DOMAIN` `.app.deployz.dev`, `API_URL` and
+- Production uses `COOKIE_DOMAIN` `.app.deployz.dev`, `API_URL` and
   `BETTER_AUTH_URL` `https://api.app.deployz.dev`, and
-  `API_BROWSER_DOMAIN_NAME` `api.app.deployz.dev`. The API deploy refuses a
-  `COOKIE_DOMAIN` that covers `CLOUDFLARE_ZONE_NAME`. A value of `.deployz.dev`
-  covers every `d-*` and `s-*` host.
-- Cutover: a session cookie that was set for `.deployz.dev` stays in the
-  browser, and customer hostnames still receive it until it expires. Change
-  `COOKIE_PREFIX` (API variable and the web `NEXT_PUBLIC_COOKIE_PREFIX` build
-  argument) in the same release, so the new cookie name cannot be hidden by the
-  old cookie. Then delete the rows of the `session` table, so no old token
-  works. Every user signs in again.
+  `API_BROWSER_DOMAIN_NAME` `api.app.deployz.dev` (cutover 2026-10-26). A
+  value of `.deployz.dev` covers every `d-*` and `s-*` host, so the API deploy
+  refuses a `COOKIE_DOMAIN` that covers `CLOUDFLARE_ZONE_NAME`.
 - A customer application can still set a cookie for `.deployz.dev`, which the
   browser also sends to the control plane. The API refuses a state-changing
   request whose `Origin` is not `WEB_URL` or `MARKETING_URL`. A separate
