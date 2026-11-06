@@ -10,7 +10,7 @@ import { createAuth, type Auth } from './auth.js';
 import { assertProductionDeploymentAllowed } from './billing-entitlements.js';
 import { buildServer } from './server.js';
 
-// Paddle migration Phase 7 — free evaluation entitlements. Evaluation
+// Billing Phase 7 — free evaluation entitlements. Evaluation
 // (signup, analysis, configuration, customer records, release builds, and
 // ONE active TEST deployment per application) is free and consults billing
 // nowhere; only a PRODUCTION deployment requires an ACTIVE subscription.
@@ -129,7 +129,7 @@ async function insertDeployment(
   return row!;
 }
 
-/** Fixture ids only — never realistic Paddle ids. */
+/** Fixture ids only — never realistic Polar ids. */
 async function setSubscription(
   db: Db,
   organizationId: string,
@@ -157,7 +157,7 @@ function postJson(
   });
 }
 
-describe('billing entitlements — free evaluation (Paddle migration Phase 7)', () => {
+describe('billing entitlements — free evaluation (billing Phase 7)', () => {
   let client: PGlite | undefined;
   let db: Db;
   let auth: Auth;

@@ -7,39 +7,30 @@ import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { createAuth, type Auth } from '../auth.js';
-import type { PaddleBilling } from '../paddle.js';
+import type { PolarBilling } from '../polar.js';
 import { buildServer } from '../server.js';
 
-// Paddle migration Phase 14 — the admin's billing view and Reconcile action.
-// Reconcile runs the SAME reconcileBilling the safety job runs; these tests
-// cover the admin wrapping (authorization, audit, what the detail exposes),
-// not reconciliation itself (billing-reconcile.test.ts). Fixture ids only.
+// The admin's billing view and Reconcile action. Reconcile runs the SAME
+// reconcileBilling the safety job runs; these tests cover the admin wrapping
+// (authorization, audit, what the detail exposes), not reconciliation itself
+// (billing-reconcile.test.ts). Fixture ids only.
 
-const PRICE_PLATFORM = 'pri_platform_test';
-const PRICE_DEPLOYMENT = 'pri_deployment_test';
-
-/** A Paddle double answering as a subscription with the platform item only. */
-function fakePaddle(updates: unknown[] = []): PaddleBilling {
+/** A Polar double answering as a subscription at the floor of one unit. */
+function fakePolar(updates: number[] = []): PolarBilling {
   return {
     config: {
-      apiKey: 'test_replace_me',
+      token: 'polar_oat_test_replace_me',
       webhookSecret: 'test_replace_me',
-      clientToken: 'pdl_sdbx_replace_me',
-      pricePlatform: PRICE_PLATFORM,
-      priceDeployment: PRICE_DEPLOYMENT,
+      productId: 'prod_test_1',
       environment: 'sandbox',
     },
     client: {
-      subscriptions: {
-        get: async () => ({
-          items: [{ price: { id: PRICE_PLATFORM }, quantity: 1, status: 'active' }],
-        }),
-        update: async (_id: string, body: unknown) => {
-          updates.push(body);
-          return {};
-        },
+      getSubscription: async (id: string) => ({ id, status: 'active', units: 1 }),
+      updateSubscriptionUnits: async (id: string, units: number) => {
+        updates.push(units);
+        return { id, status: 'active', units };
       },
-    } as unknown as PaddleBilling['client'],
+    } as unknown as PolarBilling['client'],
   };
 }
 
@@ -85,14 +76,14 @@ function auditRows(db: Db, organizationId: string) {
     .orderBy(schema.eventLogs.id);
 }
 
-describe('admin billing (Paddle migration Phase 14)', () => {
+describe('admin billing', () => {
   let client: PGlite | undefined;
   let db: Db;
   let auth: Auth;
   let app: FastifyInstance;
   let admin: { userId: string; organizationId: string; cookie: string };
   let vendor: { userId: string; organizationId: string; cookie: string };
-  const updates: unknown[] = [];
+  const updates: number[] = [];
 
   beforeAll(async () => {
     client = new PGlite();
@@ -105,7 +96,7 @@ describe('admin billing (Paddle migration Phase 14)', () => {
     app = await buildServer({
       auth,
       db,
-      paddle: fakePaddle(updates),
+      polar: fakePolar(updates),
       teamAdminEmails: [],
       teamAdminEnvGrantsEnabled: false,
     });
@@ -130,14 +121,14 @@ describe('admin billing (Paddle migration Phase 14)', () => {
   it('an organization in evaluation reconciles as SKIPPED — and the attempt is still audited', async () => {
     const response = await reconcile(app, vendor.organizationId, admin.cookie);
     expect(response.statusCode, response.body).toBe(200);
-    expect(response.json()).toMatchObject({ status: 'SKIPPED', reason: 'no subscription', expected: 0 });
+    expect(response.json()).toMatchObject({ status: 'SKIPPED', reason: 'no subscription', expected: 1 });
     const rows = await auditRows(db, vendor.organizationId);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ actorId: admin.userId, result: 'SKIPPED' });
     expect(updates).toHaveLength(0);
   });
 
-  it('a subscribed vendor with one live deployment is pushed to Paddle, audited, and shown on the detail', async () => {
+  it('a subscribed vendor with two live deployments is pushed to Polar, audited, and shown on the detail', async () => {
     await db.insert(schema.billingSubscriptions).values({
       organizationId: vendor.organizationId,
       providerCustomerId: 'ctm_test_1',
@@ -157,20 +148,22 @@ describe('admin billing (Paddle migration Phase 14)', () => {
       .insert(schema.customers)
       .values({ organizationId: vendor.organizationId, name: 'Buyer', email: 'buyer@example.com' })
       .returning();
-    await db.insert(schema.deployments).values({
-      organizationId: vendor.organizationId,
-      applicationId: application!.id,
-      customerId: customer!.id,
-      region: 'us-east-1',
-      enrollmentCode: crypto.randomUUID(),
-      deploymentType: 'PRODUCTION',
-      billingState: 'ACTIVE',
-    });
+    for (let i = 0; i < 2; i += 1) {
+      await db.insert(schema.deployments).values({
+        organizationId: vendor.organizationId,
+        applicationId: application!.id,
+        customerId: customer!.id,
+        region: 'us-east-1',
+        enrollmentCode: crypto.randomUUID(),
+        deploymentType: 'PRODUCTION',
+        billingState: 'ACTIVE',
+      });
+    }
 
     const response = await reconcile(app, vendor.organizationId, admin.cookie);
     expect(response.statusCode, response.body).toBe(200);
-    expect(response.json()).toMatchObject({ status: 'SUCCEEDED', action: 'ITEM_ADDED', expected: 1, provider: 0 });
-    expect(updates).toHaveLength(1);
+    expect(response.json()).toMatchObject({ status: 'SUCCEEDED', action: 'QUANTITY_UPDATED', expected: 2, provider: 1 });
+    expect(updates).toEqual([2]);
 
     const rows = await auditRows(db, vendor.organizationId);
     expect(rows).toHaveLength(2);
@@ -182,10 +175,12 @@ describe('admin billing (Paddle migration Phase 14)', () => {
       headers: { cookie: admin.cookie },
     });
     expect(detail.statusCode, detail.body).toBe(200);
-    const billing = (detail.json() as { billing: { activeProductionDeployments: number; subscription: { providerSubscriptionId: string; lastReconciledAt: string | null } | null; recentReconciliations: { action: string; status: string }[] } }).billing;
-    expect(billing.activeProductionDeployments).toBe(1);
+    const billing = (detail.json() as { billing: { activeProductionDeployments: number; providerDeploymentQuantity: number | null; monthlyRateDollars: number | null; subscription: { providerSubscriptionId: string; lastReconciledAt: string | null } | null; recentReconciliations: { action: string; status: string }[] } }).billing;
+    expect(billing.activeProductionDeployments).toBe(2);
+    expect(billing.providerDeploymentQuantity).toBe(2);
+    expect(billing.monthlyRateDollars).toBe(49 + 2 * 19);
     expect(billing.subscription).toMatchObject({ providerSubscriptionId: 'sub_test_1' });
     expect(billing.subscription?.lastReconciledAt).not.toBeNull();
-    expect(billing.recentReconciliations[0]).toMatchObject({ action: 'ITEM_ADDED', status: 'SUCCEEDED' });
+    expect(billing.recentReconciliations[0]).toMatchObject({ action: 'QUANTITY_UPDATED', status: 'SUCCEEDED' });
   });
 });

@@ -128,7 +128,7 @@ describe('deployment manifest — overrides, persistence and readiness gate', ()
     customerId = customer!.id;
 
     // POST /api/deployments below creates PRODUCTION deployments (the
-    // default); Paddle migration Phase 7 gates those behind an ACTIVE
+    // default); billing Phase 7 gates those behind an ACTIVE
     // subscription, which is unrelated to what this file exercises (manifest
     // overrides, persistence, readiness gate).
     await db.insert(schema.billingSubscriptions).values({

@@ -122,7 +122,7 @@ regression, because they do not shape a customer deployment:
 
 - `apps/api/src/admin/`
 - `apps/api/src/billing-*.ts`
-- `apps/api/src/paddle.ts`
+- `apps/api/src/polar.ts`
 - `apps/api/src/email.ts`
 - `apps/api/src/organizations.ts`
 - `apps/api/src/ai-*.ts`

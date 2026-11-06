@@ -9,16 +9,17 @@ import * as schema from '@deployz/db/schema';
 
 import { createAuth, type Auth } from './auth.js';
 import { completePendingCheckoutIntent } from './billing-checkout.js';
-import { createPaddle, type PaddleBilling } from './paddle.js';
+import { env } from './env.js';
+import type { CreateCheckoutInput, PolarBilling, PolarCheckout, PolarClient, PolarSubscription } from './polar.js';
 import { buildServer } from './server.js';
 
-// Paddle migration Phase 8 — first production activation. A vendor without a
-// subscription asks for a customer deployment: nothing is provisioned and no
-// deployment row exists until the subscription activates. Fixture ids only
-// (txn_test_1, sub_test_1, ...) — never anything that looks like a real
-// Paddle id.
+// First production activation. A vendor without a subscription asks for a
+// customer deployment: nothing is provisioned and no deployment row exists
+// until the subscription activates. Fixture ids only (chk_test_1,
+// sub_test_1, ...) — never anything that looks like a real Polar id.
 
-const WEBHOOK_SECRET = 'whsec_test_1';
+const WEBHOOK_SECRET = 'polar_whs_test_1';
+const PRODUCT_ID = 'product_replace_me';
 
 const READY_METADATA = {
   hasDockerfile: true,
@@ -34,86 +35,109 @@ const READY_METADATA = {
   databaseState: 'none',
 };
 
-/**
- * The real client's `webhooks` (signature verification must be real) with a
- * stubbed `transactions.create` and `subscriptions` — no test ever reaches
- * the Paddle API. `subscriptions` is here because the webhook's ACTIVE path
- * also reconciles (Phase 9); reconciliation itself is tested in
- * billing-reconcile.test.ts.
- */
-function buildPaddle(
-  createTransaction: (body: unknown) => Promise<{ id: string }> = async () => ({
-    id: 'txn_test_1',
-  }),
-): PaddleBilling {
-  const billing = createPaddle({
-    paddleApiKey: 'test_replace_me',
-    paddleWebhookSecret: WEBHOOK_SECRET,
-    paddleClientToken: 'pdl_sdbx_replace_me',
-    paddlePricePlatform: 'pri_platform_replace_me',
-    paddlePriceDeployment: 'pri_deployment_replace_me',
-    paddleEnvironment: 'sandbox',
-  });
-  if (!billing) throw new Error('createPaddle unexpectedly returned null in the test fixture');
+let checkoutCounter = 0;
+
+function openCheckout(id: string): PolarCheckout {
   return {
-    config: billing.config,
-    client: {
-      webhooks: billing.client.webhooks,
-      transactions: { create: createTransaction },
-      subscriptions: {
-        get: async () => ({ items: [{ price: { id: 'pri_platform_replace_me' }, quantity: 1 }] }),
-        update: async () => ({}),
-      },
-    } as unknown as PaddleBilling['client'],
+    id,
+    status: 'open',
+    url: `https://sandbox.polar.sh/checkout/${id}`,
+    expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   };
 }
 
-/** Signs a webhook body the way Paddle does: `ts=<ts>;h1=<hmac-sha256(secret, "ts:body")>`. */
-function signedWebhook(event: Record<string, unknown>): {
+/**
+ * A Polar double — no test ever reaches the Polar API. `getSubscription` and
+ * `updateSubscriptionUnits` are here because the webhook's ACTIVE path also
+ * reconciles (Phase 9); reconciliation itself is tested in
+ * billing-reconcile.test.ts. Every checkout gets a fresh fixture id, because
+ * the intent's checkout id is unique.
+ */
+function buildPolar(
+  options: {
+    createCheckout?: (input: CreateCheckoutInput) => Promise<PolarCheckout>;
+    getCheckout?: (id: string) => Promise<PolarCheckout>;
+  } = {},
+): PolarBilling {
+  const client = {
+    createCheckout:
+      options.createCheckout ??
+      (async () => {
+        checkoutCounter += 1;
+        return openCheckout(`chk_test_${checkoutCounter}`);
+      }),
+    getCheckout: options.getCheckout ?? (async (id: string) => openCheckout(id)),
+    getSubscription: async (id: string) => ({ id, units: 1 }) as PolarSubscription,
+    updateSubscriptionUnits: async (id: string, units: number) => ({ id, units }) as PolarSubscription,
+  } as Partial<PolarClient> as PolarClient;
+  return {
+    client,
+    config: {
+      token: 'polar_oat_replace_me',
+      webhookSecret: WEBHOOK_SECRET,
+      productId: PRODUCT_ID,
+      environment: 'sandbox',
+    },
+  };
+}
+
+/** Signs a delivery the way Polar does (Standard Webhooks): HMAC-SHA256 of
+ *  `id.timestamp.body` keyed by the secret's bytes, sent as `v1,<base64>`. */
+function signedWebhook(
+  webhookId: string,
+  event: Record<string, unknown>,
+): {
   body: string;
   headers: Record<string, string>;
 } {
   const body = JSON.stringify(event);
-  const ts = Math.floor(Date.now() / 1000);
-  const h1 = createHmac('sha256', WEBHOOK_SECRET).update(`${ts}:${body}`).digest('hex');
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = createHmac('sha256', Buffer.from(WEBHOOK_SECRET, 'utf8'))
+    .update(`${webhookId}.${timestamp}.${body}`)
+    .digest('base64');
   return {
     body,
     headers: {
-      'paddle-signature': `ts=${ts};h1=${h1}`,
+      'webhook-id': webhookId,
+      'webhook-timestamp': String(timestamp),
+      'webhook-signature': `v1,${signature}`,
       'content-type': 'application/json',
     },
   };
 }
 
-/** Paddle's wire shape (snake_case) for subscription.activated. */
-function subscriptionActivated(
-  organizationId: string,
-  eventId: string,
-  checkoutIntentId?: string,
-  subscriptionId = 'sub_test_1',
-): Record<string, unknown> {
-  const occurredAt = new Date().toISOString();
+/** Polar's wire shape for subscription.active, created by `checkoutId`. */
+function subscriptionActive(checkoutId: string | null, subscriptionId = 'sub_test_1'): Record<string, unknown> {
+  const timestamp = new Date().toISOString();
   return {
-    event_id: eventId,
-    event_type: 'subscription.activated',
-    occurred_at: occurredAt,
-    notification_id: `ntf_${eventId}`,
+    type: 'subscription.active',
+    timestamp,
     data: {
       id: subscriptionId,
       status: 'active',
-      customer_id: 'ctm_test_1',
-      address_id: 'add_test_1',
-      currency_code: 'USD',
-      created_at: occurredAt,
-      updated_at: occurredAt,
-      collection_mode: 'automatic',
-      billing_cycle: { interval: 'month', frequency: 1 },
-      current_billing_period: { starts_at: occurredAt, ends_at: occurredAt },
-      scheduled_change: null,
-      items: [{ status: 'active', quantity: 1, recurring: true, created_at: occurredAt, updated_at: occurredAt, price: { id: 'pri_platform_replace_me', product_id: 'pro_test_1', description: 'Test price', tax_mode: 'account_setting' } }],
-      custom_data: checkoutIntentId ? { organizationId, checkoutIntentId } : { organizationId },
+      amount: 6800,
+      currency: 'usd',
+      current_period_start: timestamp,
+      current_period_end: timestamp,
+      cancel_at_period_end: false,
+      ends_at: null,
+      customer_id: 'cus_test_1',
+      product_id: PRODUCT_ID,
+      checkout_id: checkoutId,
+      units: 1,
+      modified_at: timestamp,
+      metadata: {},
     },
   };
+}
+
+/** The Polar checkout id stored on an intent. */
+async function checkoutIdOf(db: Db, checkoutIntentId: string): Promise<string> {
+  const [intent] = await db
+    .select({ providerTransactionId: schema.billingCheckoutIntents.providerTransactionId })
+    .from(schema.billingCheckoutIntents)
+    .where(eq(schema.billingCheckoutIntents.id, checkoutIntentId));
+  return intent!.providerTransactionId!;
 }
 
 async function signUpAndGetOrg(
@@ -215,18 +239,20 @@ function pendingIntents(db: Db, organizationId: string) {
     );
 }
 
-describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
+describe('POST /api/billing/checkout', () => {
   let client: PGlite | undefined;
   let db: Db;
   let auth: Auth;
   let org: { userId: string; organizationId: string; cookie: string };
+  let orgEmail: string;
 
   beforeAll(async () => {
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
     auth = createAuth(db);
-    org = await signUpAndGetOrg(auth, db, `checkout-${crypto.randomUUID()}@example.com`);
+    orgEmail = `checkout-${crypto.randomUUID()}@example.com`;
+    org = await signUpAndGetOrg(auth, db, orgEmail);
   }, 60_000);
 
   afterAll(async () => {
@@ -234,7 +260,7 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
   });
 
   it('401s without a session', async () => {
-    const app = await buildServer({ auth, db, paddle: buildPaddle() });
+    const app = await buildServer({ auth, db, polar: buildPolar() });
     try {
       const response = await postJson(app, '/api/billing/checkout', {});
       expect(response.statusCode).toBe(401);
@@ -243,8 +269,8 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
     }
   });
 
-  it('503s when Paddle is not configured', async () => {
-    const app = await buildServer({ auth, db, paddle: null });
+  it('503s when Polar is not configured', async () => {
+    const app = await buildServer({ auth, db, polar: null });
     try {
       const application = await insertApplication(db, org.organizationId);
       const customer = await insertCustomer(db, org.organizationId);
@@ -261,14 +287,16 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
     }
   });
 
-  it('parks the request as a PENDING intent and returns the transaction id — no deployment row', async () => {
-    const created: unknown[] = [];
+  it('parks the request as a PENDING intent and returns the checkout URL — no deployment row', async () => {
+    const created: CreateCheckoutInput[] = [];
     const app = await buildServer({
       auth,
       db,
-      paddle: buildPaddle(async (body) => {
-        created.push(body);
-        return { id: 'txn_test_1' };
+      polar: buildPolar({
+        createCheckout: async (input) => {
+          created.push(input);
+          return openCheckout('chk_test_park');
+        },
       }),
     });
     try {
@@ -281,18 +309,22 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
         { cookie: org.cookie },
       );
       expect(response.statusCode, response.body).toBe(200);
-      const payload = response.json() as { checkoutIntentId: string; transactionId: string };
-      expect(payload.transactionId).toBe('txn_test_1');
+      const payload = response.json() as { checkoutIntentId: string; checkoutUrl: string };
+      expect(payload.checkoutUrl).toBe('https://sandbox.polar.sh/checkout/chk_test_park');
 
-      // The PLATFORM price only: the parked deployment is not live yet, and
-      // Phase 9 reconciliation bills live deployments by quantity.
+      // ONE unit of the configured product: the subscription always bills at
+      // least one customer deployment, and reconciliation raises it later.
       expect(created).toEqual([
         {
-          items: [{ priceId: 'pri_platform_replace_me', quantity: 1 }],
-          customData: {
+          productId: PRODUCT_ID,
+          units: 1,
+          externalCustomerId: org.organizationId,
+          customerEmail: orgEmail,
+          metadata: {
             organizationId: org.organizationId,
             checkoutIntentId: payload.checkoutIntentId,
           },
+          successUrl: `${env.webUrl}/dashboard/settings/billing?checkout=complete`,
         },
       ]);
 
@@ -302,7 +334,7 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
         .where(eq(schema.billingCheckoutIntents.id, payload.checkoutIntentId));
       expect(intent).toMatchObject({
         status: 'PENDING',
-        providerTransactionId: 'txn_test_1',
+        providerTransactionId: 'chk_test_park',
         applicationId: application.id,
         customerId: customer.id,
         region: 'us-east-1',
@@ -321,14 +353,81 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
     }
   });
 
-  it('a second checkout reuses the same intent and transaction', async () => {
-    let calls = 0;
+  it('builds the success URL from returnPath on WEB_URL', async () => {
+    const created: CreateCheckoutInput[] = [];
     const app = await buildServer({
       auth,
       db,
-      paddle: buildPaddle(async () => {
-        calls += 1;
-        return { id: `txn_test_reuse_${calls}` };
+      polar: buildPolar({
+        createCheckout: async (input) => {
+          created.push(input);
+          checkoutCounter += 1;
+          return openCheckout(`chk_test_${checkoutCounter}`);
+        },
+      }),
+    });
+    try {
+      await clearIntents(db, org.organizationId);
+      const response = await postJson(
+        app,
+        '/api/billing/checkout',
+        { returnPath: '/dashboard/deployments/new' },
+        { cookie: org.cookie },
+      );
+      expect(response.statusCode, response.body).toBe(200);
+      expect(created).toHaveLength(1);
+      expect(created[0]!.successUrl).toBe(`${env.webUrl}/dashboard/deployments/new?checkout=complete`);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it.each([
+    'https://evil.example.com/dashboard',
+    '//evil.example.com/dashboard',
+    '/dashboard/../settings',
+    '/dashboard?next=https://evil.example.com',
+    '/settings/billing',
+    '/dashboard/Settings',
+  ])('rejects returnPath %s before any intent or Polar call', async (returnPath) => {
+    let polarCalled = false;
+    const app = await buildServer({
+      auth,
+      db,
+      polar: buildPolar({
+        createCheckout: async () => {
+          polarCalled = true;
+          return openCheckout('chk_should_not_exist');
+        },
+      }),
+    });
+    try {
+      await clearIntents(db, org.organizationId);
+      const response = await postJson(app, '/api/billing/checkout', { returnPath }, { cookie: org.cookie });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
+      expect(polarCalled).toBe(false);
+      expect(await pendingIntents(db, org.organizationId)).toHaveLength(0);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('a second checkout reuses the same intent and its open checkout', async () => {
+    let creates = 0;
+    const lookedUp: string[] = [];
+    const app = await buildServer({
+      auth,
+      db,
+      polar: buildPolar({
+        createCheckout: async () => {
+          creates += 1;
+          return openCheckout(`chk_test_reuse_${creates}`);
+        },
+        getCheckout: async (id) => {
+          lookedUp.push(id);
+          return openCheckout(id);
+        },
       }),
     });
     try {
@@ -340,8 +439,9 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
       const second = await postJson(app, '/api/billing/checkout', body, { cookie: org.cookie });
       expect(first.statusCode, first.body).toBe(200);
       expect(second.statusCode, second.body).toBe(200);
-      // Paddle is asked once: a second transaction would be left dangling.
-      expect(calls).toBe(1);
+      // Polar is asked once: a second open checkout could also be paid.
+      expect(creates).toBe(1);
+      expect(lookedUp).toEqual(['chk_test_reuse_1']);
       expect(second.json()).toEqual(first.json());
       expect(await pendingIntents(db, org.organizationId)).toHaveLength(1);
     } finally {
@@ -349,16 +449,89 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
     }
   });
 
-  it('two simultaneous checkouts (a double click) open exactly one Paddle transaction', async () => {
+  it.each([
+    { label: 'expired', checkout: (id: string) => ({ ...openCheckout(id), status: 'expired' }) },
+    { label: 'failed', checkout: (id: string) => ({ ...openCheckout(id), status: 'failed' }) },
+    {
+      label: 'open but past its expiry',
+      checkout: (id: string) => ({ ...openCheckout(id), expires_at: new Date(Date.now() - 1000).toISOString() }),
+    },
+  ])('replaces a checkout that is $label with a new one on the same intent', async ({ checkout }) => {
+    let creates = 0;
+    const app = await buildServer({
+      auth,
+      db,
+      polar: buildPolar({
+        createCheckout: async () => {
+          creates += 1;
+          checkoutCounter += 1;
+          return openCheckout(`chk_test_${checkoutCounter}`);
+        },
+        getCheckout: async (id) => checkout(id),
+      }),
+    });
+    try {
+      await clearIntents(db, org.organizationId);
+      const first = await postJson(app, '/api/billing/checkout', {}, { cookie: org.cookie });
+      const second = await postJson(app, '/api/billing/checkout', {}, { cookie: org.cookie });
+      expect(first.statusCode, first.body).toBe(200);
+      expect(second.statusCode, second.body).toBe(200);
+      expect(creates).toBe(2);
+      const firstBody = first.json() as { checkoutIntentId: string; checkoutUrl: string };
+      const secondBody = second.json() as { checkoutIntentId: string; checkoutUrl: string };
+      expect(secondBody.checkoutIntentId).toBe(firstBody.checkoutIntentId);
+      expect(secondBody.checkoutUrl).not.toBe(firstBody.checkoutUrl);
+      const pending = await pendingIntents(db, org.organizationId);
+      expect(pending).toHaveLength(1);
+      expect(`https://sandbox.polar.sh/checkout/${pending[0]!.providerTransactionId}`).toBe(secondBody.checkoutUrl);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it.each(['confirmed', 'succeeded'])(
+    '409s CHECKOUT_ALREADY_PAID when the stored checkout is %s — no second checkout is sold',
+    async (status) => {
+      let creates = 0;
+      const app = await buildServer({
+        auth,
+        db,
+        polar: buildPolar({
+          createCheckout: async () => {
+            creates += 1;
+            checkoutCounter += 1;
+            return openCheckout(`chk_test_${checkoutCounter}`);
+          },
+          getCheckout: async (id) => ({ ...openCheckout(id), status }),
+        }),
+      });
+      try {
+        await clearIntents(db, org.organizationId);
+        const first = await postJson(app, '/api/billing/checkout', {}, { cookie: org.cookie });
+        expect(first.statusCode, first.body).toBe(200);
+        const second = await postJson(app, '/api/billing/checkout', {}, { cookie: org.cookie });
+        expect(second.statusCode).toBe(409);
+        expect(second.json()).toMatchObject({ error: { code: 'CHECKOUT_ALREADY_PAID' } });
+        expect(creates).toBe(1);
+        expect(await pendingIntents(db, org.organizationId)).toHaveLength(1);
+      } finally {
+        await app.close();
+      }
+    },
+  );
+
+  it('two simultaneous checkouts (a double click) open exactly one Polar checkout', async () => {
     let calls = 0;
     const app = await buildServer({
       auth,
       db,
-      paddle: buildPaddle(async () => {
-        calls += 1;
-        const id = `txn_test_race_${calls}`;
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        return { id };
+      polar: buildPolar({
+        createCheckout: async () => {
+          calls += 1;
+          const id = `chk_test_race_${calls}`;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          return openCheckout(id);
+        },
       }),
     });
     try {
@@ -378,7 +551,7 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
   });
 
   it('a later checkout replaces the parked request on the same intent', async () => {
-    const app = await buildServer({ auth, db, paddle: buildPaddle() });
+    const app = await buildServer({ auth, db, polar: buildPolar() });
     try {
       const [pending] = await pendingIntents(db, org.organizationId);
       const application = await insertApplication(db, org.organizationId);
@@ -406,7 +579,7 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
   });
 
   it('422s on a region that is not deployable, before any intent exists', async () => {
-    const app = await buildServer({ auth, db, paddle: buildPaddle() });
+    const app = await buildServer({ auth, db, polar: buildPolar() });
     try {
       const application = await insertApplication(db, org.organizationId);
       const customer = await insertCustomer(db, org.organizationId);
@@ -425,14 +598,16 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
     }
   });
 
-  it('409s RELEASE_NOT_PUBLISHED when the application has no built release, before any intent or Paddle call', async () => {
-    let paddleCalled = false;
+  it('409s RELEASE_NOT_PUBLISHED when the application has no built release, before any intent or Polar call', async () => {
+    let polarCalled = false;
     const app = await buildServer({
       auth,
       db,
-      paddle: buildPaddle(async () => {
-        paddleCalled = true;
-        return { id: 'txn_should_not_exist' };
+      polar: buildPolar({
+        createCheckout: async () => {
+          polarCalled = true;
+          return openCheckout('chk_should_not_exist');
+        },
       }),
     });
     try {
@@ -448,7 +623,7 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
       );
       expect(response.statusCode).toBe(409);
       expect(response.json()).toMatchObject({ error: { code: 'RELEASE_NOT_PUBLISHED' } });
-      expect(paddleCalled).toBe(false);
+      expect(polarCalled).toBe(false);
       expect(await pendingIntents(db, org.organizationId)).toHaveLength(before.length);
     } finally {
       await app.close();
@@ -456,7 +631,7 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
   });
 
   it("404s on another organization's application", async () => {
-    const app = await buildServer({ auth, db, paddle: buildPaddle() });
+    const app = await buildServer({ auth, db, polar: buildPolar() });
     try {
       const other = await signUpAndGetOrg(auth, db, `checkout-other-${crypto.randomUUID()}@example.com`);
       const application = await insertApplication(db, other.organizationId);
@@ -473,12 +648,14 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
     }
   });
 
-  it('leaves the intent PENDING and answers 502 when Paddle refuses the transaction', async () => {
+  it('leaves the intent PENDING and answers 502 when Polar refuses the checkout', async () => {
     const app = await buildServer({
       auth,
       db,
-      paddle: buildPaddle(async () => {
-        throw new Error('paddle is down');
+      polar: buildPolar({
+        createCheckout: async () => {
+          throw new Error('polar is down');
+        },
       }),
     });
     try {
@@ -493,7 +670,7 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
       );
       expect(response.statusCode).toBe(502);
       expect(response.json()).toMatchObject({ error: { code: 'CHECKOUT_UNAVAILABLE' } });
-      // The row survives with no transaction id, so the next call retries it
+      // The row survives with no checkout id, so the next call retries it
       // rather than stranding the vendor.
       const pending = await pendingIntents(db, org.organizationId);
       expect(pending).toHaveLength(1);
@@ -502,9 +679,39 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
       await app.close();
     }
   });
+
+  it('answers 502 and keeps the intent and its checkout when Polar cannot look up the stored checkout', async () => {
+    let failLookup = false;
+    const app = await buildServer({
+      auth,
+      db,
+      polar: buildPolar({
+        getCheckout: async (id) => {
+          if (failLookup) throw new Error('polar is down');
+          return openCheckout(id);
+        },
+      }),
+    });
+    try {
+      await clearIntents(db, org.organizationId);
+      const first = await postJson(app, '/api/billing/checkout', {}, { cookie: org.cookie });
+      expect(first.statusCode, first.body).toBe(200);
+      const [before] = await pendingIntents(db, org.organizationId);
+
+      failLookup = true;
+      const second = await postJson(app, '/api/billing/checkout', {}, { cookie: org.cookie });
+      expect(second.statusCode).toBe(502);
+      expect(second.json()).toMatchObject({ error: { code: 'CHECKOUT_UNAVAILABLE' } });
+      const pending = await pendingIntents(db, org.organizationId);
+      expect(pending).toHaveLength(1);
+      expect(pending[0]!.providerTransactionId).toBe(before!.providerTransactionId);
+    } finally {
+      await app.close();
+    }
+  });
 });
 
-describe('checkout intents resume on activation (Paddle migration Phase 8)', () => {
+describe('checkout intents resume on activation', () => {
   let client: PGlite | undefined;
   let db: Db;
   let auth: Auth;
@@ -522,8 +729,8 @@ describe('checkout intents resume on activation (Paddle migration Phase 8)', () 
     await client?.close();
   });
 
-  it('subscription.activated creates the parked deployment and completes the intent', async () => {
-    const app = await buildServer({ auth, db, paddle: buildPaddle() });
+  it('subscription.active creates the parked deployment and completes the intent', async () => {
+    const app = await buildServer({ auth, db, polar: buildPolar() });
     try {
       const application = await insertApplication(db, org.organizationId);
       const customer = await insertCustomer(db, org.organizationId);
@@ -537,7 +744,8 @@ describe('checkout intents resume on activation (Paddle migration Phase 8)', () 
       const { checkoutIntentId } = checkout.json() as { checkoutIntentId: string };
 
       const { body, headers } = signedWebhook(
-        subscriptionActivated(org.organizationId, 'evt_test_resume_1', checkoutIntentId),
+        'msg_test_resume_1',
+        subscriptionActive(await checkoutIdOf(db, checkoutIntentId)),
       );
       const webhook = await app.inject({
         method: 'POST',
@@ -573,12 +781,10 @@ describe('checkout intents resume on activation (Paddle migration Phase 8)', () 
   });
 
   it('a second ACTIVE delivery creates no second deployment', async () => {
-    const app = await buildServer({ auth, db, paddle: buildPaddle() });
+    const app = await buildServer({ auth, db, polar: buildPolar() });
     try {
       const before = await db.select().from(schema.deployments);
-      const { body, headers } = signedWebhook(
-        subscriptionActivated(org.organizationId, 'evt_test_resume_2'),
-      );
+      const { body, headers } = signedWebhook('msg_test_resume_2', subscriptionActive(null));
       const webhook = await app.inject({
         method: 'POST',
         url: '/api/billing/webhook',
@@ -607,12 +813,12 @@ describe('checkout intents resume on activation (Paddle migration Phase 8)', () 
         applicationId: application.id,
         customerId: customer.id,
         region: 'us-east-1',
-        providerTransactionId: 'txn_test_2',
+        providerTransactionId: 'chk_test_failed_1',
       })
       .returning();
 
     const result = await completePendingCheckoutIntent(
-      { db, paddle: buildPaddle() },
+      { db, polar: buildPolar() },
       org.organizationId,
       intent!.id,
     );
@@ -638,13 +844,15 @@ describe('checkout intents resume on activation (Paddle migration Phase 8)', () 
         .update(schema.billingSubscriptions)
         .set({ status })
         .where(eq(schema.billingSubscriptions.organizationId, org.organizationId));
-      let paddleCalled = false;
+      let polarCalled = false;
       const app = await buildServer({
         auth,
         db,
-        paddle: buildPaddle(async () => {
-          paddleCalled = true;
-          return { id: 'txn_should_not_exist' };
+        polar: buildPolar({
+          createCheckout: async () => {
+            polarCalled = true;
+            return openCheckout('chk_should_not_exist');
+          },
         }),
       });
       try {
@@ -661,7 +869,7 @@ describe('checkout intents resume on activation (Paddle migration Phase 8)', () 
           error: { code: 'SUBSCRIPTION_NEEDS_ATTENTION', details: { subscriptionStatus: status } },
         });
         // No second subscription is ever sold.
-        expect(paddleCalled).toBe(false);
+        expect(polarCalled).toBe(false);
       } finally {
         await db
           .update(schema.billingSubscriptions)
@@ -677,7 +885,7 @@ describe('checkout intents resume on activation (Paddle migration Phase 8)', () 
       .update(schema.billingSubscriptions)
       .set({ status: 'CANCELED' })
       .where(eq(schema.billingSubscriptions.organizationId, org.organizationId));
-    const app = await buildServer({ auth, db, paddle: buildPaddle() });
+    const app = await buildServer({ auth, db, polar: buildPolar() });
     try {
       await clearIntents(db, org.organizationId);
       const application = await insertApplication(db, org.organizationId);
@@ -699,7 +907,7 @@ describe('checkout intents resume on activation (Paddle migration Phase 8)', () 
   });
 
   it('409s a checkout once the subscription is ACTIVE', async () => {
-    const app = await buildServer({ auth, db, paddle: buildPaddle() });
+    const app = await buildServer({ auth, db, polar: buildPolar() });
     try {
       const application = await insertApplication(db, org.organizationId);
       const customer = await insertCustomer(db, org.organizationId);
@@ -736,7 +944,7 @@ describe('checkout intents carry the deployment size', () => {
   });
 
   it('refuses a size below the minimum before any intent exists, stores the chosen size, and freezes it on activation', async () => {
-    const app = await buildServer({ auth, db, paddle: buildPaddle() });
+    const app = await buildServer({ auth, db, polar: buildPolar() });
     try {
       const application = await insertApplication(db, org.organizationId);
       await db
@@ -763,7 +971,10 @@ describe('checkout intents carry the deployment size', () => {
       const [parked] = await pendingIntents(db, org.organizationId);
       expect(parked).toMatchObject({ id: checkoutIntentId, sizeProfile: 'large' });
 
-      const { body, headers } = signedWebhook(subscriptionActivated(org.organizationId, 'evt_test_size_1', checkoutIntentId));
+      const { body, headers } = signedWebhook(
+        'msg_test_size_1',
+        subscriptionActive(await checkoutIdOf(db, checkoutIntentId)),
+      );
       const webhook = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers, payload: body });
       expect(webhook.statusCode, webhook.body).toBe(200);
 
@@ -821,13 +1032,12 @@ describe('subscribe-only checkout intents (invitation-first flow)', () => {
 
   it('creates a subscribe-only intent (empty body) with null application/customer/region', async () => {
     await clearIntents(db, org.organizationId);
-    const app = await buildServer({ auth, db, paddle: buildPaddle() });
+    const app = await buildServer({ auth, db, polar: buildPolar() });
     try {
       const response = await postJson(app, '/api/billing/checkout', {}, { cookie: org.cookie });
       expect(response.statusCode, response.body).toBe(200);
-      const body = response.json() as { checkoutIntentId: string; transactionId: string };
+      const body = response.json() as { checkoutIntentId: string; checkoutUrl: string };
       expect(body.checkoutIntentId).toBeTruthy();
-      expect(body.transactionId).toBe('txn_test_1');
 
       const [intent] = await db
         .select()
@@ -835,6 +1045,7 @@ describe('subscribe-only checkout intents (invitation-first flow)', () => {
         .where(eq(schema.billingCheckoutIntents.id, body.checkoutIntentId));
       expect(intent).toBeDefined();
       expect(intent!.status).toBe('PENDING');
+      expect(body.checkoutUrl).toBe(`https://sandbox.polar.sh/checkout/${intent!.providerTransactionId}`);
       expect(intent!.applicationId).toBeNull();
       expect(intent!.customerId).toBeNull();
       expect(intent!.region).toBeNull();
@@ -845,7 +1056,7 @@ describe('subscribe-only checkout intents (invitation-first flow)', () => {
 
   it('rejects partial fields with 422 VALIDATION_ERROR (all-or-none)', async () => {
     await clearIntents(db, org.organizationId);
-    const app = await buildServer({ auth, db, paddle: buildPaddle() });
+    const app = await buildServer({ auth, db, polar: buildPolar() });
     try {
       const application = await insertApplication(db, org.organizationId);
       const customer = await insertCustomer(db, org.organizationId);
@@ -896,16 +1107,16 @@ describe('subscribe-only checkout intents (invitation-first flow)', () => {
 
   it('completes a subscribe-only intent without creating a deployment', async () => {
     await clearIntents(db, org.organizationId);
-    const app = await buildServer({ auth, db, paddle: buildPaddle() });
+    const app = await buildServer({ auth, db, polar: buildPolar() });
     try {
       // Create subscribe-only intent
       const intentResponse = await postJson(app, '/api/billing/checkout', {}, { cookie: org.cookie });
       expect(intentResponse.statusCode).toBe(200);
       const { checkoutIntentId } = intentResponse.json() as { checkoutIntentId: string };
 
-      // Simulate webhook: subscription.activated
-      const webhookEvent = subscriptionActivated(org.organizationId, 'evt_subscribe_only_1', checkoutIntentId);
-      const { body, headers } = signedWebhook(webhookEvent);
+      // Simulate webhook: subscription.active
+      const webhookEvent = subscriptionActive(await checkoutIdOf(db, checkoutIntentId));
+      const { body, headers } = signedWebhook('msg_subscribe_only_1', webhookEvent);
       const webhookResponse = await app.inject({
         method: 'POST',
         url: '/api/billing/webhook',
@@ -929,7 +1140,7 @@ describe('subscribe-only checkout intents (invitation-first flow)', () => {
         .where(eq(schema.deployments.organizationId, org.organizationId));
       expect(deployments).toHaveLength(0);
 
-      // Redelivery should no-op (no PENDING intent)
+      // Redelivery of the same webhook id is a no-op duplicate
       const redeliveryResponse = await app.inject({
         method: 'POST',
         url: '/api/billing/webhook',
@@ -937,6 +1148,7 @@ describe('subscribe-only checkout intents (invitation-first flow)', () => {
         payload: body,
       });
       expect(redeliveryResponse.statusCode).toBe(200);
+      expect(redeliveryResponse.json()).toMatchObject({ outcome: 'DUPLICATE' });
     } finally {
       await app.close();
     }

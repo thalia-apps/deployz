@@ -3,36 +3,34 @@ import { eq } from 'drizzle-orm';
 import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
-import { productionDeploymentCounts } from './billing-domain.js';
-import type { PaddleBilling } from './paddle.js';
+import { productionDeploymentCounts, subscriptionUnits } from './billing-domain.js';
+import type { PolarBilling } from './polar.js';
 
-// Paddle migration Phase 9 — reconciliation. Deployz owns exactly one billing
-// number: how many production deployments are actually live, less the
-// organization's included allowance (billing-domain.ts). This module pushes
-// that ABSOLUTE quantity onto the subscription's per-deployment item — never
-// a delta, never an increment. A missed or duplicated call therefore cannot
-// drift the quantity: running it twice produces the same subscription as
-// running it once. Paddle never learns about the allowance itself; it only
-// ever receives the final billable quantity.
+// Reconciliation. Deployz owns exactly one billing number: how many
+// production deployments are actually live, less the organization's included
+// allowance, with a floor of one unit (billing-domain.ts). This module pushes
+// that ABSOLUTE unit count onto the Polar subscription — never a delta, never
+// an increment. A missed or duplicated call therefore cannot drift the
+// quantity: running it twice produces the same subscription as running it
+// once. Polar never learns about the allowance itself; it only ever receives
+// the final unit count.
 //
 // Everything here is decoupled from deployment safety (audit §4). It is
 // called only after a billing state actually changed, it never runs inside
-// the caller's transaction (a Paddle round trip must not hold a database
+// the caller's transaction (a provider round trip must not hold a database
 // connection open), and it never throws: a provider failure is recorded and
-// the Phase 10 safety job picks the drift up on its next pass.
+// the safety job picks the drift up on its next pass.
 
 export interface ReconcileDeps {
   db: RuntimeDb;
-  paddle: PaddleBilling | null;
+  polar: PolarBilling | null;
   now?: () => Date;
 }
 
 /** What reconciliation did. Recorded verbatim in `billing_reconciliation_events.action`. */
 export type ReconcileAction =
-  | 'NONE' // provider already matched the expected quantity
-  | 'QUANTITY_UPDATED' // the per-deployment item was set to the expected count
-  | 'ITEM_REMOVED' // the last live deployment went away; the item was dropped
-  | 'ITEM_ADDED' // the first live deployment appeared; the item was added
+  | 'NONE' // provider already matched the expected unit count
+  | 'QUANTITY_UPDATED' // the subscription units were set to the expected count
   | 'SKIPPED';
 
 export interface ReconcileResult {
@@ -42,16 +40,15 @@ export interface ReconcileResult {
   active: number;
   /** The organization's included production deployments. */
   included: number;
-  /** What Deployz believes should be billed: max(active - included, 0). */
+  /** The unit count Deployz believes should be billed: max(active - included, 1). */
   expected: number;
   /** What the provider had before the update — null when it was never read. */
   provider: number | null;
   reason?: string;
 }
 
-// The subscription states whose quantity Paddle will accept an update for.
-// PAUSED and CANCELED are not updatable, and a CANCELED subscription bills
-// nothing anyway.
+// The subscription states whose units Deployz updates. PAUSED and CANCELED
+// are left alone, and a CANCELED subscription bills nothing anyway.
 const UPDATABLE_STATUSES: ReadonlySet<string> = new Set(['ACTIVE', 'PAST_DUE']);
 
 async function recordReconciliation(
@@ -82,7 +79,7 @@ export async function reconcileBilling(
   deps: ReconcileDeps,
   organizationId: string,
 ): Promise<ReconcileResult> {
-  const { db, paddle } = deps;
+  const { db, polar } = deps;
   const now = deps.now ?? (() => new Date());
 
   const rows = await db
@@ -97,12 +94,10 @@ export async function reconcileBilling(
     .from(schema.organization)
     .where(eq(schema.organization.id, organizationId))
     .limit(1);
-  const { active, included, billable: expected } = productionDeploymentCounts(
-    rows,
-    organization?.included ?? 0,
-  );
+  const { active, included, billable } = productionDeploymentCounts(rows, organization?.included ?? 0);
+  const expected = subscriptionUnits(billable);
 
-  if (!paddle) {
+  if (!polar) {
     // Billing is switched off for this deployment of the control plane; there
     // is no provider to disagree with.
     return {
@@ -124,8 +119,8 @@ export async function reconcileBilling(
 
   if (!subscription) {
     // Evaluation mode. Nothing was ever sold, so nothing can be reconciled.
-    // Recorded only when Deployz believes something should be billed, which
-    // would mean a live production deployment with no subscription behind it.
+    // Recorded only when a live production deployment beyond the allowance
+    // has no subscription behind it.
     const result: ReconcileResult = {
       status: 'SKIPPED',
       action: 'SKIPPED',
@@ -135,7 +130,7 @@ export async function reconcileBilling(
       provider: null,
       reason: 'no subscription',
     };
-    if (expected > 0) await recordReconciliation(db, organizationId, result);
+    if (billable > 0) await recordReconciliation(db, organizationId, result);
     return result;
   }
 
@@ -149,21 +144,13 @@ export async function reconcileBilling(
       provider: null,
       reason: `subscription is ${subscription.status}`,
     };
-    if (expected > 0) await recordReconciliation(db, organizationId, result);
+    if (billable > 0) await recordReconciliation(db, organizationId, result);
     return result;
   }
 
   try {
-    const live = await paddle.client.subscriptions.get(subscription.providerSubscriptionId);
-    // Paddle keeps an item on the record as `inactive` once it has been
-    // removed from the subscription. Those must be filtered out of BOTH the
-    // count and the rebuilt list below: sending one back would resurrect an
-    // item Paddle had already stopped billing.
-    const liveItems = live.items.filter((item) => item.status !== 'inactive');
-    // Paddle returns the full price object per item; the per-deployment item
-    // is the one priced at PADDLE_PRICE_DEPLOYMENT. Its absence means zero.
-    const deploymentItem = liveItems.find((item) => item.price?.id === paddle.config.priceDeployment);
-    const provider = deploymentItem?.quantity ?? 0;
+    const live = await polar.client.getSubscription(subscription.providerSubscriptionId);
+    const provider = live.units ?? 0;
 
     if (provider === expected) {
       await db
@@ -173,32 +160,12 @@ export async function reconcileBilling(
       return { status: 'SUCCEEDED', action: 'NONE', active, included, expected, provider };
     }
 
-    // Paddle replaces the item list wholesale: anything omitted is removed,
-    // so every other item has to be sent back unchanged. The per-deployment
-    // item is dropped rather than set to zero — the price's own minimum
-    // quantity is 1, so zero is not a value it can hold.
-    const items = liveItems
-      .filter((item) => item.price?.id !== paddle.config.priceDeployment)
-      .map((item) => ({ priceId: item.price!.id, quantity: item.quantity }));
-    if (expected > 0) {
-      items.push({ priceId: paddle.config.priceDeployment, quantity: expected });
-    }
+    // Polar owns the money math: the change applies now, and the prorated
+    // difference (a charge for a deployment that went live mid-cycle, a
+    // credit for one that stopped) lands on the next renewal invoice.
+    await polar.client.updateSubscriptionUnits(subscription.providerSubscriptionId, expected);
 
-    await paddle.client.subscriptions.update(subscription.providerSubscriptionId, {
-      items,
-      // Paddle owns the money math: a deployment that goes live mid-cycle is
-      // charged for the part of the cycle it is live, and one that is removed
-      // is credited the same way.
-      prorationBillingMode: 'prorated_immediately',
-      // The deployment is already running. Refusing the quantity change
-      // because a card failed would only under-bill it; letting the change
-      // land keeps the subscription honest and leaves Paddle to chase the
-      // payment (Phase 13 acts on the resulting status).
-      onPaymentFailure: 'apply_change',
-    });
-
-    const action: ReconcileAction =
-      expected === 0 ? 'ITEM_REMOVED' : provider === 0 ? 'ITEM_ADDED' : 'QUANTITY_UPDATED';
+    const action: ReconcileAction = 'QUANTITY_UPDATED';
     const result: ReconcileResult = { status: 'SUCCEEDED', action, active, included, expected, provider };
     await recordReconciliation(db, organizationId, result);
     await db

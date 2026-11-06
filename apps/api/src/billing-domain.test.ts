@@ -7,6 +7,7 @@ import {
   productionDeploymentCounts,
   isBillableDeployment,
   servingBillingEvent,
+  subscriptionUnits,
   DEPLOYMENT_PRICE_DOLLARS,
   PLATFORM_PRICE_DOLLARS,
 } from './billing-domain.js';
@@ -187,6 +188,30 @@ describe('billableDeploymentQuantity (included production deployments)', () => {
 
   it('crosses the threshold one deployment at a time', () => {
     expect([0, 1, 2, 3, 4].map((active) => billableDeploymentQuantity(active, 2))).toEqual([0, 0, 0, 1, 2]);
+  });
+});
+
+describe('subscriptionUnits (floor of one unit)', () => {
+  it('bills one unit when nothing is billable', () => {
+    expect(subscriptionUnits(0)).toBe(1);
+  });
+
+  it('bills one unit for the first billable deployment — the first live deployment changes nothing', () => {
+    expect(subscriptionUnits(1)).toBe(1);
+  });
+
+  it('bills the billable count above one', () => {
+    expect(subscriptionUnits(3)).toBe(3);
+  });
+
+  it('never takes the total under the minimum, whatever the allowance', () => {
+    expect(subscriptionUnits(billableDeploymentQuantity(3, 3))).toBe(1);
+    expect(subscriptionUnits(billableDeploymentQuantity(0, 10000))).toBe(1);
+    expect(subscriptionUnits(billableDeploymentQuantity(5, 2))).toBe(3);
+  });
+
+  it('keeps the minimum subscription at $68', () => {
+    expect(PLATFORM_PRICE_DOLLARS + subscriptionUnits(0) * DEPLOYMENT_PRICE_DOLLARS).toBe(68);
   });
 });
 

@@ -8,38 +8,30 @@ import * as schema from '@deployz/db/schema';
 
 import { sweepBilling, sweepRelayLiveness } from '../src/lambda/worker.js';
 
-// Paddle migration Phase 10 — the billing safety net. Every billing write in
-// the request path is best-effort by design, so a Paddle failure can never
-// fail a deployment; this sweep is what makes that safe. It runs on the same
-// 15-minute schedule as the watchdogs.
+// The billing safety net. Every billing write in the request path is
+// best-effort by design, so a Polar failure can never fail a deployment; this
+// sweep is what makes that safe. It runs on the same 15-minute schedule as
+// the watchdogs.
 
-const PRICE_PLATFORM = 'pri_platform_test';
-const PRICE_DEPLOYMENT = 'pri_deployment_test';
-
-interface UpdateCall {
-  items: { priceId: string; quantity: number }[];
-}
-
-/** A Paddle double — no test reaches the Paddle API. */
-function fakePaddle(updates: UpdateCall[] = []): Parameters<typeof sweepBilling>[1] {
+/** A Polar double — no test reaches the Polar API. The subscription holds
+ *  `state.units`; an update records the new count and sets it. */
+function fakePolar(
+  updates: number[] = [],
+  state: { units: number } = { units: 1 },
+): Parameters<typeof sweepBilling>[1] {
   return {
     config: {
-      apiKey: 'test_replace_me',
+      token: 'polar_oat_test_replace_me',
       webhookSecret: 'test_replace_me',
-      clientToken: 'pdl_sdbx_replace_me',
-      pricePlatform: PRICE_PLATFORM,
-      priceDeployment: PRICE_DEPLOYMENT,
+      productId: 'prod_test_1',
       environment: 'sandbox' as const,
     },
     client: {
-      subscriptions: {
-        get: async () => ({
-          items: [{ price: { id: PRICE_PLATFORM }, quantity: 1, status: 'active' }],
-        }),
-        update: async (_id: string, body: UpdateCall) => {
-          updates.push(body);
-          return {};
-        },
+      getSubscription: async (id: string) => ({ id, status: 'active', units: state.units }),
+      updateSubscriptionUnits: async (id: string, units: number) => {
+        updates.push(units);
+        state.units = units;
+        return { id, status: 'active', units };
       },
     },
   } as unknown as Parameters<typeof sweepBilling>[1];
@@ -47,7 +39,7 @@ function fakePaddle(updates: UpdateCall[] = []): Parameters<typeof sweepBilling>
 
 const READY_TIMING = { READY: { startedAt: '2026-09-01T00:00:00.000Z' } };
 
-describe('sweepBilling (Paddle migration Phase 10)', () => {
+describe('sweepBilling', () => {
   let client: PGlite | undefined;
   let db: Db;
   let organizationId: string;
@@ -187,20 +179,14 @@ describe('sweepBilling (Paddle migration Phase 10)', () => {
       providerSubscriptionId: 'sub_sweep_1',
       status: 'ACTIVE',
     });
-    const updates: UpdateCall[] = [];
+    const updates: number[] = [];
+    const polarState = { units: 2 };
 
-    const result = await sweepBilling(db, fakePaddle(updates));
+    const result = await sweepBilling(db, fakePolar(updates, polarState));
 
     expect(result.reconciled).toBe(1);
-    // One deployment reached ACTIVE in the first test of this file.
-    expect(updates).toEqual([
-      expect.objectContaining({
-        items: [
-          { priceId: PRICE_PLATFORM, quantity: 1 },
-          { priceId: PRICE_DEPLOYMENT, quantity: 1 },
-        ],
-      }),
-    ]);
+    // One deployment reached ACTIVE in the first test of this file: one unit.
+    expect(updates).toEqual([1]);
     const [subscription] = await db
       .select()
       .from(schema.billingSubscriptions)
@@ -209,7 +195,7 @@ describe('sweepBilling (Paddle migration Phase 10)', () => {
   });
 
   it('leaves a freshly reconciled subscription alone', async () => {
-    const result = await sweepBilling(db, fakePaddle());
+    const result = await sweepBilling(db, fakePolar());
     expect(result.reconciled).toBe(0);
   });
 });
@@ -269,34 +255,13 @@ describe('sweepBilling respects the included production deployment allowance', (
     await client?.close();
   });
 
-  it('repairs Paddle to max(active − included, 0): 5 live, 2 included, Paddle had 4 → 3', async () => {
-    const updates: UpdateCall[] = [];
-    const paddle = {
-      ...fakePaddle(updates),
-      client: {
-        subscriptions: {
-          get: async () => ({
-            items: [
-              { price: { id: PRICE_PLATFORM }, quantity: 1, status: 'active' },
-              { price: { id: PRICE_DEPLOYMENT }, quantity: 4, status: 'active' },
-            ],
-          }),
-          update: async (_id: string, body: UpdateCall) => {
-            updates.push(body);
-            return {};
-          },
-        },
-      },
-    } as unknown as Parameters<typeof sweepBilling>[1];
+  it('repairs Polar to max(active − included, 1): 5 live, 2 included, Polar had 4 → 3', async () => {
+    const updates: number[] = [];
 
-    const result = await sweepBilling(db, paddle);
+    const result = await sweepBilling(db, fakePolar(updates, { units: 4 }));
 
     expect(result.reconciled).toBe(1);
-    expect(updates).toHaveLength(1);
-    expect(updates[0]!.items).toEqual([
-      { priceId: PRICE_PLATFORM, quantity: 1 },
-      { priceId: PRICE_DEPLOYMENT, quantity: 3 },
-    ]);
+    expect(updates).toEqual([3]);
     const [ledger] = await db
       .select()
       .from(schema.billingReconciliationEvents)
@@ -305,8 +270,8 @@ describe('sweepBilling respects the included production deployment allowance', (
   });
 
   it('a repeated pass within the hour is a no-op', async () => {
-    const updates: UpdateCall[] = [];
-    const result = await sweepBilling(db, fakePaddle(updates));
+    const updates: number[] = [];
+    const result = await sweepBilling(db, fakePolar(updates));
     expect(result.reconciled).toBe(0);
     expect(updates).toHaveLength(0);
   });
@@ -459,7 +424,7 @@ describe('sweepBilling pauses and resumes billing with the serving state', () =>
     await remove(updating.id, neverLive.id, test.id);
   });
 
-  it('reconciles Paddle down on a pause and back up on a resume, and a repeat pass changes nothing', async () => {
+  it('reconciles Polar down on a pause and back up on a resume, and a repeat pass changes nothing', async () => {
     await db.insert(schema.billingSubscriptions).values({
       organizationId,
       providerCustomerId: 'ctm_serving',
@@ -469,37 +434,20 @@ describe('sweepBilling pauses and resumes billing with the serving state', () =>
     });
     const healthy = await insertLive();
     const failing = await insertLive({ state: 'FAILED' });
-    let providerQuantity = 2;
-    const updates: UpdateCall[] = [];
-    const paddle = {
-      ...fakePaddle(),
-      client: {
-        subscriptions: {
-          get: async () => ({
-            items: [
-              { price: { id: PRICE_PLATFORM }, quantity: 1, status: 'active' },
-              { price: { id: PRICE_DEPLOYMENT }, quantity: providerQuantity, status: 'active' },
-            ],
-          }),
-          update: async (_id: string, body: UpdateCall) => {
-            updates.push(body);
-            providerQuantity = body.items.find((item) => item.priceId === PRICE_DEPLOYMENT)?.quantity ?? 0;
-            return {};
-          },
-        },
-      },
-    } as unknown as Parameters<typeof sweepBilling>[1];
+    const provider = { units: 2 };
+    const updates: number[] = [];
+    const polar = fakePolar(updates, provider);
 
-    await sweepBilling(db, paddle);
-    expect(providerQuantity).toBe(1);
+    await sweepBilling(db, polar);
+    expect(provider.units).toBe(1);
 
-    await sweepBilling(db, paddle);
+    await sweepBilling(db, polar);
     expect(updates).toHaveLength(1);
 
     await db.update(schema.deployments).set({ state: 'HEALTHY' }).where(eq(schema.deployments.id, failing.id));
-    await sweepBilling(db, paddle);
-    expect(providerQuantity).toBe(2);
-    expect(updates).toHaveLength(2);
+    await sweepBilling(db, polar);
+    expect(provider.units).toBe(2);
+    expect(updates).toEqual([1, 2]);
     expect((await fetchRow(healthy.id)).billingState).toBe('ACTIVE');
   });
 });

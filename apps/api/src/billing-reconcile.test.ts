@@ -6,57 +6,43 @@ import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { reconcileBilling } from './billing-reconcile.js';
-import type { PaddleBilling } from './paddle.js';
+import type { PolarBilling } from './polar.js';
 
-// Paddle migration Phase 9 — reconciliation pushes the ABSOLUTE number of
-// live production deployments onto the subscription's per-deployment item.
-// Fixture ids only (sub_test_1, pri_deployment_test, ...).
-
-const PRICE_PLATFORM = 'pri_platform_test';
-const PRICE_DEPLOYMENT = 'pri_deployment_test';
+// Reconciliation pushes the ABSOLUTE unit count — live production
+// deployments beyond the allowance, with a floor of one — onto the Polar
+// subscription. Fixture ids only (sub_test_1, prod_test_1, ...).
 
 interface UpdateCall {
   subscriptionId: string;
-  body: { items: { priceId: string; quantity: number }[]; prorationBillingMode?: string; onPaymentFailure?: string };
+  units: number;
 }
 
-/** A Paddle double: `subscriptions.get` returns the item list under test,
- *  `subscriptions.update` records what reconciliation asked for. */
-function fakePaddle(options: {
-  items?: { priceId: string; quantity: number; status?: 'active' | 'inactive' | 'trialing' }[];
+/** A Polar double: `getSubscription` returns the units under test,
+ *  `updateSubscriptionUnits` records what reconciliation asked for. */
+function fakePolar(options: {
+  units?: number | null;
   getError?: Error;
   updateError?: Error;
   updates?: UpdateCall[];
-}): PaddleBilling {
-  const items = options.items ?? [];
+}): PolarBilling {
   return {
     config: {
-      apiKey: 'test_replace_me',
+      token: 'polar_oat_test_replace_me',
       webhookSecret: 'test_replace_me',
-      clientToken: 'pdl_sdbx_replace_me',
-      pricePlatform: PRICE_PLATFORM,
-      priceDeployment: PRICE_DEPLOYMENT,
+      productId: 'prod_test_1',
       environment: 'sandbox',
     },
     client: {
-      subscriptions: {
-        get: async () => {
-          if (options.getError) throw options.getError;
-          return {
-            items: items.map((i) => ({
-              price: { id: i.priceId },
-              quantity: i.quantity,
-              status: i.status ?? 'active',
-            })),
-          };
-        },
-        update: async (subscriptionId: string, body: UpdateCall['body']) => {
-          if (options.updateError) throw options.updateError;
-          options.updates?.push({ subscriptionId, body });
-          return {};
-        },
+      getSubscription: async (id: string) => {
+        if (options.getError) throw options.getError;
+        return { id, status: 'active', units: options.units === undefined ? 1 : options.units };
       },
-    } as unknown as PaddleBilling['client'],
+      updateSubscriptionUnits: async (subscriptionId: string, units: number) => {
+        if (options.updateError) throw options.updateError;
+        options.updates?.push({ subscriptionId, units });
+        return { id: subscriptionId, status: 'active', units };
+      },
+    } as unknown as PolarBilling['client'],
   };
 }
 
@@ -80,7 +66,7 @@ async function seedOrg(db: Db): Promise<{ applicationId: string; customerId: str
   return { applicationId: application!.id, customerId: customer!.id };
 }
 
-describe('reconcileBilling (Paddle migration Phase 9)', () => {
+describe('reconcileBilling', () => {
   let client: PGlite | undefined;
   let db: Db;
   let ids: { applicationId: string; customerId: string };
@@ -151,98 +137,47 @@ describe('reconcileBilling (Paddle migration Phase 9)', () => {
     await addDeployment('TEST', 'ACTIVE');
     const updates: UpdateCall[] = [];
 
-    const result = await reconcileBilling(
-      { db, paddle: fakePaddle({ items: [{ priceId: PRICE_PLATFORM, quantity: 1 }], updates }) },
-      ORG,
-    );
+    const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates }) }, ORG);
 
-    expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'ITEM_ADDED', expected: 2, provider: 0 });
-    expect(updates).toHaveLength(1);
-    expect(updates[0]!.body.items).toEqual([
-      { priceId: PRICE_PLATFORM, quantity: 1 },
-      { priceId: PRICE_DEPLOYMENT, quantity: 2 },
-    ]);
+    expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'QUANTITY_UPDATED', expected: 2, provider: 1 });
+    expect(updates).toEqual([{ subscriptionId: 'sub_test_1', units: 2 }]);
   });
 
-  it('sends the absolute quantity, so running twice is the same as running once', async () => {
+  it('sends the absolute unit count, so running twice is the same as running once', async () => {
     await addSubscription('ACTIVE');
     await addDeployment('PRODUCTION', 'ACTIVE');
     await addDeployment('PRODUCTION', 'ACTIVE');
     await addDeployment('PRODUCTION', 'ACTIVE');
     const updates: UpdateCall[] = [];
-    const paddle = fakePaddle({
-      items: [
-        { priceId: PRICE_PLATFORM, quantity: 1 },
-        { priceId: PRICE_DEPLOYMENT, quantity: 1 },
-      ],
-      updates,
-    });
+    const polar = fakePolar({ units: 1, updates });
 
-    await reconcileBilling({ db, paddle }, ORG);
-    await reconcileBilling({ db, paddle }, ORG);
+    await reconcileBilling({ db, polar }, ORG);
+    await reconcileBilling({ db, polar }, ORG);
 
     // Both passes ask for 3 — never 1 + 2, and never 3 + 3.
-    expect(updates.map((u) => u.body.items)).toEqual([
-      [
-        { priceId: PRICE_PLATFORM, quantity: 1 },
-        { priceId: PRICE_DEPLOYMENT, quantity: 3 },
-      ],
-      [
-        { priceId: PRICE_PLATFORM, quantity: 1 },
-        { priceId: PRICE_DEPLOYMENT, quantity: 3 },
-      ],
-    ]);
+    expect(updates.map((u) => u.units)).toEqual([3, 3]);
   });
 
-  it('preserves the platform item and lets Paddle prorate', async () => {
-    await addSubscription('ACTIVE');
-    await addDeployment('PRODUCTION', 'ACTIVE');
-    const updates: UpdateCall[] = [];
-
-    await reconcileBilling(
-      {
-        db,
-        paddle: fakePaddle({
-          items: [
-            { priceId: PRICE_PLATFORM, quantity: 1 },
-            { priceId: PRICE_DEPLOYMENT, quantity: 4 },
-          ],
-          updates,
-        }),
-      },
-      ORG,
-    );
-
-    expect(updates[0]!.body).toMatchObject({
-      prorationBillingMode: 'prorated_immediately',
-      onPaymentFailure: 'apply_change',
-    });
-    // The platform item survives: Paddle removes anything left out.
-    expect(updates[0]!.body.items).toContainEqual({ priceId: PRICE_PLATFORM, quantity: 1 });
-  });
-
-  it('drops the per-deployment item when the last live deployment goes away', async () => {
+  it('keeps the floor of one unit when the last live deployment goes away', async () => {
     await addSubscription('ACTIVE');
     await addDeployment('PRODUCTION', 'STOPPED');
     const updates: UpdateCall[] = [];
 
-    const result = await reconcileBilling(
-      {
-        db,
-        paddle: fakePaddle({
-          items: [
-            { priceId: PRICE_PLATFORM, quantity: 1 },
-            { priceId: PRICE_DEPLOYMENT, quantity: 1 },
-          ],
-          updates,
-        }),
-      },
-      ORG,
-    );
+    const result = await reconcileBilling({ db, polar: fakePolar({ units: 2, updates }) }, ORG);
 
-    expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'ITEM_REMOVED', expected: 0, provider: 1 });
-    // Zero is not a quantity this price can hold — the item is removed.
-    expect(updates[0]!.body.items).toEqual([{ priceId: PRICE_PLATFORM, quantity: 1 }]);
+    expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'QUANTITY_UPDATED', active: 0, expected: 1, provider: 2 });
+    // Never zero units: the subscription always bills one customer deployment.
+    expect(updates).toEqual([{ subscriptionId: 'sub_test_1', units: 1 }]);
+  });
+
+  it('treats a subscription with no units as zero and sets the floor', async () => {
+    await addSubscription('ACTIVE');
+    const updates: UpdateCall[] = [];
+
+    const result = await reconcileBilling({ db, polar: fakePolar({ units: null, updates }) }, ORG);
+
+    expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'QUANTITY_UPDATED', active: 0, expected: 1, provider: 0 });
+    expect(updates).toEqual([{ subscriptionId: 'sub_test_1', units: 1 }]);
   });
 
   it('writes no reconciliation row when the provider already agrees, but stamps lastReconciledAt', async () => {
@@ -250,19 +185,7 @@ describe('reconcileBilling (Paddle migration Phase 9)', () => {
     await addDeployment('PRODUCTION', 'ACTIVE');
     const updates: UpdateCall[] = [];
 
-    const result = await reconcileBilling(
-      {
-        db,
-        paddle: fakePaddle({
-          items: [
-            { priceId: PRICE_PLATFORM, quantity: 1 },
-            { priceId: PRICE_DEPLOYMENT, quantity: 1 },
-          ],
-          updates,
-        }),
-      },
-      ORG,
-    );
+    const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates }) }, ORG);
 
     expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'NONE', expected: 1, provider: 1 });
     expect(updates).toHaveLength(0);
@@ -274,23 +197,22 @@ describe('reconcileBilling (Paddle migration Phase 9)', () => {
     expect(subscription!.lastReconciledAt).not.toBeNull();
   });
 
+  it('leaves a subscription with no live deployment at one unit alone', async () => {
+    await addSubscription('ACTIVE');
+    const updates: UpdateCall[] = [];
+
+    const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates }) }, ORG);
+
+    expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'NONE', active: 0, expected: 1, provider: 1 });
+    expect(updates).toHaveLength(0);
+  });
+
   it('records the change it made', async () => {
     await addSubscription('ACTIVE');
     await addDeployment('PRODUCTION', 'ACTIVE');
     await addDeployment('PRODUCTION', 'ACTIVE');
 
-    await reconcileBilling(
-      {
-        db,
-        paddle: fakePaddle({
-          items: [
-            { priceId: PRICE_PLATFORM, quantity: 1 },
-            { priceId: PRICE_DEPLOYMENT, quantity: 5 },
-          ],
-        }),
-      },
-      ORG,
-    );
+    await reconcileBilling({ db, polar: fakePolar({ units: 5 }) }, ORG);
 
     const rows = await reconciliationRows();
     expect(rows).toHaveLength(1);
@@ -302,25 +224,40 @@ describe('reconcileBilling (Paddle migration Phase 9)', () => {
     });
   });
 
-  it('never throws when Paddle fails — it records FAILED and returns', async () => {
+  it('never throws when Polar fails — it records FAILED and returns', async () => {
     await addSubscription('ACTIVE');
     await addDeployment('PRODUCTION', 'ACTIVE');
 
     const result = await reconcileBilling(
-      { db, paddle: fakePaddle({ items: [], updateError: new Error('paddle is down') }) },
+      { db, polar: fakePolar({ units: 0, updateError: new Error('polar is down') }) },
       ORG,
     );
 
-    expect(result).toMatchObject({ status: 'FAILED', expected: 1, reason: 'paddle is down' });
+    expect(result).toMatchObject({ status: 'FAILED', expected: 1, reason: 'polar is down' });
     const rows = await reconciliationRows();
-    expect(rows[0]).toMatchObject({ status: 'FAILED', error: 'paddle is down', expectedDeploymentQuantity: 1 });
+    expect(rows[0]).toMatchObject({ status: 'FAILED', error: 'polar is down', expectedDeploymentQuantity: 1 });
+  });
+
+  it('records FAILED when reading the subscription fails', async () => {
+    await addSubscription('ACTIVE');
+    await addDeployment('PRODUCTION', 'ACTIVE');
+    const updates: UpdateCall[] = [];
+
+    const result = await reconcileBilling(
+      { db, polar: fakePolar({ getError: new Error('polar read failed'), updates }) },
+      ORG,
+    );
+
+    expect(result).toMatchObject({ status: 'FAILED', provider: null, reason: 'polar read failed' });
+    expect(updates).toHaveLength(0);
+    expect(await reconciliationRows()).toHaveLength(1);
   });
 
   it('skips silently when billing is not configured', async () => {
     await addSubscription('ACTIVE');
     await addDeployment('PRODUCTION', 'ACTIVE');
 
-    const result = await reconcileBilling({ db, paddle: null }, ORG);
+    const result = await reconcileBilling({ db, polar: null }, ORG);
 
     expect(result).toMatchObject({ status: 'SKIPPED', reason: 'billing disabled', expected: 1 });
     expect(await reconciliationRows()).toHaveLength(0);
@@ -329,16 +266,16 @@ describe('reconcileBilling (Paddle migration Phase 9)', () => {
   it('skips an organization in evaluation with nothing to bill, and writes no row', async () => {
     await addDeployment('TEST', 'ACTIVE');
 
-    const result = await reconcileBilling({ db, paddle: fakePaddle({}) }, ORG);
+    const result = await reconcileBilling({ db, polar: fakePolar({}) }, ORG);
 
-    expect(result).toMatchObject({ status: 'SKIPPED', reason: 'no subscription', expected: 0 });
+    expect(result).toMatchObject({ status: 'SKIPPED', reason: 'no subscription', active: 0, expected: 1 });
     expect(await reconciliationRows()).toHaveLength(0);
   });
 
   it('records the anomaly of a live production deployment with no subscription', async () => {
     await addDeployment('PRODUCTION', 'ACTIVE');
 
-    const result = await reconcileBilling({ db, paddle: fakePaddle({}) }, ORG);
+    const result = await reconcileBilling({ db, polar: fakePolar({}) }, ORG);
 
     expect(result).toMatchObject({ status: 'SKIPPED', reason: 'no subscription', expected: 1 });
     const rows = await reconciliationRows();
@@ -352,7 +289,7 @@ describe('reconcileBilling (Paddle migration Phase 9)', () => {
       await addDeployment('PRODUCTION', 'ACTIVE');
       const updates: UpdateCall[] = [];
 
-      const result = await reconcileBilling({ db, paddle: fakePaddle({ updates }) }, ORG);
+      const result = await reconcileBilling({ db, polar: fakePolar({ units: 0, updates }) }, ORG);
 
       expect(result).toMatchObject({ status: 'SKIPPED', reason: `subscription is ${status}` });
       expect(updates).toHaveLength(0);
@@ -360,103 +297,74 @@ describe('reconcileBilling (Paddle migration Phase 9)', () => {
     },
   );
 
-  it('never resurrects an item Paddle has already deactivated', async () => {
-    await addSubscription('ACTIVE');
-    await addDeployment('PRODUCTION', 'ACTIVE');
+  it('writes no anomaly row for a CANCELED subscription with nothing beyond the allowance', async () => {
+    await addSubscription('CANCELED');
     const updates: UpdateCall[] = [];
 
-    const result = await reconcileBilling(
-      {
-        db,
-        paddle: fakePaddle({
-          items: [
-            { priceId: PRICE_PLATFORM, quantity: 1 },
-            // Removed from the subscription earlier; Paddle keeps the record.
-            { priceId: 'pri_retired_test', quantity: 3, status: 'inactive' },
-            { priceId: PRICE_DEPLOYMENT, quantity: 9, status: 'inactive' },
-          ],
-          updates,
-        }),
-      },
-      ORG,
-    );
+    const result = await reconcileBilling({ db, polar: fakePolar({ units: 0, updates }) }, ORG);
 
-    // The inactive per-deployment item does not count as the current quantity.
-    expect(result).toMatchObject({ expected: 1, provider: 0, action: 'ITEM_ADDED' });
-    // And neither inactive item is sent back.
-    expect(updates[0]!.body.items).toEqual([
-      { priceId: PRICE_PLATFORM, quantity: 1 },
-      { priceId: PRICE_DEPLOYMENT, quantity: 1 },
-    ]);
+    expect(result).toMatchObject({ status: 'SKIPPED', reason: 'subscription is CANCELED', expected: 1 });
+    expect(updates).toHaveLength(0);
+    expect(await reconciliationRows()).toHaveLength(0);
   });
 
-  it('reconciles a PAST_DUE subscription — Paddle is still billing it', async () => {
+  it('reconciles a PAST_DUE subscription — Polar is still billing it', async () => {
     await addSubscription('PAST_DUE');
+    await addDeployment('PRODUCTION', 'ACTIVE');
     await addDeployment('PRODUCTION', 'ACTIVE');
     const updates: UpdateCall[] = [];
 
-    const result = await reconcileBilling(
-      { db, paddle: fakePaddle({ items: [{ priceId: PRICE_PLATFORM, quantity: 1 }], updates }) },
-      ORG,
-    );
+    const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates }) }, ORG);
 
     expect(result.status).toBe('SUCCEEDED');
-    expect(updates).toHaveLength(1);
+    expect(updates).toEqual([{ subscriptionId: 'sub_test_1', units: 2 }]);
   });
 
   // ── Included production deployments ─────────────────────────────────────
-  // The allowance reduces ONLY the per-deployment quantity: Paddle receives
-  // max(active - included, 0), never learns the allowance itself, and the
-  // platform item is untouched throughout.
+  // The allowance reduces ONLY the billable count: Polar receives
+  // max(active - included, 1) units and never learns the allowance itself.
   describe('included production deployments', () => {
-    const platformOnly = [{ priceId: PRICE_PLATFORM, quantity: 1 }];
-
     it('subtracts the allowance from the live count', async () => {
       await addSubscription('ACTIVE');
       await setIncluded(2);
       for (let i = 0; i < 5; i += 1) await addDeployment('PRODUCTION', 'ACTIVE');
       const updates: UpdateCall[] = [];
 
-      const result = await reconcileBilling({ db, paddle: fakePaddle({ items: platformOnly, updates }) }, ORG);
+      const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates }) }, ORG);
 
-      expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'ITEM_ADDED', active: 5, included: 2, expected: 3 });
-      expect(updates[0]!.body.items).toEqual([
-        { priceId: PRICE_PLATFORM, quantity: 1 },
-        { priceId: PRICE_DEPLOYMENT, quantity: 3 },
-      ]);
+      expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'QUANTITY_UPDATED', active: 5, included: 2, expected: 3 });
+      expect(updates).toEqual([{ subscriptionId: 'sub_test_1', units: 3 }]);
     });
 
-    it('removes the deployment item when every live deployment is included', async () => {
+    it('drops to the floor of one unit when every live deployment is included', async () => {
       await addSubscription('ACTIVE');
       await setIncluded(3);
       for (let i = 0; i < 3; i += 1) await addDeployment('PRODUCTION', 'ACTIVE');
       const updates: UpdateCall[] = [];
 
-      const result = await reconcileBilling(
-        {
-          db,
-          paddle: fakePaddle({
-            items: [...platformOnly, { priceId: PRICE_DEPLOYMENT, quantity: 3 }],
-            updates,
-          }),
-        },
-        ORG,
-      );
+      const result = await reconcileBilling({ db, polar: fakePolar({ units: 3, updates }) }, ORG);
 
-      expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'ITEM_REMOVED', active: 3, included: 3, expected: 0, provider: 3 });
-      // Platform × 1 only — never a $0 line, never a quantity-0 item.
-      expect(updates[0]!.body.items).toEqual(platformOnly);
+      expect(result).toMatchObject({
+        status: 'SUCCEEDED',
+        action: 'QUANTITY_UPDATED',
+        active: 3,
+        included: 3,
+        expected: 1,
+        provider: 3,
+      });
+      // Never zero units — the allowance never takes the total under the minimum.
+      expect(updates).toEqual([{ subscriptionId: 'sub_test_1', units: 1 }]);
     });
 
-    it('never goes negative when the allowance exceeds the live count', async () => {
+    it('never goes under one unit when the allowance exceeds the live count', async () => {
       await addSubscription('ACTIVE');
       await setIncluded(10000);
       await addDeployment('PRODUCTION', 'ACTIVE');
       const updates: UpdateCall[] = [];
 
-      const result = await reconcileBilling({ db, paddle: fakePaddle({ items: platformOnly, updates }) }, ORG);
+      const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates }) }, ORG);
 
-      expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'NONE', active: 1, included: 10000, expected: 0, provider: 0 });
+      expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'NONE', active: 1, included: 10000, expected: 1, provider: 1 });
       expect(updates).toHaveLength(0);
     });
 
@@ -467,62 +375,60 @@ describe('reconcileBilling (Paddle migration Phase 9)', () => {
       await addDeployment('PRODUCTION', 'ACTIVE');
       const updates: UpdateCall[] = [];
 
-      const result = await reconcileBilling({ db, paddle: fakePaddle({ items: platformOnly, updates }) }, ORG);
+      const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates }) }, ORG);
 
-      expect(result).toMatchObject({ active: 1, included: 1, expected: 0 });
+      expect(result).toMatchObject({ active: 1, included: 1, expected: 1 });
       expect(updates).toHaveLength(0);
     });
 
     it('converges to the absolute formula whichever order the allowance and the count change in', async () => {
       await addSubscription('ACTIVE');
       const updates: UpdateCall[] = [];
-      const paddle = fakePaddle({ items: platformOnly, updates });
+      const polar = fakePolar({ units: 1, updates });
 
-      // 2 live, allowance 0 → 2; allowance becomes 2 → item removed; a third
+      // 2 live, allowance 0 → 2; allowance becomes 2 → floor of 1; a third
       // deployment goes live → 1; allowance back to 0 → 3. Every pass sends the
-      // absolute quantity for the state at that moment.
+      // absolute unit count for the state at that moment.
       await addDeployment('PRODUCTION', 'ACTIVE');
       await addDeployment('PRODUCTION', 'ACTIVE');
-      expect((await reconcileBilling({ db, paddle }, ORG)).expected).toBe(2);
+      expect((await reconcileBilling({ db, polar }, ORG)).expected).toBe(2);
       await setIncluded(2);
-      expect((await reconcileBilling({ db, paddle }, ORG)).expected).toBe(0);
+      expect((await reconcileBilling({ db, polar }, ORG)).expected).toBe(1);
       await addDeployment('PRODUCTION', 'ACTIVE');
-      expect((await reconcileBilling({ db, paddle }, ORG)).expected).toBe(1);
+      expect((await reconcileBilling({ db, polar }, ORG)).expected).toBe(1);
       await setIncluded(0);
-      expect((await reconcileBilling({ db, paddle }, ORG)).expected).toBe(3);
+      expect((await reconcileBilling({ db, polar }, ORG)).expected).toBe(3);
 
-      // The fake always reports the platform item only (provider 0), so the
-      // pass that expected 0 was a no-op and every other pass pushed.
-      expect(updates.map((u) => u.body.items.find((i) => i.priceId === PRICE_DEPLOYMENT)?.quantity ?? 0)).toEqual([
-        2, 1, 3,
-      ]);
+      // The fake always reports one unit, so the passes that expected 1 were
+      // no-ops and every other pass pushed.
+      expect(updates.map((u) => u.units)).toEqual([2, 3]);
     });
 
-    it('with no subscription the allowance changes nothing: no Paddle call, no ledger row', async () => {
+    it('with no subscription the allowance changes nothing: no Polar call, no ledger row', async () => {
       await setIncluded(3);
       await addDeployment('PRODUCTION', 'ACTIVE');
       const updates: UpdateCall[] = [];
 
-      const result = await reconcileBilling({ db, paddle: fakePaddle({ items: platformOnly, updates }) }, ORG);
+      const result = await reconcileBilling({ db, polar: fakePolar({ updates }) }, ORG);
 
-      expect(result).toMatchObject({ status: 'SKIPPED', reason: 'no subscription', active: 1, included: 3, expected: 0 });
+      expect(result).toMatchObject({ status: 'SKIPPED', reason: 'no subscription', active: 1, included: 3, expected: 1 });
       expect(updates).toHaveLength(0);
-      // Nothing should be billed, so the "live deployment with no
-      // subscription" anomaly row is not written either.
+      // Nothing is billable beyond the allowance, so the "live deployment with
+      // no subscription" anomaly row is not written either.
       expect(await reconciliationRows()).toHaveLength(0);
     });
 
-    it('a Paddle failure records the expected quantity under the allowance for the retry', async () => {
+    it('a Polar failure records the expected unit count under the allowance for the retry', async () => {
       await addSubscription('ACTIVE');
       await setIncluded(1);
       for (let i = 0; i < 4; i += 1) await addDeployment('PRODUCTION', 'ACTIVE');
 
       const result = await reconcileBilling(
-        { db, paddle: fakePaddle({ items: platformOnly, updateError: new Error('paddle down') }) },
+        { db, polar: fakePolar({ units: 1, updateError: new Error('polar down') }) },
         ORG,
       );
 
-      expect(result).toMatchObject({ status: 'FAILED', expected: 3, reason: 'paddle down' });
+      expect(result).toMatchObject({ status: 'FAILED', expected: 3, reason: 'polar down' });
       const rows = await reconciliationRows();
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatchObject({ expectedDeploymentQuantity: 3, status: 'FAILED' });

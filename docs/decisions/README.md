@@ -1248,7 +1248,7 @@ verified READY stage, or on the next safety-job pass when the connector is
 connected and the deployment is `HEALTHY` or `UPDATE_AVAILABLE`. Removal
 still stops billing permanently. TEST deployments and never-live
 deployments are never billed. Each pause and resume is an `event_logs`
-entry, and the Paddle quantity follows through the normal absolute
+entry, and the billed quantity follows through the normal absolute
 reconciliation.
 
 Reason: the earlier rule (only LIVE and REMOVED moved billing, and no health
@@ -1259,10 +1259,10 @@ reconcile time, keeps each pause and resume auditable per deployment and
 lets the billing page show active, paused and billed counts. Using the
 persisted `relayStatus` (written only after 15 minutes without a check-in)
 and the existing 15-minute pass means a short heartbeat gap never changes
-the Paddle quantity, with no new scheduler.
+the billed quantity, with no new scheduler.
 
 Rejected: pausing on runtime health (`healthStatus` UNHEALTHY or DEGRADED).
-It changes on every relay poll and would churn the Paddle quantity, and the
+It changes on every relay poll and would churn the billed quantity, and the
 deployment can still serve part of its traffic. Pausing on a failed update:
 the previous release still serves, so the deployment returns to `HEALTHY` or
 `UPDATE_AVAILABLE` and stays billed.
@@ -1274,7 +1274,7 @@ disconnect threshold, and a resume by the safety job by up to 15 minutes;
 both favor the vendor.
 
 What would change it: a vendor abuses the disconnect pause (keep the
-application running and the connector stopped), or Paddle proration churn
+application running and the connector stopped), or proration churn
 from repeated outages shows in invoices (then add a minimum pause time).
 
 ## Connector IAM is limited to its own installation (2026-10-21)
@@ -1726,3 +1726,30 @@ Decision: production alarms go at once by email to `help@deployz.dev`, which
 is also the support mailbox. `tejas@deployz.dev` and
 `sumit@thaliatechnologies.com` are the second administrators. A hosted
 status page is a later item.
+
+## Billing moves from Paddle to Polar, with a minimum of one unit (2026-11-07)
+
+Context: Paddle billing was built and verified only on the Paddle sandbox.
+No customer ever paid through it.
+
+Decision: Polar replaces Paddle as the billing provider and merchant of
+record. The billing model does not change: Deployz still pushes one
+absolute number, and a production deployment is billed only while it serves
+the customer. One commercial change: the subscription always bills at least
+one $19 unit, so it starts at $68/month and the first customer deployment
+uses the unit bought at checkout. The unit count is
+`max(live − included, 1)`; the included allowance reduces only the units
+above one. Unit changes use Polar's `prorate` behavior, so the difference
+lands on the next renewal invoice. Paddle is removed, not kept beside Polar:
+there was nothing to migrate. Migration 0059 sets Paddle subscriptions to
+CANCELED and expires parked checkouts. The only hand-set secret is
+`POLAR_TOKEN`; the deploy finds or creates the product and the webhook
+endpoint ([`../billing/polar-billing.md`](../billing/polar-billing.md)).
+
+Rejected: vendor-bought installation slots with scheduled reductions. That
+model bills empty capacity and needs purchase, reduction and reservation
+flows that the automatic count does not.
+
+Still open before production: what Polar does with a prorated charge that
+is still pending when a subscription is canceled, and Polar production
+approval.

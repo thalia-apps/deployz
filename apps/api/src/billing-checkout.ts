@@ -10,29 +10,28 @@ import { ApiError } from './errors.js';
 import { recordEvent } from './events.js';
 import { newestDeployableRelease, releaseRequiredError } from './install-parameters.js';
 import { getSubscriptionStatus } from './organizations.js';
-import type { PaddleBilling } from './paddle.js';
+import type { PolarBilling } from './polar.js';
 import { requirePreflightReady, runApplicationPreflight } from './preflight.js';
 
-// Paddle migration Phase 8 — first production activation. A vendor with no
-// subscription asks for a customer deployment: nothing is provisioned, no
-// deployment row is written and no install link exists. The request is parked
-// as a billing_checkout_intents row tied to a Paddle transaction, and the
-// vendor pays through Paddle.js. When the subscription activates, the Phase 6
+// First production activation. A vendor with no subscription asks for a
+// customer deployment: nothing is provisioned, no deployment row is written
+// and no install link exists. The request is parked as a
+// billing_checkout_intents row tied to a Polar checkout, and the vendor pays
+// on Polar's hosted checkout page. When the subscription activates, the
 // webhook completes the intent and only then does the deployment row appear.
 //
-// The transaction carries the PLATFORM price only. The per-deployment price
-// is billed by quantity through Phase 9 reconciliation, which counts
-// deployments that are actually live (billing_state ACTIVE) — a deployment
-// that has not installed yet is not live, so charging $19 here would bill for
-// something that is not running.
+// The checkout is for ONE unit: the subscription always bills at least one
+// customer deployment ($49 + $19 = $68). The parked deployment uses that
+// unit when it goes live; reconciliation (billing-reconcile.ts) raises the
+// unit count only when more deployments are live than the floor covers.
 
-/** A parked request older than this is stale: Paddle may have dropped its
- *  transaction, and the vendor's intent has plainly moved on. */
+/** A parked request older than this is stale: its checkout has expired, and
+ *  the vendor's intent has plainly moved on. */
 const CHECKOUT_INTENT_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 export interface CheckoutDeps {
   db: RuntimeDb;
-  paddle: PaddleBilling | null;
+  polar: PolarBilling | null;
   /** DEPLOY-027 (Phase 4) — materialization seam (see deploy-links.ts). */
   materialization?: import('./deploy-links.js').MaterializationDeps;
   /** Compiler-v2 — artifact publication seam (see compiler-artifact.ts). */
@@ -51,15 +50,20 @@ export interface CreateCheckoutIntentParams {
   /** The size for the parked deployment; absent = the application default. */
   sizeProfile?: InfrastructureSizeTier;
   createdBy: string | null;
+  /** Prefilled on Polar's checkout; the vendor can change it there. */
+  customerEmail: string | null;
+  /** Where Polar sends the vendor after paying (server-built, same origin). */
+  successUrl: string;
 }
 
 export interface CreatedCheckoutIntent {
   checkoutIntentId: string;
-  transactionId: string;
+  /** Polar's hosted checkout page; apps/web redirects the browser to it. */
+  checkoutUrl: string;
 }
 
 /** Expires PENDING intents older than the window, so a checkout retried much
- *  later never resurrects a transaction Paddle has long since dropped. */
+ *  later never resurrects a checkout Polar has long since expired. */
 async function expireStalePendingIntents(
   db: RuntimeDb,
   organizationId: string,
@@ -78,32 +82,31 @@ async function expireStalePendingIntents(
 }
 
 /**
- * Parks a production deployment request and opens a Paddle transaction for
- * it. Everything that can be checked before the vendor pays is checked here
+ * Parks a production deployment request and opens a Polar checkout for it. Everything that can be checked before the vendor pays is checked here
  * — organization ownership of the application and the customer, and the same
  * preflight and built-release gates createDeploymentRecord runs — so a
  * completed checkout does not land on a request that was never going to work.
  *
  * Pressing the button twice is safe: an organization has at most one PENDING
  * intent (partial unique index), so a second call updates that row with the
- * newest request and reuses its transaction. Paddle is never asked for a
- * second transaction the first checkout would leave dangling.
+ * newest request and reuses its checkout while that is still open. Polar is
+ * never asked for a second open checkout the vendor could also pay.
  */
 export async function createCheckoutIntent(
   deps: CheckoutDeps,
   params: CreateCheckoutIntentParams,
 ): Promise<CreatedCheckoutIntent> {
-  const { db, paddle } = deps;
+  const { db, polar } = deps;
   const now = deps.now ?? (() => new Date());
-  if (!paddle) {
-    throw new ApiError(503, 'BILLING_DISABLED', 'Paddle billing is not configured');
+  if (!polar) {
+    throw new ApiError(503, 'BILLING_DISABLED', 'Polar billing is not configured');
   }
 
   // Phase 13: a checkout is the way IN to a subscription, so it is only
   // offered where there is none to fix. ACTIVE creates deployments directly
   // (the Phase 7 gate lets it through, so a second subscription must not be
   // sold). PAST_DUE and PAUSED already have a subscription — selling another
-  // would double-bill; the fix is the card form or resume on Paddle's portal.
+  // would double-bill; the fix is the card form or resume on Polar's portal.
   // Only evaluation (no row) and CANCELED (the old subscription is over,
   // and the webhook's mismatch guard accepts a new id after a cancel) may
   // start a checkout.
@@ -147,8 +150,8 @@ export async function createCheckoutIntent(
   }
 
   // One checkout at a time per organization: without this lock two
-  // simultaneous calls (a double click) both see no transaction on the intent
-  // and each opens a Paddle transaction, and the vendor can pay for both.
+  // simultaneous calls (a double click) both see no checkout on the intent
+  // and each opens a Polar checkout, and the vendor can pay for both.
   const created = await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'billing-checkout:' + params.organizationId}))`);
     const startedAt = now();
@@ -188,48 +191,72 @@ export async function createCheckoutIntent(
       intent = inserted!;
     }
 
+    // A checkout that is still open is reused. One already paid is waiting
+    // for its webhook: opening another would sell a second subscription.
+    // An expired or failed one is replaced on the same intent.
     if (intent.providerTransactionId) {
-      return { checkoutIntentId: intent.id, transactionId: intent.providerTransactionId };
+      let previous;
+      try {
+        previous = await polar.client.getCheckout(intent.providerTransactionId);
+      } catch (error) {
+        logCheckoutFailure(params.organizationId, error);
+        return null;
+      }
+      if (previous.status === 'confirmed' || previous.status === 'succeeded') {
+        throw new ApiError(
+          409,
+          'CHECKOUT_ALREADY_PAID',
+          'Your payment is being confirmed. Refresh this page in a moment.',
+        );
+      }
+      if (previous.status === 'open' && new Date(previous.expires_at) > startedAt) {
+        return { checkoutIntentId: intent.id, checkoutUrl: previous.url };
+      }
     }
 
-    // The intent id travels in customData so the webhook can attribute the
-    // subscription to this organization — and to this exact parked request —
-    // before any subscription row exists. Hence the row must exist first; a
-    // Paddle failure leaves it PENDING with no transaction, and the next call
-    // reuses the row and retries.
-    let transactionId: string;
+    // The checkout is created after the intent row, so the webhook can bind
+    // the subscription to this exact parked request through the checkout id.
+    // A Polar failure leaves the intent PENDING with no checkout, and the
+    // next call reuses the row and retries.
+    let checkout;
     try {
-      const transaction = await paddle.client.transactions.create({
-        items: [{ priceId: paddle.config.pricePlatform, quantity: 1 }],
-        customData: { organizationId: params.organizationId, checkoutIntentId: intent.id },
+      checkout = await polar.client.createCheckout({
+        productId: polar.config.productId,
+        units: 1,
+        externalCustomerId: params.organizationId,
+        customerEmail: params.customerEmail,
+        metadata: { organizationId: params.organizationId, checkoutIntentId: intent.id },
+        successUrl: params.successUrl,
       });
-      transactionId = transaction.id;
     } catch (error) {
-      // Phase 16 finding: the provider's reason was swallowed entirely, which
-      // turned a malformed API key into an undiagnosable 502. Logged server-side
-      // only — the client never sees provider internals.
-      console.error(
-        JSON.stringify({
-          event: 'billing:checkout-transaction-failed',
-          organizationId: params.organizationId,
-          error: error instanceof Error ? error.message : String(error),
-        }),
-      );
+      logCheckoutFailure(params.organizationId, error);
       // Returned, not thrown: the PENDING intent must commit.
       return null;
     }
 
     await tx
       .update(schema.billingCheckoutIntents)
-      .set({ providerTransactionId: transactionId })
+      .set({ providerTransactionId: checkout.id })
       .where(eq(schema.billingCheckoutIntents.id, intent.id));
 
-    return { checkoutIntentId: intent.id, transactionId };
+    return { checkoutIntentId: intent.id, checkoutUrl: checkout.url };
   });
   if (!created) {
     throw new ApiError(502, 'CHECKOUT_UNAVAILABLE', 'Could not start checkout. Try again.');
   }
   return created;
+}
+
+// The provider's reason is logged server-side only — the client never sees
+// provider internals.
+function logCheckoutFailure(organizationId: string, error: unknown): void {
+  console.error(
+    JSON.stringify({
+      event: 'billing:checkout-failed',
+      organizationId,
+      error: error instanceof Error ? error.message : String(error),
+    }),
+  );
 }
 
 export interface CompletedCheckoutIntent {
@@ -245,16 +272,15 @@ export interface CompletedCheckoutIntent {
 
 /**
  * Creates the deployment for the intent an activated subscription paid for.
- * The event names the intent through Deployz's own `customData`, which Paddle
- * copies from the checkout transaction onto the subscription; without one,
- * the organization's single PENDING intent is used.
+ * The webhook names the intent through the subscription's checkout id;
+ * without one, the organization's single PENDING intent is used.
  *
  * The deployment insert and the intent's completion run in ONE transaction
  * guarded by `WHERE status = 'PENDING'`, so a redelivered webhook — or two
  * ACTIVE events racing — can never create the deployment twice.
  *
  * Never throws: this runs inside the webhook path, and a failure to create
- * the deployment must not make Paddle redeliver a subscription event that was
+ * the deployment must not make Polar redeliver a subscription event that was
  * applied correctly. A failed intent is recorded FAILED with its reason — the
  * subscription is real, so the vendor now passes the Phase 7 gate and can
  * create the deployment directly.

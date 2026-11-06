@@ -209,4 +209,67 @@ describe('migrations', () => {
     expect(labels).toContain('REDIS_PROVISIONING_FAILED');
     expect(labels).toContain('REDIS_CONNECTION_FAILED');
   });
+
+  // 0059 moves billing from Paddle to Polar: the enum gains POLAR, the
+  // provider columns default to it, and every Paddle subscription and parked
+  // checkout is closed. Re-applied over seeded Paddle rows, as a database
+  // migrated before 0059 sees it.
+  it('0059 adds POLAR, cancels Paddle subscriptions and expires PENDING intents', async () => {
+    const { rows: seeded } = await client!.query<{ organization_id: string; application_id: string; customer_id: string }>(
+      `WITH org AS (
+         INSERT INTO organization (id, name, slug, created_at)
+         VALUES ('org_0059', 'Polar move', 'polar-move', now()) RETURNING id
+       ), app AS (
+         INSERT INTO applications (organization_id, name, repo_full_name, repo_url)
+         SELECT id, 'shop', 'acme/shop-0059', 'https://github.com/acme/shop-0059' FROM org RETURNING id, organization_id
+       ), cust AS (
+         INSERT INTO customers (organization_id, name, email)
+         SELECT organization_id, 'Buyer', 'buyer-0059@example.com' FROM app RETURNING id
+       )
+       SELECT app.organization_id, app.id AS application_id, cust.id AS customer_id FROM app, cust`,
+    );
+    const ids = seeded[0]!;
+    await client!.query(
+      `INSERT INTO billing_subscriptions (organization_id, provider, provider_customer_id, provider_subscription_id, status)
+       VALUES ($1, 'PADDLE', 'ctm_test_0059', 'sub_test_0059', 'ACTIVE')`,
+      [ids.organization_id],
+    );
+    await client!.query(
+      `INSERT INTO billing_checkout_intents (organization_id, application_id, customer_id, region, provider, status)
+       VALUES ($1, $2, $3, 'us-east-1', 'PADDLE', 'PENDING')`,
+      [ids.organization_id, ids.application_id, ids.customer_id],
+    );
+
+    const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'drizzle');
+    const sql = readFileSync(join(migrationsDir, '0059_polar_billing.sql'), 'utf8');
+    await client!.exec(sql.replaceAll('--> statement-breakpoint', ''));
+
+    const { rows: labels } = await client!.query<{ enumlabel: string }>(
+      `SELECT enumlabel FROM pg_enum
+       JOIN pg_type ON pg_type.oid = pg_enum.enumtypid
+       WHERE pg_type.typname = 'billing_provider'
+       ORDER BY enumsortorder`,
+    );
+    expect(labels.map((r) => r.enumlabel)).toEqual(['PADDLE', 'POLAR']);
+
+    const { rows: subscriptions } = await client!.query<{ provider: string; status: string }>(
+      `SELECT provider, status FROM billing_subscriptions WHERE organization_id = $1`,
+      [ids.organization_id],
+    );
+    expect(subscriptions).toEqual([{ provider: 'PADDLE', status: 'CANCELED' }]);
+
+    const { rows: intents } = await client!.query<{ status: string; resolved_at: Date | null }>(
+      `SELECT status, resolved_at FROM billing_checkout_intents WHERE organization_id = $1`,
+      [ids.organization_id],
+    );
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.status).toBe('EXPIRED');
+    expect(intents[0]?.resolved_at).not.toBeNull();
+
+    const { rows: polar } = await client!.query<{ provider: string }>(
+      `INSERT INTO billing_provider_events (provider_event_id, event_type, occurred_at)
+       VALUES ('evt_test_0059', 'subscription.created', now()) RETURNING provider`,
+    );
+    expect(polar).toEqual([{ provider: 'POLAR' }]);
+  });
 });

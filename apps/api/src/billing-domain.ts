@@ -1,10 +1,10 @@
 import type { DeploymentBillingState, DeploymentState, DeploymentType, RelayStatus } from '@deployz/contracts';
 
-// Billing domain rules (Paddle migration Phase 2) — pure functions that
+// Billing domain rules — pure functions that
 // decide whether, and when, a deployment becomes billable. Deployz displays
 // prices but does no money math; the billing provider is the source of
 // truth for charges and invoices. Provider-independent on purpose: nothing
-// here names Paddle.
+// here names the provider.
 
 export const PLATFORM_PRICE_DOLLARS = 49; // base platform price, display only
 export const DEPLOYMENT_PRICE_DOLLARS = 19; // price per billable deployment, display only
@@ -125,14 +125,25 @@ export function countBillableDeployments(rows: readonly BillingSnapshot[]): numb
 
 /**
  * The quantity the provider bills for: live production deployments beyond
- * the allowance, never negative. This is the ONLY number reconciliation ever
- * pushes to the provider.
+ * the allowance, never negative. subscriptionUnits turns it into the unit
+ * count the provider bills.
  */
 export function billableDeploymentQuantity(
   activeProductionDeployments: number,
   includedProductionDeployments: number,
 ): number {
   return Math.max(activeProductionDeployments - includedProductionDeployments, 0);
+}
+
+/**
+ * The unit count the subscription bills: the billable quantity, but never
+ * less than one. A subscription always includes one customer deployment
+ * ($49 platform + $19 = $68 minimum), so the first live deployment changes
+ * nothing and the allowance never takes the total under the minimum. This is
+ * the ONLY number reconciliation ever pushes to the provider.
+ */
+export function subscriptionUnits(billable: number): number {
+  return Math.max(billable, 1);
 }
 
 /** The counts every billing surface shows: active, paused, included, billable. */

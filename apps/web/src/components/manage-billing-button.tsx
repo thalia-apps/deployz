@@ -8,12 +8,11 @@ import { Button } from '@/components/ui/button';
 import { errorMessage } from '@/lib/api-client';
 import { openBillingPortal, type BillingPortalTarget } from '@/lib/billing-checkout';
 
-// Paddle migration Phase 12 — the way into Paddle's hosted customer portal.
-// Every screen that manages a subscription (card, invoices, cancel) is
-// Paddle's, so this is a hand-off, not a page: it mints a short-lived
-// pre-authenticated session on the API and sends the vendor there. Same tab,
-// never an iframe — Paddle's own guidance, and the portal is where the
-// vendor's card lives.
+// The way into the billing provider's hosted customer portal. Every screen
+// that manages a subscription (card, invoices, cancel) is the provider's, so
+// this is a hand-off, not a page: it mints a short-lived pre-authenticated
+// session on the API and sends the vendor there. Same tab, never an iframe —
+// the portal is where the vendor's card lives.
 export function ManageBillingButton({
   target = 'overview',
   children,

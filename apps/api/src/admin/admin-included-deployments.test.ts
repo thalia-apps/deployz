@@ -7,53 +7,39 @@ import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { createAuth, type Auth } from '../auth.js';
-import type { PaddleBilling } from '../paddle.js';
+import type { PolarBilling } from '../polar.js';
 import { buildServer } from '../server.js';
 
 // Included production deployments — the admin mutation
-// (docs/billing/paddle-billing.md, "Included production deployments"). These tests cover
+// (docs/billing/polar-billing.md, "Included production deployments"). These tests cover
 // the admin wrapping: authorization, validation, the audit row, and that a
 // real change on a subscribed organization runs reconcileBilling and pushes
-// max(active − included, 0). The formula itself is billing-reconcile.test.ts.
+// max(active − included, 1) units. The formula itself is billing-reconcile.test.ts.
 
-const PRICE_PLATFORM = 'pri_platform_test';
-const PRICE_DEPLOYMENT = 'pri_deployment_test';
-
-interface UpdateCall {
-  items: { priceId: string; quantity: number }[];
+interface PolarState {
+  units: number;
+  updates: number[];
+  fail?: Error;
 }
 
-/** A Paddle double whose subscription carries the platform item plus the
- *  deployment item at `deploymentQuantity` (absent when 0). */
-function fakePaddle(state: { deploymentQuantity: number; updates: UpdateCall[]; fail?: Error }): PaddleBilling {
+/** A Polar double whose subscription holds `units`; an update sets them. */
+function fakePolar(state: PolarState): PolarBilling {
   return {
     config: {
-      apiKey: 'test_replace_me',
+      token: 'polar_oat_test_replace_me',
       webhookSecret: 'test_replace_me',
-      clientToken: 'pdl_sdbx_replace_me',
-      pricePlatform: PRICE_PLATFORM,
-      priceDeployment: PRICE_DEPLOYMENT,
+      productId: 'prod_test_1',
       environment: 'sandbox',
     },
     client: {
-      subscriptions: {
-        get: async () => ({
-          items: [
-            { price: { id: PRICE_PLATFORM }, quantity: 1, status: 'active' },
-            ...(state.deploymentQuantity > 0
-              ? [{ price: { id: PRICE_DEPLOYMENT }, quantity: state.deploymentQuantity, status: 'active' }]
-              : []),
-          ],
-        }),
-        update: async (_id: string, body: UpdateCall) => {
-          if (state.fail) throw state.fail;
-          state.updates.push(body);
-          state.deploymentQuantity =
-            body.items.find((item) => item.priceId === PRICE_DEPLOYMENT)?.quantity ?? 0;
-          return {};
-        },
+      getSubscription: async (id: string) => ({ id, status: 'active', units: state.units }),
+      updateSubscriptionUnits: async (id: string, units: number) => {
+        if (state.fail) throw state.fail;
+        state.updates.push(units);
+        state.units = units;
+        return { id, status: 'active', units };
       },
-    } as unknown as PaddleBilling['client'],
+    } as unknown as PolarBilling['client'],
   };
 }
 
@@ -120,10 +106,7 @@ describe('admin included production deployments', () => {
   let admin: { userId: string; organizationId: string; cookie: string };
   let vendor: { userId: string; organizationId: string; cookie: string };
   let ids: { applicationId: string; customerId: string };
-  const paddleState: { deploymentQuantity: number; updates: UpdateCall[]; fail?: Error } = {
-    deploymentQuantity: 0,
-    updates: [],
-  };
+  const polarState: PolarState = { units: 1, updates: [] };
 
   beforeAll(async () => {
     client = new PGlite();
@@ -150,7 +133,7 @@ describe('admin included production deployments', () => {
     app = await buildServer({
       auth,
       db,
-      paddle: fakePaddle(paddleState),
+      polar: fakePolar(polarState),
       teamAdminEmails: [],
       teamAdminEnvGrantsEnabled: false,
     });
@@ -168,9 +151,9 @@ describe('admin included production deployments', () => {
       .orderBy(desc(schema.eventLogs.id))
       .limit(1);
     auditBaseline = latest?.id ?? 0;
-    paddleState.deploymentQuantity = 0;
-    paddleState.updates.length = 0;
-    delete paddleState.fail;
+    polarState.units = 1;
+    polarState.updates.length = 0;
+    delete polarState.fail;
     await db.delete(schema.billingReconciliationEvents);
     await db.delete(schema.deployments);
     await db.delete(schema.billingSubscriptions);
@@ -302,7 +285,7 @@ describe('admin included production deployments', () => {
         reconciliation: null,
       });
       expect(await allowanceOf(db, vendor.organizationId)).toBe(3);
-      expect(paddleState.updates).toHaveLength(0);
+      expect(polarState.updates).toHaveLength(0);
       // No subscription was created by the allowance itself.
       expect(await db.select().from(schema.billingSubscriptions)).toHaveLength(0);
 
@@ -324,7 +307,7 @@ describe('admin included production deployments', () => {
       });
       expect(typeof rows[0]!.payload.adminEmail).toBe('string');
       // Nothing secret in the audit row.
-      expect(JSON.stringify(rows[0]!.payload)).not.toMatch(/apiKey|webhookSecret|clientToken|pri_|sub_test/);
+      expect(JSON.stringify(rows[0]!.payload)).not.toMatch(/webhookSecret|polar_oat|prod_test|sub_test/);
     });
 
     it('the allowance shows on the vendor detail with a zero billable quantity', async () => {
@@ -346,10 +329,10 @@ describe('admin included production deployments', () => {
   });
 
   describe('with an active subscription', () => {
-    it('an increase reduces the Paddle quantity immediately (5 live, 0 → 2 included, qty 5 → 3)', async () => {
+    it('an increase reduces the Polar units immediately (5 live, 0 → 2 included, units 5 → 3)', async () => {
       await subscribe();
       await addLiveDeployments(5);
-      paddleState.deploymentQuantity = 5;
+      polarState.units = 5;
 
       const response = await setAllowance(app, vendor.organizationId, admin.cookie, {
         includedProductionDeployments: 2,
@@ -363,11 +346,7 @@ describe('admin included production deployments', () => {
         changed: true,
         reconciliation: { status: 'SUCCEEDED', action: 'QUANTITY_UPDATED', expected: 3, provider: 5 },
       });
-      expect(paddleState.updates).toHaveLength(1);
-      expect(paddleState.updates[0]!.items).toEqual([
-        { priceId: PRICE_PLATFORM, quantity: 1 },
-        { priceId: PRICE_DEPLOYMENT, quantity: 3 },
-      ]);
+      expect(polarState.updates).toEqual([3]);
 
       const rows = await auditRows(db, vendor.organizationId);
       expect(rows[0]!.payload).toMatchObject({
@@ -378,14 +357,14 @@ describe('admin included production deployments', () => {
       });
     });
 
-    it('a decrease raises the Paddle quantity (5 live, 3 → 0 included, qty 2 → 5)', async () => {
+    it('a decrease raises the Polar units (5 live, 3 → 0 included, units 2 → 5)', async () => {
       await subscribe();
       await addLiveDeployments(5);
       await db
         .update(schema.organization)
         .set({ includedProductionDeployments: 3 })
         .where(eq(schema.organization.id, vendor.organizationId));
-      paddleState.deploymentQuantity = 2;
+      polarState.units = 2;
 
       const response = await setAllowance(app, vendor.organizationId, admin.cookie, {
         includedProductionDeployments: 0,
@@ -396,27 +375,30 @@ describe('admin included production deployments', () => {
         current: { includedProductionDeployments: 0, billableDeploymentQuantity: 5 },
         reconciliation: { status: 'SUCCEEDED', action: 'QUANTITY_UPDATED', expected: 5, provider: 2 },
       });
-      expect(paddleState.deploymentQuantity).toBe(5);
+      expect(polarState.units).toBe(5);
     });
 
-    it('covering every live deployment removes the Paddle item; the platform item stays', async () => {
+    it('covering every live deployment drops Polar to the floor of one unit, never zero', async () => {
       await subscribe();
       await addLiveDeployments(2);
-      paddleState.deploymentQuantity = 2;
+      polarState.units = 2;
 
       const response = await setAllowance(app, vendor.organizationId, admin.cookie, {
         includedProductionDeployments: 2,
         reason: 'pilot',
       });
-      expect(response.json().reconciliation).toMatchObject({ action: 'ITEM_REMOVED', expected: 0 });
-      expect(paddleState.updates[0]!.items).toEqual([{ priceId: PRICE_PLATFORM, quantity: 1 }]);
+      expect(response.json()).toMatchObject({
+        current: { includedProductionDeployments: 2, billableDeploymentQuantity: 0 },
+        reconciliation: { action: 'QUANTITY_UPDATED', expected: 1, provider: 2 },
+      });
+      expect(polarState.updates).toEqual([1]);
     });
 
     it('a same-value update is audited but reconciles nothing', async () => {
       await subscribe();
       await addLiveDeployments(1);
       await setAllowance(app, vendor.organizationId, admin.cookie, { includedProductionDeployments: 1, reason: 'a' });
-      paddleState.updates.length = 0;
+      polarState.updates.length = 0;
 
       const response = await setAllowance(app, vendor.organizationId, admin.cookie, {
         includedProductionDeployments: 1,
@@ -424,7 +406,7 @@ describe('admin included production deployments', () => {
       });
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({ changed: false, reconciliation: null });
-      expect(paddleState.updates).toHaveLength(0);
+      expect(polarState.updates).toHaveLength(0);
       const rows = await auditRows(db, vendor.organizationId);
       expect(rows).toHaveLength(2);
       expect(rows[1]!.payload).toMatchObject({ changed: false, reconciliationTriggered: false, reason: 'no-op' });
@@ -445,11 +427,11 @@ describe('admin included production deployments', () => {
       });
     });
 
-    it('a Paddle failure keeps the new allowance, records the drift, and a retry repairs it', async () => {
+    it('a Polar failure keeps the new allowance, records the drift, and a retry repairs it', async () => {
       await subscribe();
       await addLiveDeployments(4);
-      paddleState.deploymentQuantity = 4;
-      paddleState.fail = new Error('paddle unavailable');
+      polarState.units = 4;
+      polarState.fail = new Error('polar unavailable');
 
       const response = await setAllowance(app, vendor.organizationId, admin.cookie, {
         includedProductionDeployments: 1,
@@ -458,7 +440,7 @@ describe('admin included production deployments', () => {
       expect(response.statusCode, response.body).toBe(200);
       expect(response.json()).toMatchObject({
         changed: true,
-        reconciliation: { status: 'FAILED', expected: 3, reason: 'paddle unavailable' },
+        reconciliation: { status: 'FAILED', expected: 3, reason: 'polar unavailable' },
       });
       // The admin's intent survives the outage.
       expect(await allowanceOf(db, vendor.organizationId)).toBe(1);
@@ -477,8 +459,8 @@ describe('admin included production deployments', () => {
       });
       expect(detail.json().billing.recentReconciliations[0]).toMatchObject({ status: 'FAILED', expected: 3 });
 
-      // ...and the existing Reconcile action repairs it once Paddle is back.
-      delete paddleState.fail;
+      // ...and the existing Reconcile action repairs it once Polar is back.
+      delete polarState.fail;
       const retry = await app.inject({
         method: 'POST',
         url: `/api/admin/vendors/${vendor.organizationId}/reconcile-billing`,
@@ -486,7 +468,7 @@ describe('admin included production deployments', () => {
         payload: '{}',
       });
       expect(retry.json()).toMatchObject({ status: 'SUCCEEDED', expected: 3, provider: 4 });
-      expect(paddleState.deploymentQuantity).toBe(3);
+      expect(polarState.units).toBe(3);
     });
 
     it('two concurrent updates each audit the value the other left, and the end state is consistent', async () => {
@@ -508,8 +490,8 @@ describe('admin included production deployments', () => {
       expect([1, 2]).toContain(previous[1]);
       const final = await allowanceOf(db, vendor.organizationId);
       expect([1, 2]).toContain(final);
-      // Whatever landed last, Paddle converged on the absolute formula for it.
-      expect(paddleState.deploymentQuantity).toBe(3 - final);
+      // Whatever landed last, Polar converged on the absolute formula for it.
+      expect(polarState.units).toBe(Math.max(3 - final, 1));
     });
   });
 
@@ -525,13 +507,13 @@ describe('admin included production deployments', () => {
       expect(response.statusCode).toBe(200);
       expect(response.json().reconciliation).toMatchObject({ status: 'SKIPPED', expected: 1 });
       expect(await allowanceOf(db, vendor.organizationId)).toBe(1);
-      expect(paddleState.updates).toHaveLength(0);
+      expect(polarState.updates).toHaveLength(0);
     });
 
     it('PAST_DUE still reconciles', async () => {
       await subscribe('PAST_DUE');
       await addLiveDeployments(2);
-      paddleState.deploymentQuantity = 2;
+      polarState.units = 2;
 
       const response = await setAllowance(app, vendor.organizationId, admin.cookie, {
         includedProductionDeployments: 1,

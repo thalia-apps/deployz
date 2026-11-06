@@ -7,116 +7,110 @@ import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { createAuth, type Auth } from './auth.js';
-import type { PaddleBilling } from './paddle.js';
+import { PolarApiError, type PolarBilling, type PolarOrder } from './polar.js';
 import { buildServer } from './server.js';
 
 // GET /api/billing/account and GET /api/billing/invoices/:id. Fixture ids
-// only; no test reaches the Paddle API.
+// only; no test reaches the Polar API.
 
 interface Calls {
   subscriptionGets: string[];
-  transactionLists: unknown[];
-  invoicePdfs: string[];
+  orderLists: string[];
+  paymentMethodLists: string[];
+  invoiceUrls: string[];
 }
 
-function card(last4: string) {
+const OWN_PAID_ORDER = '00000000-0000-4000-8000-000000000001';
+const OWN_VOID_ORDER = '00000000-0000-4000-8000-000000000002';
+const OTHER_ORG_ORDER = '00000000-0000-4000-8000-000000000003';
+const OWN_UNPAID_ORDER = '00000000-0000-4000-8000-000000000004';
+const OWN_UNGENERATED_ORDER = '00000000-0000-4000-8000-000000000005';
+const UNKNOWN_ORDER = '00000000-0000-4000-8000-000000000009';
+
+function order(id: string, overrides: Partial<PolarOrder> = {}): PolarOrder {
   return {
-    type: 'card',
-    card: { type: 'visa', last4, expiryMonth: 4, expiryYear: 2030, cardholderName: 'Test' },
+    id,
+    created_at: '2026-10-01T00:00:00Z',
+    status: 'paid',
+    paid: true,
+    total_amount: 6800,
+    currency: 'usd',
+    invoice_number: '2026-00002',
+    is_invoice_generated: true,
+    subscription_id: 'sub_own',
+    description: 'Deployz',
+    ...overrides,
   };
 }
 
-const TRANSACTIONS = [
-  {
-    id: 'txn_methodchange',
-    status: 'completed',
-    origin: 'subscription_payment_method_change',
-    subscriptionId: 'sub_own',
-    invoiceNumber: null,
-    billedAt: '2026-10-20T00:00:00Z',
-    createdAt: '2026-10-20T00:00:00Z',
-    currencyCode: 'USD',
-    details: { totals: { grandTotal: '0' } },
-    payments: [{ status: 'captured', methodDetails: card('4242') }],
-  },
-  {
-    id: 'txn_renewal',
-    status: 'completed',
-    origin: 'subscription_recurring',
-    subscriptionId: 'sub_own',
-    invoiceNumber: '2026-00002',
-    billedAt: '2026-10-01T00:00:00Z',
-    createdAt: '2026-10-01T00:00:00Z',
-    currencyCode: 'USD',
-    details: { totals: { grandTotal: '6800' } },
-    payments: [
-      { status: 'captured', methodDetails: card('1111') },
-      { status: 'error', methodDetails: card('0002') },
-    ],
-  },
+const ORDERS: PolarOrder[] = [
+  order(OWN_PAID_ORDER),
+  order(OWN_VOID_ORDER, { status: 'void', paid: false, invoice_number: null }),
+  order(OTHER_ORG_ORDER, { subscription_id: 'sub_other' }),
 ];
 
-function fakePaddle(options: { calls?: Calls; error?: Error; scheduledCancel?: boolean } = {}): PaddleBilling {
-  const transactionsById: Record<string, unknown> = {
-    txn_renewal: TRANSACTIONS[1],
-    txn_other_org: { ...TRANSACTIONS[1], id: 'txn_other_org', subscriptionId: 'sub_other' },
-    txn_draft: { ...TRANSACTIONS[1], id: 'txn_draft', invoiceNumber: null },
+function fakePolar(
+  options: { calls?: Calls; error?: Error; paymentMethodError?: Error; scheduledCancel?: boolean } = {},
+): PolarBilling {
+  const ordersById: Record<string, PolarOrder> = {
+    [OWN_PAID_ORDER]: ORDERS[0]!,
+    [OTHER_ORG_ORDER]: ORDERS[2]!,
+    [OWN_UNPAID_ORDER]: order(OWN_UNPAID_ORDER, { status: 'pending', paid: false }),
+    [OWN_UNGENERATED_ORDER]: order(OWN_UNGENERATED_ORDER, { is_invoice_generated: false }),
   };
   return {
     config: {
-      apiKey: 'test_replace_me',
+      token: 'test_replace_me',
       webhookSecret: 'test_replace_me',
-      clientToken: 'pdl_sdbx_replace_me',
-      pricePlatform: 'pri_platform_replace_me',
-      priceDeployment: 'pri_deployment_replace_me',
+      productId: 'prod_test_replace_me',
       environment: 'sandbox',
     },
     client: {
-      subscriptions: {
-        get: async (id: string) => {
-          if (options.error) throw options.error;
-          options.calls?.subscriptionGets.push(id);
-          return {
-            id,
-            nextBilledAt: options.scheduledCancel ? null : '2026-11-01T00:00:00Z',
-            scheduledChange: options.scheduledCancel
-              ? { action: 'cancel', effectiveAt: '2026-11-01T00:00:00Z', resumeAt: null }
-              : null,
-            nextTransaction: options.scheduledCancel
-              ? null
-              : {
-                  details: {
-                    totals: { grandTotal: '8700', currencyCode: 'USD' },
-                    lineItems: [
-                      { product: { name: 'Deployz Platform' }, quantity: 1, totals: { total: '4900' } },
-                      { product: { name: 'Customer Deployment' }, quantity: 2, totals: { total: '3800' } },
-                    ],
-                  },
-                },
-          };
-        },
+      getSubscription: async (id: string) => {
+        if (options.error) throw options.error;
+        options.calls?.subscriptionGets.push(id);
+        return {
+          id,
+          status: 'active',
+          amount: 8700,
+          currency: 'usd',
+          current_period_start: '2026-10-01T00:00:00Z',
+          current_period_end: '2026-11-01T00:00:00Z',
+          cancel_at_period_end: options.scheduledCancel ?? false,
+          ends_at: options.scheduledCancel ? '2026-11-01T00:00:00Z' : null,
+          customer_id: 'ctm_shared',
+          product_id: 'prod_test_replace_me',
+          checkout_id: null,
+          units: 2,
+          modified_at: null,
+          metadata: {},
+          prices: [{ amount_type: 'fixed', price_amount: 4900 }, { amount_type: 'seat_based' }],
+        };
       },
-      transactions: {
-        list: (query: unknown) => {
-          options.calls?.transactionLists.push(query);
-          return { next: async () => TRANSACTIONS };
-        },
-        get: async (id: string) => {
-          const found = transactionsById[id];
-          if (!found) throw Object.assign(new Error('not found'), { code: 'not_found' });
-          return found;
-        },
-        getInvoicePDF: async (id: string) => {
-          options.calls?.invoicePdfs.push(id);
-          return { url: `https://invoices.test/${id}.pdf` };
-        },
+      listSubscriptionOrders: async (subscriptionId: string) => {
+        options.calls?.orderLists.push(subscriptionId);
+        return ORDERS;
       },
-    } as unknown as PaddleBilling['client'],
+      listPaymentMethods: async (customerId: string) => {
+        options.calls?.paymentMethodLists.push(customerId);
+        if (options.paymentMethodError) throw options.paymentMethodError;
+        return [{ type: 'card', method_metadata: { brand: 'visa', last4: '4242', exp_month: 4, exp_year: 2030 } }];
+      },
+      getOrder: async (id: string) => {
+        const found = ordersById[id];
+        if (!found) throw new PolarApiError(404, 'not found');
+        return found;
+      },
+      getOrderInvoiceUrl: async (found: PolarOrder) => {
+        options.calls?.invoiceUrls.push(found.id);
+        return found.is_invoice_generated ? `https://invoices.test/${found.id}.pdf` : null;
+      },
+    } as unknown as PolarBilling['client'],
   };
 }
 
 function newCalls(): Calls {
-  return { subscriptionGets: [], transactionLists: [], invoicePdfs: [] };
+  return { subscriptionGets: [], orderLists: [], paymentMethodLists: [], invoiceUrls: [] };
 }
 
 async function signUp(auth: Auth, db: Db, email: string) {
@@ -165,17 +159,17 @@ describe('billing account and invoices', () => {
   });
 
   it('401s without a session', async () => {
-    const app = await buildServer({ auth, db, paddle: fakePaddle() });
+    const app = await buildServer({ auth, db, polar: fakePolar() });
     try {
       expect((await get(app, '/api/billing/account')).statusCode).toBe(401);
-      expect((await get(app, '/api/billing/invoices/txn_renewal')).statusCode).toBe(401);
+      expect((await get(app, `/api/billing/invoices/${OWN_PAID_ORDER}`)).statusCode).toBe(401);
     } finally {
       await app.close();
     }
   });
 
-  it('503s when Paddle is not configured', async () => {
-    const app = await buildServer({ auth, db, paddle: null });
+  it('503s when Polar is not configured', async () => {
+    const app = await buildServer({ auth, db, polar: null });
     try {
       const response = await get(app, '/api/billing/account', owner.cookie);
       expect(response.statusCode).toBe(503);
@@ -187,7 +181,7 @@ describe('billing account and invoices', () => {
 
   it('409s an organization in evaluation', async () => {
     const calls = newCalls();
-    const app = await buildServer({ auth, db, paddle: fakePaddle({ calls }) });
+    const app = await buildServer({ auth, db, polar: fakePolar({ calls }) });
     try {
       const response = await get(app, '/api/billing/account', evaluating.cookie);
       expect(response.statusCode).toBe(409);
@@ -200,34 +194,31 @@ describe('billing account and invoices', () => {
 
   it("reads the next payment, payment method and invoices of the organization's own subscription", async () => {
     const calls = newCalls();
-    const app = await buildServer({ auth, db, paddle: fakePaddle({ calls }) });
+    const app = await buildServer({ auth, db, polar: fakePolar({ calls }) });
     try {
       const response = await get(app, '/api/billing/account', owner.cookie);
       expect(response.statusCode, response.body).toBe(200);
       expect(calls.subscriptionGets).toEqual(['sub_own']);
-      // Scoped by subscription, never by the (shareable) customer id.
-      expect(calls.transactionLists).toEqual([
-        expect.objectContaining({ subscriptionId: ['sub_own'] }),
-      ]);
-      expect(calls.transactionLists[0]).not.toHaveProperty('customerId');
+      // Orders are scoped by subscription, never by the (shareable) customer id.
+      expect(calls.orderLists).toEqual(['sub_own']);
+      expect(calls.paymentMethodLists).toEqual(['ctm_shared']);
       expect(response.json()).toEqual({
         nextPayment: {
           date: '2026-11-01T00:00:00Z',
           amount: '8700',
           currencyCode: 'USD',
           lines: [
-            { description: 'Deployz Platform', quantity: 1, amount: '4900', currencyCode: 'USD' },
-            { description: 'Customer Deployment', quantity: 2, amount: '3800', currencyCode: 'USD' },
+            { description: 'Platform', quantity: 1, amount: '4900', currencyCode: 'USD' },
+            { description: 'Customer deployments', quantity: 2, amount: '3800', currencyCode: 'USD' },
           ],
         },
         scheduledChange: null,
-        // The newest captured payment: the payment-method change.
         paymentMethod: { type: 'card', cardBrand: 'visa', last4: '4242', expiryMonth: 4, expiryYear: 2030 },
-        // The $0 payment-method change is not an invoice.
+        // A void order and another subscription's order are not invoices.
         transactions: [
           {
-            id: 'txn_renewal',
-            status: 'completed',
+            id: OWN_PAID_ORDER,
+            status: 'paid',
             billedAt: '2026-10-01T00:00:00Z',
             invoiceNumber: '2026-00002',
             amount: '6800',
@@ -240,8 +231,24 @@ describe('billing account and invoices', () => {
     }
   });
 
+  it('still answers without a payment method when Polar cannot list it', async () => {
+    const app = await buildServer({
+      auth,
+      db,
+      polar: fakePolar({ paymentMethodError: new Error('internal polar detail') }),
+    });
+    try {
+      const response = await get(app, '/api/billing/account', owner.cookie);
+      expect(response.statusCode, response.body).toBe(200);
+      expect(response.json()).toMatchObject({ paymentMethod: null, nextPayment: { amount: '8700' } });
+      expect(response.body).not.toContain('internal polar detail');
+    } finally {
+      await app.close();
+    }
+  });
+
   it('shows a scheduled cancellation and no next payment', async () => {
-    const app = await buildServer({ auth, db, paddle: fakePaddle({ scheduledCancel: true }) });
+    const app = await buildServer({ auth, db, polar: fakePolar({ scheduledCancel: true }) });
     try {
       const response = await get(app, '/api/billing/account', owner.cookie);
       expect(response.json()).toMatchObject({
@@ -257,43 +264,56 @@ describe('billing account and invoices', () => {
     const app = await buildServer({
       auth,
       db,
-      paddle: fakePaddle({ error: new Error('internal paddle detail') }),
+      polar: fakePolar({ error: new Error('internal polar detail') }),
     });
     try {
       const response = await get(app, '/api/billing/account', owner.cookie);
       expect(response.statusCode).toBe(502);
       expect(response.json()).toMatchObject({ error: { code: 'BILLING_DETAILS_UNAVAILABLE' } });
-      expect(response.body).not.toContain('internal paddle detail');
+      expect(response.body).not.toContain('internal polar detail');
     } finally {
       await app.close();
     }
   });
 
-  it("returns an invoice link for the organization's own transaction", async () => {
+  it("returns an invoice link for the organization's own order", async () => {
     const calls = newCalls();
-    const app = await buildServer({ auth, db, paddle: fakePaddle({ calls }) });
+    const app = await buildServer({ auth, db, polar: fakePolar({ calls }) });
     try {
-      const response = await get(app, '/api/billing/invoices/txn_renewal', owner.cookie);
+      const response = await get(app, `/api/billing/invoices/${OWN_PAID_ORDER}`, owner.cookie);
       expect(response.statusCode, response.body).toBe(200);
-      expect(response.json()).toEqual({ url: 'https://invoices.test/txn_renewal.pdf' });
+      expect(response.json()).toEqual({ url: `https://invoices.test/${OWN_PAID_ORDER}.pdf` });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('409s while Polar is still generating the invoice', async () => {
+    const calls = newCalls();
+    const app = await buildServer({ auth, db, polar: fakePolar({ calls }) });
+    try {
+      const response = await get(app, `/api/billing/invoices/${OWN_UNGENERATED_ORDER}`, owner.cookie);
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toMatchObject({ error: { code: 'INVOICE_NOT_READY' } });
+      expect(calls.invoiceUrls).toEqual([OWN_UNGENERATED_ORDER]);
     } finally {
       await app.close();
     }
   });
 
   it.each([
-    ['another organization’s transaction', 'txn_other_org'],
-    ['a transaction with no invoice', 'txn_draft'],
-    ['an unknown transaction', 'txn_unknown'],
+    ['another organization’s order', OTHER_ORG_ORDER],
+    ['an unpaid order', OWN_UNPAID_ORDER],
+    ['an unknown order', UNKNOWN_ORDER],
     ['a malformed id', '..%2Fsubscriptions'],
-  ])('404s %s and mints no link', async (_label, transactionId) => {
+  ])('404s %s and mints no link', async (_label, orderId) => {
     const calls = newCalls();
-    const app = await buildServer({ auth, db, paddle: fakePaddle({ calls }) });
+    const app = await buildServer({ auth, db, polar: fakePolar({ calls }) });
     try {
-      const response = await get(app, `/api/billing/invoices/${transactionId}`, owner.cookie);
+      const response = await get(app, `/api/billing/invoices/${orderId}`, owner.cookie);
       expect(response.statusCode).toBe(404);
       expect(response.json()).toMatchObject({ error: { code: 'INVOICE_NOT_FOUND' } });
-      expect(calls.invoicePdfs).toHaveLength(0);
+      expect(calls.invoiceUrls).toHaveLength(0);
     } finally {
       await app.close();
     }
@@ -311,10 +331,10 @@ describe('billing account and invoices', () => {
       .update(schema.session)
       .set({ activeOrganizationId: owner.organizationId })
       .where(eq(schema.session.userId, member.userId));
-    const app = await buildServer({ auth, db, paddle: fakePaddle() });
+    const app = await buildServer({ auth, db, polar: fakePolar() });
     try {
       expect((await get(app, '/api/billing/account', member.cookie)).statusCode).toBe(403);
-      expect((await get(app, '/api/billing/invoices/txn_renewal', member.cookie)).statusCode).toBe(403);
+      expect((await get(app, `/api/billing/invoices/${OWN_PAID_ORDER}`, member.cookie)).statusCode).toBe(403);
     } finally {
       await app.close();
     }

@@ -11,11 +11,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 export const metadata: Metadata = {
   title: 'Pricing',
-  description: '$49/month plus $19 for each live customer deployment. No infrastructure resale.',
+  description: '$49/month plus $19 for each live customer deployment, from $68/month. No infrastructure resale.',
 };
 
 const USAGE_ROWS = [
-  { deployments: 'Base only', count: 0, total: '$49' },
+  { deployments: 'No live deployment yet', count: 0, total: '$68' },
   { deployments: '1 deployment', count: 1, total: '$68' },
   { deployments: '5 deployments', count: 5, total: '$144' },
   { deployments: '10 deployments', count: 10, total: '$239' },
@@ -63,8 +63,8 @@ export default function PricingPage() {
           <p className="max-w-xl text-sm text-muted-foreground">
             The base subscription covers your dashboard, GitHub integration and readiness checks.
             Test deployments are not charged. Each customer deployment adds $19/month only while it
-            runs for your customer. A failed or disconnected deployment is not charged, and charges
-            stop when it is removed.
+            runs for your customer, with a minimum of one, so a subscription starts at $68/month. A
+            failed or disconnected deployment is not charged, and charges stop when it is removed.
           </p>
         </section>
 

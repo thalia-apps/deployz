@@ -214,12 +214,12 @@ export interface AdminVendorBilling {
   activeProductionDeployments: number;
   /** The admin-set pooled allowance (organization.included_production_deployments). */
   includedProductionDeployments: number;
-  /** max(active - included, 0) — the only quantity Paddle is ever told. */
+  /** max(active - included, 0); Polar is told max(this, 1). */
   billableDeploymentQuantity: number;
-  /** What Paddle held after the last reconciliation that updated it; null when never pushed. */
+  /** What Polar held after the last reconciliation that updated it; null when never pushed. */
   providerDeploymentQuantity: number | null;
   providerQuantityAsOf: string | null;
-  /** Display run-rate ($49 + billable × $19); null while evaluating or canceled. */
+  /** Display run-rate ($49 + max(billable, 1) × $19); null while evaluating or canceled. */
   monthlyRateDollars: number | null;
   subscription: {
     providerSubscriptionId: string;
@@ -451,7 +451,7 @@ export function reconcileVendorBillingAdmin(
 
 /** The result of updating a vendor's pooled "included production
  *  deployments" allowance — the allowance itself is always saved; the
- *  provider (Paddle) side is best-effort and reported separately via
+ *  provider (Polar) side is best-effort and reported separately via
  *  `reconciliation`, which is null when there was nothing to reconcile
  *  (unchanged value, or no subscription). */
 export interface AdminIncludedDeploymentsResult {

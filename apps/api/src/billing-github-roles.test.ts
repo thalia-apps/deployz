@@ -56,12 +56,12 @@ describe('billing and GitHub connection need owner or admin', () => {
     await applyMigrations(client);
     db = createDb(client);
     const auth = createAuth(db);
-    // paddle: null, so a caller who passes the role check gets 503
-    // BILLING_DISABLED, never a real Paddle call.
+    // polar: null, so a caller who passes the role check gets 503
+    // BILLING_DISABLED, never a real Polar call.
     app = await buildServer({
       auth,
       db,
-      paddle: null,
+      polar: null,
       githubAppInstallUrl: 'https://github.com/apps/deployz-test',
     });
     owner = await signUp(auth, db, `roles-owner-${crypto.randomUUID()}@example.com`);

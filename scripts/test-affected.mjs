@@ -72,7 +72,7 @@ const WEB_NO_E2E = [
 const API_NON_CRITICAL = [
   /^apps\/api\/src\/admin\//,
   /^apps\/api\/src\/billing-[a-z-]+\.ts$/,
-  /^apps\/api\/src\/paddle\.ts$/,
+  /^apps\/api\/src\/polar\.ts$/,
   /^apps\/api\/src\/email\.ts$/,
   /^apps\/api\/src\/organizations\.ts$/,
   /^apps\/api\/src\/ai-[a-z-]+\.ts$/,
@@ -115,7 +115,7 @@ const FRESH = 'pnpm e2e:fresh';
 export const VERIFIED_PATHS = [
   'apps/web/src/components/deployz-brand.tsx',
   'apps/api/src/admin',
-  'apps/api/src/paddle.ts',
+  'apps/api/src/polar.ts',
   'apps/api/src/email.ts',
   'apps/api/src/organizations.ts',
   'apps/api/src/jev-shadow.ts',

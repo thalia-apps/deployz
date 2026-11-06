@@ -15,6 +15,7 @@ import {
   DEPLOYMENT_PRICE_DOLLARS,
   PLATFORM_PRICE_DOLLARS,
   productionDeploymentCounts,
+  subscriptionUnits,
 } from '../billing-domain.js';
 
 import { redactClaimedPayload } from '../claimed-payload.js';
@@ -735,10 +736,9 @@ export async function getVendorDetail(db: RuntimeDb, organizationId: string) {
     .orderBy(desc(schema.eventLogs.occurredAt))
     .limit(30);
 
-  // Paddle migration Phase 14 — what an admin needs to judge a billing
-  // question without opening Paddle: the numbers Deployz owns (live
+  // What an admin needs to judge a billing question without opening Polar: the numbers Deployz owns (live
   // production deployments, the included allowance, and the billable
-  // quantity they yield), what Paddle was last told, and how the last few
+  // quantity they yield), what Polar was last told, and how the last few
   // reconciliations went. Counted with its own query, not from the capped
   // list above: a vendor with more deployments than LIST_CAP would otherwise
   // read as under-billed.
@@ -757,12 +757,12 @@ export async function getVendorDetail(db: RuntimeDb, organizationId: string) {
     .orderBy(desc(schema.billingReconciliationEvents.createdAt))
     .limit(5);
   // The provider quantity is not stored live. A ledger row carries a
-  // provider quantity only when a pass read Paddle AND pushed an update, so
-  // the newest such row's expected quantity is what Paddle held afterwards.
+  // provider quantity only when a pass read Polar AND pushed an update, so
+  // the newest such row's expected quantity is what Polar held afterwards.
   const lastProviderRead = recentReconciliations.find((row) => row.providerDeploymentQuantity !== null);
   // A run-rate only means something once there is a subscription to bill
   // against; evaluation is free. Display arithmetic from the display prices —
-  // Paddle remains the source of truth for money.
+  // Polar remains the source of truth for money.
   const billsRunRate = subscription !== undefined && subscription.status !== 'CANCELED';
 
   return {
@@ -780,7 +780,7 @@ export async function getVendorDetail(db: RuntimeDb, organizationId: string) {
       providerDeploymentQuantity: lastProviderRead?.expectedDeploymentQuantity ?? null,
       providerQuantityAsOf: lastProviderRead?.createdAt ?? null,
       monthlyRateDollars: billsRunRate
-        ? PLATFORM_PRICE_DOLLARS + counts.billable * DEPLOYMENT_PRICE_DOLLARS
+        ? PLATFORM_PRICE_DOLLARS + subscriptionUnits(counts.billable) * DEPLOYMENT_PRICE_DOLLARS
         : null,
       subscription: subscription
         ? {

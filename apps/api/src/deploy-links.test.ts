@@ -173,7 +173,7 @@ describe('deploy links', () => {
     application = await insertApplication(db, orgA.organizationId);
     customer = await insertCustomer(db, orgA.organizationId);
 
-    // Deploy links always create a PRODUCTION deployment (Paddle migration
+    // Deploy links always create a PRODUCTION deployment (billing
     // Phase 7 gates that behind an ACTIVE subscription) — this file is about
     // deploy-link lifecycle, not billing, so orgA gets one up front.
     await db.insert(schema.billingSubscriptions).values({

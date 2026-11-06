@@ -68,7 +68,7 @@ export type DeploymentEventType =
   | 'deployment.billing_paused'
   | 'deployment.billing_resumed'
   // Paddle migration Phase 8 — a parked production deployment was created
-  // from the Paddle ACTIVE webhook (apps/api/src/billing-checkout.ts).
+  // from the Polar ACTIVE webhook (apps/api/src/billing-checkout.ts).
   | 'billing.subscription_activated'
   | 'config.updated'
   | 'config.failed'

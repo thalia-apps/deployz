@@ -454,7 +454,7 @@ function NewDeploymentScreen() {
         </Card>
       ) : null}
 
-      {/* Customer mode: a past-due or paused vendor needs the Paddle portal
+      {/* Customer mode: a past-due or paused vendor needs the billing portal
           to fix their subscription, not a new checkout. */}
       {!isTestDeployment && (subscriptionStatus === 'PAST_DUE' || subscriptionStatus === 'PAUSED') ? (
         <Card>

@@ -58,7 +58,7 @@ present. The refusal message names the workflow and the escape hatch.
 ## Consequences
 
 - `BOOTSTRAP_TEMPLATE_URL`, `DEPLOYABLE_AWS_REGIONS`, `DOCKERHUB_SECRET_NAME`,
-  `PADDLE_ENVIRONMENT`, `BILLING_ENFORCEMENT` and `BOOTSTRAP_REPUBLISH` are
+  `POLAR_ENVIRONMENT`, `BILLING_ENFORCEMENT` and `BOOTSTRAP_REPUBLISH` are
   GitHub repository **variables** read by the workflow, because CI is the
   only route to change the running environment.
 - The workflow's completeness gate refuses to deploy when any required value

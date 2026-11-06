@@ -5,7 +5,7 @@ import type { DeploymentBillingState, DeploymentType } from '@deployz/contracts'
 import { applyBillingTransition, isBillableDeployment, type BillingEvent } from './billing-domain.js';
 import { mapSubscriptionStatus } from './billing-webhooks.js';
 
-// Paddle migration Phase 15 — the billing matrix, exhaustively. The suites
+// The billing matrix, exhaustively. The suites
 // beside this one test behaviour by story; this one walks every cell of the
 // pure decision tables so a gap is a failing test, not an oversight. The
 // human-readable version of the same tables is docs/billing/billing-matrix.md
@@ -72,22 +72,23 @@ describe('billable predicate — all 8 cells', () => {
   });
 });
 
-describe('Paddle subscription status -> Deployz status', () => {
+describe('Polar subscription status -> Deployz status', () => {
   it.each([
     ['active', 'ACTIVE'],
-    // Deployz sells no trials, but Paddle can still report one; it bills, so it is ACTIVE.
+    // Deployz sells no trials, but Polar can still report one; it bills, so it is ACTIVE.
     ['trialing', 'ACTIVE'],
     ['past_due', 'PAST_DUE'],
+    ['unpaid', 'PAST_DUE'],
     ['paused', 'PAUSED'],
     ['canceled', 'CANCELED'],
-  ] as const)('%s -> %s', (paddle, ours) => {
-    expect(mapSubscriptionStatus(paddle)).toBe(ours);
+  ] as const)('%s -> %s', (polar, ours) => {
+    expect(mapSubscriptionStatus(polar)).toBe(ours);
   });
 
-  it.each(['', 'unknown', 'ACTIVE', 'deleted', 'incomplete'])(
-    'anything Paddle might add later (%s) is ignored, never guessed',
-    (paddle) => {
-      expect(mapSubscriptionStatus(paddle)).toBeUndefined();
+  it.each(['', 'unknown', 'ACTIVE', 'deleted', 'incomplete', 'incomplete_expired'])(
+    'a status that never billed or that Polar might add later (%s) is ignored, never guessed',
+    (polar) => {
+      expect(mapSubscriptionStatus(polar)).toBeUndefined();
     },
   );
 });

@@ -8,7 +8,7 @@ import type { DeploymentBillingState, DeploymentType } from '@deployz/contracts'
 // Included production deployments: the allowance is pooled across the
 // organization, so no individual deployment is ever "free" or "$19". A
 // deployment counts toward the production deployment total once live; what
-// the organization pays is max(active − included, 0) × the deployment price.
+// the organization pays is max(active − included, 1) × the deployment price.
 //
 // The customer never sees any of this: pricing is between Deployz and the
 // vendor, and the install/deploy-link pages must stay free of it.

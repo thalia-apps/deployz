@@ -1,28 +1,24 @@
-import { and, eq, sql } from 'drizzle-orm';
-
-import { EventName, type EventEntity } from '@paddle/paddle-node-sdk';
+import { eq } from 'drizzle-orm';
 
 import type { BillingSubscriptionStatus } from '@deployz/contracts';
 import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { ApiError } from './errors.js';
-import type { PaddleBilling } from './paddle.js';
+import { verifyPolarWebhook, type PolarBilling, type PolarSubscription, type WebhookHeaders } from './polar.js';
 
-// Paddle migration Phase 6 — webhook verification, dedupe, ordering and
-// subscription-state projection (docs/billing/paddle-billing.md). Reuses the
-// raw-body carve-out in server.ts (addContentTypeParser) for signature checks.
+// Webhook verification, dedupe, ordering and subscription-state projection
+// (docs/billing/polar-billing.md). Reuses the raw-body carve-out in server.ts
+// (addContentTypeParser) for signature checks.
 
 export interface WebhookDeps {
   db: RuntimeDb;
-  paddle: PaddleBilling | null;
+  polar: PolarBilling | null;
   now?: () => Date;
-  // Fired after commit, once a subscription's status actually changed.
-  // Phase 8 wires this to completePendingCheckoutIntent (billing-checkout.ts);
-  // Phase 9 will reconcile from here too. `checkoutIntentId` is Deployz's own
-  // customData, which Paddle copies from the checkout transaction onto the
-  // subscription it creates — it names the exact parked request that was paid
-  // for, so the wrong one can never be resumed.
+  // Fired after commit, once a subscription event was applied. server.ts
+  // wires this to completePendingCheckoutIntent (billing-checkout.ts) and to
+  // reconciliation. `checkoutIntentId` is the intent whose Polar checkout
+  // created the subscription, so the wrong parked request is never resumed.
   onSubscriptionChanged?: (change: {
     organizationId: string;
     previousStatus: BillingSubscriptionStatus | null;
@@ -36,120 +32,80 @@ export type WebhookOutcome =
   | { outcome: 'DUPLICATE' }
   | { outcome: 'IGNORED' };
 
-// The subscription lifecycle events that carry a full subscription snapshot.
-// Every other subscription.* event (imported, trialing) is intentionally left
-// unhandled — Deployz never imports subscriptions and does not act on trials.
-const SUBSCRIPTION_SNAPSHOT_EVENTS: ReadonlySet<string> = new Set([
-  EventName.SubscriptionCreated,
-  EventName.SubscriptionActivated,
-  EventName.SubscriptionUpdated,
-  EventName.SubscriptionPastDue,
-  EventName.SubscriptionPaused,
-  EventName.SubscriptionResumed,
-  EventName.SubscriptionCanceled,
+// Every subscription event carries the full subscription. The endpoint is
+// subscribed to these only (scripts/billing/polar-setup.mjs); anything else
+// that arrives is recorded IGNORED.
+const SUBSCRIPTION_EVENTS: ReadonlySet<string> = new Set([
+  'subscription.created',
+  'subscription.active',
+  'subscription.updated',
+  'subscription.canceled',
+  'subscription.uncanceled',
+  'subscription.past_due',
+  'subscription.paused',
+  'subscription.resumed',
+  'subscription.revoked',
 ]);
 
-// Transaction events only ever touch lastProviderEventAt — the subscription
-// events above are the authority for status.
-const TRANSACTION_TOUCH_EVENTS: ReadonlySet<string> = new Set([
-  EventName.TransactionCompleted,
-  EventName.TransactionPaymentFailed,
-]);
-
-function organizationIdFromCustomData(customData: unknown): string | undefined {
-  if (typeof customData !== 'object' || customData === null) return undefined;
-  const organizationId = (customData as Record<string, unknown>).organizationId;
-  return typeof organizationId === 'string' ? organizationId : undefined;
+interface PolarEvent {
+  type: string;
+  timestamp: string;
+  data: PolarSubscription;
 }
 
-/** The checkout intent id Deployz set on the transaction's customData
- *  (billing-checkout.ts), copied by Paddle onto the subscription event. */
-function checkoutIntentIdFromCustomData(customData: unknown): string | undefined {
-  if (typeof customData !== 'object' || customData === null) return undefined;
-  const checkoutIntentId = (customData as Record<string, unknown>).checkoutIntentId;
-  return typeof checkoutIntentId === 'string' ? checkoutIntentId : undefined;
-}
-
-async function isPendingCheckoutOf(
+/** The checkout intent whose Polar checkout created this subscription. */
+async function intentForCheckout(
   tx: RuntimeDb,
-  organizationId: string,
-  data: { customData?: unknown; transactionId?: string | null },
-): Promise<boolean> {
-  const checkoutIntentId = checkoutIntentIdFromCustomData(data.customData);
-  if (!checkoutIntentId) return false;
+  checkoutId: string | null,
+): Promise<{ id: string; organizationId: string; status: string } | undefined> {
+  if (!checkoutId) return undefined;
   const [intent] = await tx
-    .select({ providerTransactionId: schema.billingCheckoutIntents.providerTransactionId })
+    .select({
+      id: schema.billingCheckoutIntents.id,
+      organizationId: schema.billingCheckoutIntents.organizationId,
+      status: schema.billingCheckoutIntents.status,
+    })
     .from(schema.billingCheckoutIntents)
-    .where(
-      and(
-        eq(schema.billingCheckoutIntents.id, checkoutIntentId),
-        eq(schema.billingCheckoutIntents.organizationId, organizationId),
-        eq(schema.billingCheckoutIntents.status, 'PENDING'),
-      ),
-    )
+    .where(eq(schema.billingCheckoutIntents.providerTransactionId, checkoutId))
     .limit(1);
-  if (!intent) return false;
-  return !data.transactionId || data.transactionId === intent.providerTransactionId;
+  return intent;
 }
 
 /**
- * Resolves the organization an event belongs to: Deployz's own `customData`
- * first (set on the checkout transaction in Phase 8, copied by Paddle onto
- * the subscription), else the organization already on file for that
- * `providerSubscriptionId`. `data.id` is the subscription id for every
- * subscription.* event; for transaction.* events it is the transaction id, so
- * this fallback only ever resolves those through `customData`.
- *
- * A checkout can be opened in the browser with client-chosen `customData`, so
- * a subscription event follows the organization already on file for its
- * subscription, and binds a subscription not yet on file only when its
- * `customData` names that organization's PENDING checkout intent (and, when
- * the event carries one, that intent's transaction) — whatever the event type.
+ * Resolves the organization an event belongs to. A subscription already on
+ * file always follows the organization on file. A subscription not yet on
+ * file is bound only when its `checkout_id` is the checkout of an
+ * organization's PENDING intent and it is for POLAR_PRODUCT_ID. Only
+ * Deployz creates those checkouts (with its server token), so client-chosen
+ * metadata can never bind a subscription to another organization.
  */
 async function resolveOrganizationId(
   tx: RuntimeDb,
-  event: EventEntity,
-  pricePlatform: string,
+  data: PolarSubscription,
+  productId: string,
+  intent: { organizationId: string; status: string } | undefined,
 ): Promise<string | undefined> {
-  const data = event.data as {
-    id: string;
-    customData?: unknown;
-    transactionId?: string | null;
-    items?: { price?: { id: string } | null }[];
-  };
-  const fromCustomData = organizationIdFromCustomData(data.customData);
   const [existing] = await tx
     .select({ organizationId: schema.billingSubscriptions.organizationId })
     .from(schema.billingSubscriptions)
     .where(eq(schema.billingSubscriptions.providerSubscriptionId, data.id))
     .limit(1);
-
-  if (!SUBSCRIPTION_SNAPSHOT_EVENTS.has(event.eventType)) {
-    return fromCustomData ?? existing?.organizationId;
-  }
-  if (existing) {
-    return existing.organizationId;
-  }
-  // Only subscription.created carries a transaction id, so the transaction
-  // check above cannot bind the later events; the platform price is what a
-  // checkout Deployz opened always contains, and one opened by a client with
-  // other items does not.
-  const hasPlatformPrice = data.items?.some((item) => item.price?.id === pricePlatform) ?? false;
-  if (fromCustomData && hasPlatformPrice && (await isPendingCheckoutOf(tx, fromCustomData, data))) {
-    return fromCustomData;
-  }
+  if (existing) return existing.organizationId;
+  if (intent?.status === 'PENDING' && data.product_id === productId) return intent.organizationId;
   return undefined;
 }
 
-/** Paddle's subscription status -> Deployz's. Exported for the Phase 15
- *  matrix test; nothing outside this module calls it. Unknown values map to
- *  undefined and the event is IGNORED — never guessed. */
+/** Polar's subscription status -> Deployz's. Exported for the matrix test;
+ *  nothing outside this module calls it. `incomplete` is not a paid
+ *  subscription yet, and unknown values map to undefined: the event is
+ *  IGNORED — never guessed. */
 export function mapSubscriptionStatus(status: string): BillingSubscriptionStatus | undefined {
   switch (status) {
     case 'active':
     case 'trialing':
       return 'ACTIVE';
     case 'past_due':
+    case 'unpaid':
       return 'PAST_DUE';
     case 'paused':
       return 'PAUSED';
@@ -165,30 +121,22 @@ type SubscriptionSnapshotResult =
   | { status: 'IGNORED'; error?: string };
 
 /**
- * Upserts `billing_subscriptions` from a subscription.* event. Two guards
- * keep out-of-order and cross-subscription deliveries from corrupting state:
+ * Upserts `billing_subscriptions` from a subscription event. Two guards keep
+ * out-of-order and cross-subscription deliveries from corrupting state:
  *
  * - Regression guard: an event older than what is already recorded
- *   (`lastProviderEventAt`) is ignored — Paddle does not order deliveries.
- * - Mismatch guard: a different `providerSubscriptionId` than the one on
- *   file is only accepted when the stored subscription is CANCELED (a
- *   reactivation creates a new Paddle subscription); otherwise it is
- *   rejected, which is what stops a second active subscription from
- *   overwriting the first.
+ *   (`lastProviderEventAt`) is ignored — deliveries are not ordered.
+ * - Mismatch guard: a different subscription id than the one on file is only
+ *   accepted when the stored subscription is CANCELED (a resubscribe creates
+ *   a new subscription); otherwise it is rejected, which is what stops a
+ *   second active subscription from overwriting the first.
  */
 async function applySubscriptionSnapshot(
   tx: RuntimeDb,
   organizationId: string,
-  event: EventEntity,
+  data: PolarSubscription,
   occurredAt: Date,
 ): Promise<SubscriptionSnapshotResult> {
-  const data = event.data as {
-    id: string;
-    status: string;
-    customerId: string;
-    currentBillingPeriod?: { startsAt: string; endsAt: string } | null;
-    scheduledChange?: { action: string; effectiveAt: string } | null;
-  };
   const newStatus = mapSubscriptionStatus(data.status);
   if (!newStatus) {
     return { status: 'IGNORED' };
@@ -209,21 +157,19 @@ async function applySubscriptionSnapshot(
     }
   }
 
+  // A cancellation the vendor scheduled keeps the subscription active until
+  // the period ends; it is shown, never enforced, before then.
+  const scheduledCancel = data.cancel_at_period_end && newStatus !== 'CANCELED';
   const values = {
     organizationId,
-    providerCustomerId: data.customerId,
+    provider: 'POLAR' as const,
+    providerCustomerId: data.customer_id,
     providerSubscriptionId: data.id,
     status: newStatus,
-    currentPeriodStart: data.currentBillingPeriod?.startsAt
-      ? new Date(data.currentBillingPeriod.startsAt)
-      : null,
-    currentPeriodEnd: data.currentBillingPeriod?.endsAt
-      ? new Date(data.currentBillingPeriod.endsAt)
-      : null,
-    scheduledChangeAction: data.scheduledChange?.action ?? null,
-    scheduledChangeAt: data.scheduledChange?.effectiveAt
-      ? new Date(data.scheduledChange.effectiveAt)
-      : null,
+    currentPeriodStart: data.current_period_start ? new Date(data.current_period_start) : null,
+    currentPeriodEnd: data.current_period_end ? new Date(data.current_period_end) : null,
+    scheduledChangeAction: scheduledCancel ? 'cancel' : null,
+    scheduledChangeAt: scheduledCancel ? new Date(data.ends_at ?? data.current_period_end) : null,
     lastProviderEventAt: occurredAt,
   };
 
@@ -233,32 +179,10 @@ async function applySubscriptionSnapshot(
       .set(values)
       .where(eq(schema.billingSubscriptions.organizationId, organizationId));
   } else {
-    await tx.insert(schema.billingSubscriptions).values({ provider: 'PADDLE', ...values });
+    await tx.insert(schema.billingSubscriptions).values(values);
   }
 
   return { status: 'PROCESSED', previousStatus: existing?.status ?? null, newStatus };
-}
-
-/** Touches lastProviderEventAt for the subscription a transaction belongs to.
- *  Returns false (no-op) when the transaction names no known subscription —
- *  subscription events are the authority for status, this is bookkeeping only. */
-async function touchTransactionSubscription(
-  tx: RuntimeDb,
-  event: EventEntity,
-  occurredAt: Date,
-): Promise<boolean> {
-  const data = event.data as { subscriptionId?: string | null };
-  if (!data.subscriptionId) return false;
-  const updated = await tx
-    .update(schema.billingSubscriptions)
-    .set({
-      // Never backwards: a delayed transaction event must not reopen the
-      // door to subscription events older than one already applied.
-      lastProviderEventAt: sql`greatest(coalesce(${schema.billingSubscriptions.lastProviderEventAt}, ${occurredAt.toISOString()}::timestamptz), ${occurredAt.toISOString()}::timestamptz)`,
-    })
-    .where(eq(schema.billingSubscriptions.providerSubscriptionId, data.subscriptionId))
-    .returning();
-  return updated.length > 0;
 }
 
 async function markEvent(
@@ -281,44 +205,43 @@ async function markEvent(
 }
 
 /**
- * Verifies, dedupes and applies one Paddle webhook delivery. Paddle retries
- * every non-2xx response for days with the same `event.eventId` — only a 2xx
- * marks delivery, so a failed verification must never return one. Nothing is
+ * Verifies, dedupes and applies one Polar webhook delivery. Polar retries
+ * every non-2xx response with the same `webhook-id` — only a 2xx marks
+ * delivery, so a failed verification must never return one. Nothing is
  * written before verification succeeds.
  */
-export async function handlePaddleWebhook(
+export async function handlePolarWebhook(
   deps: WebhookDeps,
   rawBody: string,
-  signatureHeader: string | undefined,
+  headers: WebhookHeaders,
 ): Promise<WebhookOutcome> {
-  const { db, paddle } = deps;
+  const { db, polar } = deps;
   const now = deps.now ?? (() => new Date());
 
-  if (!paddle) {
-    throw new ApiError(503, 'BILLING_DISABLED', 'Paddle billing is not configured');
+  if (!polar) {
+    throw new ApiError(503, 'BILLING_DISABLED', 'Polar billing is not configured');
   }
-  if (!signatureHeader) {
-    throw new ApiError(401, 'WEBHOOK_SIGNATURE_MISSING', 'Missing Paddle-Signature header');
+  if (!headers.id || !headers.timestamp || !headers.signature) {
+    throw new ApiError(401, 'WEBHOOK_SIGNATURE_MISSING', 'Missing webhook signature headers');
   }
-
-  let event: EventEntity;
-  try {
-    event = await paddle.client.webhooks.unmarshal(rawBody, paddle.config.webhookSecret, signatureHeader);
-  } catch {
+  if (!verifyPolarWebhook(rawBody, headers, polar.config.webhookSecret, now().getTime() / 1000)) {
     throw new ApiError(401, 'WEBHOOK_SIGNATURE_INVALID', 'Webhook signature verification failed');
   }
 
-  const occurredAt = new Date(event.occurredAt);
+  const event = JSON.parse(rawBody) as PolarEvent;
+  const providerEventId = headers.id;
+  const occurredAt = new Date(event.timestamp);
 
   // Dedupe at the database, not only in application code: the unique index
   // on providerEventId is the actual guarantee. A row that exists with
-  // FAILED is retried — Paddle only re-delivers when we did not 2xx, so a
+  // FAILED is retried — Polar only re-delivers when we did not 2xx, so a
   // FAILED row means our own earlier attempt crashed, not a duplicate.
   const [inserted] = await db
     .insert(schema.billingProviderEvents)
     .values({
-      providerEventId: event.eventId,
-      eventType: event.eventType,
+      provider: 'POLAR',
+      providerEventId,
+      eventType: event.type,
       occurredAt,
       processingStatus: 'RECEIVED',
     })
@@ -332,7 +255,7 @@ export async function handlePaddleWebhook(
     const [existing] = await db
       .select()
       .from(schema.billingProviderEvents)
-      .where(eq(schema.billingProviderEvents.providerEventId, event.eventId))
+      .where(eq(schema.billingProviderEvents.providerEventId, providerEventId))
       .limit(1);
     if (!existing || existing.processingStatus !== 'FAILED') {
       return { outcome: 'DUPLICATE' };
@@ -355,44 +278,36 @@ export async function handlePaddleWebhook(
 
   try {
     const outcome = await db.transaction(async (tx) => {
-      const organizationId = await resolveOrganizationId(tx, event, paddle.config.pricePlatform);
+      if (!SUBSCRIPTION_EVENTS.has(event.type)) {
+        await markEvent(tx, eventRowId, 'IGNORED', now(), undefined);
+        return { outcome: 'IGNORED' } as const;
+      }
+
+      const intent = await intentForCheckout(tx, event.data.checkout_id);
+      const organizationId = await resolveOrganizationId(tx, event.data, polar.config.productId, intent);
       if (!organizationId) {
         await markEvent(tx, eventRowId, 'IGNORED', now(), undefined, 'organization not found');
         return { outcome: 'IGNORED' } as const;
       }
 
-      if (SUBSCRIPTION_SNAPSHOT_EVENTS.has(event.eventType)) {
-        const result = await applySubscriptionSnapshot(tx, organizationId, event, occurredAt);
-        await markEvent(
-          tx,
-          eventRowId,
-          result.status,
-          now(),
+      const result = await applySubscriptionSnapshot(tx, organizationId, event.data, occurredAt);
+      await markEvent(
+        tx,
+        eventRowId,
+        result.status,
+        now(),
+        organizationId,
+        result.status === 'IGNORED' ? result.error : undefined,
+      );
+      if (result.status === 'PROCESSED') {
+        subscriptionChange = {
           organizationId,
-          result.status === 'IGNORED' ? result.error : undefined,
-        );
-        if (result.status === 'PROCESSED') {
-          subscriptionChange = {
-            organizationId,
-            previousStatus: result.previousStatus,
-            status: result.newStatus,
-            checkoutIntentId: checkoutIntentIdFromCustomData(
-              (event.data as { customData?: unknown }).customData,
-            ),
-          };
-        }
-        return { outcome: result.status } as const;
+          previousStatus: result.previousStatus,
+          status: result.newStatus,
+          checkoutIntentId: intent?.organizationId === organizationId ? intent.id : undefined,
+        };
       }
-
-      if (TRANSACTION_TOUCH_EVENTS.has(event.eventType)) {
-        const touched = await touchTransactionSubscription(tx, event, occurredAt);
-        await markEvent(tx, eventRowId, touched ? 'PROCESSED' : 'IGNORED', now(), organizationId);
-        return { outcome: touched ? 'PROCESSED' : 'IGNORED' } as const;
-      }
-
-      // Everything else is a known Paddle event Deployz does not act on.
-      await markEvent(tx, eventRowId, 'IGNORED', now(), organizationId);
-      return { outcome: 'IGNORED' } as const;
+      return { outcome: result.status } as const;
     });
 
     if (subscriptionChange) {
@@ -411,8 +326,19 @@ export async function handlePaddleWebhook(
         .where(eq(schema.billingProviderEvents.id, eventRowId));
     } catch {
       // Best effort — the original error is what matters; rethrow it so the
-      // route answers 500 and Paddle retries.
+      // route answers 500 and Polar retries.
     }
     throw error;
   }
 }
+
+/** Reads the three Standard Webhooks headers from a request. */
+export function webhookHeaders(headers: Record<string, string | string[] | undefined>): WebhookHeaders {
+  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+  return {
+    id: first(headers['webhook-id']),
+    timestamp: first(headers['webhook-timestamp']),
+    signature: first(headers['webhook-signature']),
+  };
+}
+

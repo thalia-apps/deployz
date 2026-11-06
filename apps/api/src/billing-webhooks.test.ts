@@ -8,150 +8,93 @@ import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { createAuth, type Auth } from './auth.js';
-import { createPaddle, type PaddleBilling } from './paddle.js';
+import { mapSubscriptionStatus } from './billing-webhooks.js';
+import type { PolarBilling, PolarClient, PolarSubscription } from './polar.js';
 import { buildServer } from './server.js';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────
 //
-// Obvious fixture values only (sub_test_1, ctm_test_1, evt_test_1, ...) —
-// never anything that looks like a real Paddle id.
+// Obvious fixture values only (sub_test_1, cus_test_1, msg_test_1,
+// chk_test_1, ...) — never anything that looks like a real Polar id.
 
-const WEBHOOK_SECRET = 'whsec_test_1';
+const WEBHOOK_SECRET = 'polar_whs_test_1';
+const PRODUCT_ID = 'product_replace_me';
 
-function buildPaddle(): PaddleBilling {
-  const billing = createPaddle({
-    paddleApiKey: 'test_replace_me',
-    paddleWebhookSecret: WEBHOOK_SECRET,
-    paddleClientToken: 'pdl_sdbx_replace_me',
-    paddlePricePlatform: 'pri_platform_replace_me',
-    paddlePriceDeployment: 'pri_deployment_replace_me',
-    paddleEnvironment: 'sandbox',
-  });
-  if (!billing) throw new Error('createPaddle unexpectedly returned null in the test fixture');
-  return billing;
+/** A Polar double: no test ever reaches the Polar API. The ACTIVE path
+ *  reconciles (Phase 9), so the two calls reconciliation makes are here;
+ *  reconciliation itself is tested in billing-reconcile.test.ts. */
+function buildPolar(): PolarBilling {
+  return {
+    client: {
+      getSubscription: async (id: string) => ({ id, units: 1 }) as PolarSubscription,
+      updateSubscriptionUnits: async (id: string, units: number) => ({ id, units }) as PolarSubscription,
+    } as Partial<PolarClient> as PolarClient,
+    config: {
+      token: 'polar_oat_replace_me',
+      webhookSecret: WEBHOOK_SECRET,
+      productId: PRODUCT_ID,
+      environment: 'sandbox',
+    },
+  };
 }
 
-/** Signs a webhook body the way Paddle does: `ts=<ts>;h1=<hmac-sha256(secret, "ts:body")>`. */
+/** Signs a delivery the way Polar does (Standard Webhooks): HMAC-SHA256 of
+ *  `id.timestamp.body` keyed by the secret's bytes, sent as `v1,<base64>`. */
 function signedWebhook(
   secret: string,
+  webhookId: string,
   event: Record<string, unknown>,
-  tsOverride?: number,
+  timestampOverride?: number,
 ): { body: string; headers: Record<string, string> } {
   const body = JSON.stringify(event);
-  const ts = tsOverride ?? Math.floor(Date.now() / 1000);
-  const h1 = createHmac('sha256', secret).update(`${ts}:${body}`).digest('hex');
+  const timestamp = timestampOverride ?? Math.floor(Date.now() / 1000);
+  const signature = createHmac('sha256', Buffer.from(secret, 'utf8'))
+    .update(`${webhookId}.${timestamp}.${body}`)
+    .digest('base64');
   return {
     body,
     headers: {
-      'paddle-signature': `ts=${ts};h1=${h1}`,
+      'webhook-id': webhookId,
+      'webhook-timestamp': String(timestamp),
+      'webhook-signature': `v1,${signature}`,
       'content-type': 'application/json',
     },
   };
 }
 
 interface SubscriptionEventOptions {
-  eventId: string;
-  eventType: string;
-  occurredAt: string;
-  organizationId?: string;
-  checkoutIntentId?: string;
-  transactionId?: string;
-  subscriptionId?: string;
+  type: string;
+  timestamp: string;
   status: string;
+  subscriptionId?: string;
+  checkoutId?: string | null;
+  productId?: string;
   customerId?: string;
-  currentBillingPeriod?: { starts_at: string; ends_at: string } | null;
-  scheduledChange?: { action: string; effective_at: string } | null;
-  itemPriceIds?: string[];
+  cancelAtPeriodEnd?: boolean;
+  endsAt?: string | null;
+  metadata?: Record<string, string>;
 }
 
-/** Paddle's wire shape (snake_case) for a subscription.* notification. */
+/** Polar's wire shape for a subscription.* delivery. */
 function subscriptionEvent(options: SubscriptionEventOptions): Record<string, unknown> {
   return {
-    event_id: options.eventId,
-    event_type: options.eventType,
-    occurred_at: options.occurredAt,
-    notification_id: `ntf_${options.eventId}`,
+    type: options.type,
+    timestamp: options.timestamp,
     data: {
       id: options.subscriptionId ?? 'sub_test_1',
-      transaction_id: options.transactionId,
       status: options.status,
-      customer_id: options.customerId ?? 'ctm_test_1',
-      address_id: 'add_test_1',
-      currency_code: 'USD',
-      created_at: options.occurredAt,
-      updated_at: options.occurredAt,
-      collection_mode: 'automatic',
-      billing_cycle: { interval: 'month', frequency: 1 },
-      current_billing_period:
-        options.currentBillingPeriod === undefined
-          ? { starts_at: '2026-01-01T00:00:00Z', ends_at: '2026-02-01T00:00:00Z' }
-          : options.currentBillingPeriod,
-      scheduled_change: options.scheduledChange ?? null,
-      items: (options.itemPriceIds ?? ['pri_platform_replace_me']).map((priceId) => ({
-        status: 'active',
-        quantity: 1,
-        recurring: true,
-        created_at: options.occurredAt,
-        updated_at: options.occurredAt,
-        price: { id: priceId, product_id: 'pro_test_1', description: 'Test price', tax_mode: 'account_setting' },
-      })),
-      custom_data: options.organizationId
-        ? { organizationId: options.organizationId, checkoutIntentId: options.checkoutIntentId }
-        : null,
-    },
-  };
-}
-
-interface TransactionEventOptions {
-  eventId: string;
-  eventType: string;
-  occurredAt: string;
-  organizationId?: string;
-  subscriptionId?: string | null;
-}
-
-/** Paddle's wire shape (snake_case) for a transaction.* notification. */
-function transactionEvent(options: TransactionEventOptions): Record<string, unknown> {
-  return {
-    event_id: options.eventId,
-    event_type: options.eventType,
-    occurred_at: options.occurredAt,
-    notification_id: `ntf_${options.eventId}`,
-    data: {
-      id: 'txn_test_1',
-      status: 'completed',
-      currency_code: 'USD',
-      origin: 'web',
-      collection_mode: 'automatic',
-      subscription_id: options.subscriptionId ?? null,
-      custom_data: options.organizationId ? { organizationId: options.organizationId } : null,
-      items: [],
-      payments: [],
-      created_at: options.occurredAt,
-      updated_at: options.occurredAt,
-    },
-  };
-}
-
-/** A minimal product.updated notification — an event Deployz never acts on. */
-function productUpdatedEvent(options: {
-  eventId: string;
-  occurredAt: string;
-  organizationId?: string;
-}): Record<string, unknown> {
-  return {
-    event_id: options.eventId,
-    event_type: 'product.updated',
-    occurred_at: options.occurredAt,
-    notification_id: `ntf_${options.eventId}`,
-    data: {
-      id: 'pro_test_1',
-      name: 'Test Product',
-      tax_category: 'standard',
-      status: 'active',
-      created_at: options.occurredAt,
-      updated_at: options.occurredAt,
-      custom_data: options.organizationId ? { organizationId: options.organizationId } : null,
+      amount: 6800,
+      currency: 'usd',
+      current_period_start: '2026-01-01T00:00:00Z',
+      current_period_end: '2026-02-01T00:00:00Z',
+      cancel_at_period_end: options.cancelAtPeriodEnd ?? false,
+      ends_at: options.endsAt ?? null,
+      customer_id: options.customerId ?? 'cus_test_1',
+      product_id: options.productId ?? PRODUCT_ID,
+      checkout_id: options.checkoutId ?? null,
+      units: 1,
+      modified_at: options.timestamp,
+      metadata: options.metadata ?? {},
     },
   };
 }
@@ -185,23 +128,23 @@ async function getSubscriptionRow(db: Db, organizationId: string) {
   return row ?? null;
 }
 
-async function getEventRow(db: Db, eventId: string) {
+async function getEventRow(db: Db, webhookId: string) {
   const [row] = await db
     .select()
     .from(schema.billingProviderEvents)
-    .where(eq(schema.billingProviderEvents.providerEventId, eventId))
+    .where(eq(schema.billingProviderEvents.providerEventId, webhookId))
     .limit(1);
   return row ?? null;
 }
 
-/** The webhook binds a new subscription to an organization only through that
- *  organization's PENDING checkout intent; this parks a fresh one (replacing any
- *  earlier intent) and returns its id for the event's customData. */
-async function seedPendingIntent(db: Db, organizationId: string, providerTransactionId?: string): Promise<string> {
+/** The webhook binds a new subscription to an organization only through the
+ *  Polar checkout of that organization's PENDING checkout intent; this parks
+ *  a fresh one (replacing any earlier intent) tied to `checkoutId`. */
+async function seedPendingIntent(db: Db, organizationId: string, checkoutId: string): Promise<string> {
   await db.delete(schema.billingCheckoutIntents).where(eq(schema.billingCheckoutIntents.organizationId, organizationId));
   const [intent] = await db
     .insert(schema.billingCheckoutIntents)
-    .values({ organizationId, providerTransactionId })
+    .values({ organizationId, providerTransactionId: checkoutId })
     .returning();
   return intent!.id;
 }
@@ -212,18 +155,45 @@ function nextEmail(): string {
   return `webhook-org-${counter}-${crypto.randomUUID()}@example.com`;
 }
 
-describe('POST /api/billing/webhook (Paddle)', () => {
+describe('mapSubscriptionStatus', () => {
+  it.each([
+    ['active', 'ACTIVE'],
+    ['trialing', 'ACTIVE'],
+    ['past_due', 'PAST_DUE'],
+    ['unpaid', 'PAST_DUE'],
+    ['paused', 'PAUSED'],
+    ['canceled', 'CANCELED'],
+    ['incomplete', undefined],
+    ['incomplete_expired', undefined],
+    ['some_future_status', undefined],
+  ])('maps %s to %s', (status, expected) => {
+    expect(mapSubscriptionStatus(status)).toBe(expected);
+  });
+});
+
+describe('POST /api/billing/webhook (Polar)', () => {
   let client: PGlite;
   let db: Db;
   let auth: Auth;
   let app: FastifyInstance;
+
+  async function post(headers: Record<string, string>, body: string) {
+    return app.inject({ method: 'POST', url: '/api/billing/webhook', headers, payload: body });
+  }
+
+  async function send(webhookId: string, event: Record<string, unknown>) {
+    const signed = signedWebhook(WEBHOOK_SECRET, webhookId, event);
+    const response = await post(signed.headers, signed.body);
+    expect(response.statusCode, response.body).toBe(200);
+    return response.json() as { received: boolean; outcome: string };
+  }
 
   beforeAll(async () => {
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
     auth = createAuth(db);
-    app = await buildServer({ auth, db, paddle: buildPaddle() });
+    app = await buildServer({ auth, db, polar: buildPolar() });
   });
 
   afterAll(async () => {
@@ -233,282 +203,407 @@ describe('POST /api/billing/webhook (Paddle)', () => {
 
   it('rejects a forged signature (wrong secret) with 401 and writes nothing', async () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
+    await seedPendingIntent(db, org.organizationId, 'chk_forged');
     const event = subscriptionEvent({
-      eventId: 'evt_test_1',
-      eventType: 'subscription.created',
-      occurredAt: new Date().toISOString(),
-      organizationId: org.organizationId,
-      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
+      type: 'subscription.created',
+      timestamp: new Date().toISOString(),
+      checkoutId: 'chk_forged',
       status: 'active',
     });
-    const { body, headers } = signedWebhook('whsec_wrong_secret', event);
+    const { body, headers } = signedWebhook('polar_whs_wrong_secret', 'msg_test_1', event);
 
-    const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers, payload: body });
+    const response = await post(headers, body);
 
     expect(response.statusCode).toBe(401);
-    expect(await getEventRow(db, 'evt_test_1')).toBeNull();
+    expect(response.json()).toMatchObject({ error: { code: 'WEBHOOK_SIGNATURE_INVALID' } });
+    expect(await getEventRow(db, 'msg_test_1')).toBeNull();
     expect(await getSubscriptionRow(db, org.organizationId)).toBeNull();
   });
 
-  it('rejects a missing Paddle-Signature header with 401', async () => {
-    const org = await signUpAndGetOrg(auth, db, nextEmail());
+  it.each(['webhook-id', 'webhook-timestamp', 'webhook-signature'])(
+    'rejects a delivery without the %s header with 401 and writes nothing',
+    async (header) => {
+      const event = subscriptionEvent({
+        type: 'subscription.created',
+        timestamp: new Date().toISOString(),
+        status: 'active',
+      });
+      const { body, headers } = signedWebhook(WEBHOOK_SECRET, `msg_missing_${header}`, event);
+      delete headers[header];
+
+      const response = await post(headers, body);
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toMatchObject({ error: { code: 'WEBHOOK_SIGNATURE_MISSING' } });
+      expect(await getEventRow(db, `msg_missing_${header}`)).toBeNull();
+    },
+  );
+
+  it('rejects a malformed signature header with 401', async () => {
     const event = subscriptionEvent({
-      eventId: 'evt_test_2',
-      eventType: 'subscription.created',
-      occurredAt: new Date().toISOString(),
-      organizationId: org.organizationId,
-      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
+      type: 'subscription.created',
+      timestamp: new Date().toISOString(),
       status: 'active',
     });
+    const { body, headers } = signedWebhook(WEBHOOK_SECRET, 'msg_malformed', event);
 
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/billing/webhook',
-      headers: { 'content-type': 'application/json' },
-      payload: JSON.stringify(event),
-    });
+    const response = await post({ ...headers, 'webhook-signature': 'v1,bm90LWEtc2lnbmF0dXJl' }, body);
 
     expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({ error: { code: 'WEBHOOK_SIGNATURE_INVALID' } });
+    expect(await getEventRow(db, 'msg_malformed')).toBeNull();
   });
 
-  it('rejects a stale timestamp (outside the 5s tolerance) with 401', async () => {
-    const org = await signUpAndGetOrg(auth, db, nextEmail());
+  it('rejects a signature made for another webhook id with 401', async () => {
     const event = subscriptionEvent({
-      eventId: 'evt_test_3',
-      eventType: 'subscription.created',
-      occurredAt: new Date().toISOString(),
-      organizationId: org.organizationId,
-      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
+      type: 'subscription.created',
+      timestamp: new Date().toISOString(),
+      status: 'active',
+    });
+    const { body, headers } = signedWebhook(WEBHOOK_SECRET, 'msg_signed_id', event);
+
+    const response = await post({ ...headers, 'webhook-id': 'msg_other_id' }, body);
+
+    expect(response.statusCode).toBe(401);
+    expect(await getEventRow(db, 'msg_other_id')).toBeNull();
+  });
+
+  it('rejects a stale timestamp (outside the 300 s tolerance) with 401', async () => {
+    const org = await signUpAndGetOrg(auth, db, nextEmail());
+    await seedPendingIntent(db, org.organizationId, 'chk_stale');
+    const event = subscriptionEvent({
+      type: 'subscription.created',
+      timestamp: new Date().toISOString(),
+      checkoutId: 'chk_stale',
       status: 'active',
     });
     const staleTs = Math.floor(Date.now() / 1000) - 600;
-    const { body, headers } = signedWebhook(WEBHOOK_SECRET, event, staleTs);
+    const { body, headers } = signedWebhook(WEBHOOK_SECRET, 'msg_test_3', event, staleTs);
 
-    const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers, payload: body });
+    const response = await post(headers, body);
 
     expect(response.statusCode).toBe(401);
-    expect(await getEventRow(db, 'evt_test_3')).toBeNull();
+    expect(await getEventRow(db, 'msg_test_3')).toBeNull();
+    expect(await getSubscriptionRow(db, org.organizationId)).toBeNull();
   });
 
   it('applies subscription.created (active) — subscription row ACTIVE, event row PROCESSED', async () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
-    const occurredAt = new Date().toISOString();
-    const event = subscriptionEvent({
-      eventId: 'evt_test_4',
-      eventType: 'subscription.created',
-      occurredAt,
-      organizationId: org.organizationId,
-      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
-      subscriptionId: 'sub_test_1',
-      customerId: 'ctm_test_1',
-      status: 'active',
-    });
-    const { body, headers } = signedWebhook(WEBHOOK_SECRET, event);
+    await seedPendingIntent(db, org.organizationId, 'chk_test_4');
 
-    const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers, payload: body });
+    const result = await send(
+      'msg_test_4',
+      subscriptionEvent({
+        type: 'subscription.created',
+        timestamp: new Date().toISOString(),
+        checkoutId: 'chk_test_4',
+        subscriptionId: 'sub_test_4',
+        customerId: 'cus_test_4',
+        status: 'active',
+      }),
+    );
 
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({ received: true, outcome: 'PROCESSED' });
+    expect(result).toMatchObject({ received: true, outcome: 'PROCESSED' });
 
     const row = await getSubscriptionRow(db, org.organizationId);
     expect(row).not.toBeNull();
+    expect(row!.provider).toBe('POLAR');
     expect(row!.status).toBe('ACTIVE');
-    expect(row!.providerCustomerId).toBe('ctm_test_1');
-    expect(row!.providerSubscriptionId).toBe('sub_test_1');
+    expect(row!.providerCustomerId).toBe('cus_test_4');
+    expect(row!.providerSubscriptionId).toBe('sub_test_4');
     expect(row!.currentPeriodStart?.toISOString()).toBe('2026-01-01T00:00:00.000Z');
     expect(row!.currentPeriodEnd?.toISOString()).toBe('2026-02-01T00:00:00.000Z');
+    expect(row!.scheduledChangeAction).toBeNull();
 
-    const eventRow = await getEventRow(db, 'evt_test_4');
-    expect(eventRow?.processingStatus).toBe('PROCESSED');
+    const eventRow = await getEventRow(db, 'msg_test_4');
+    expect(eventRow).toMatchObject({
+      provider: 'POLAR',
+      eventType: 'subscription.created',
+      processingStatus: 'PROCESSED',
+      organizationId: org.organizationId,
+    });
   });
 
-  it('answers DUPLICATE on a second delivery of the same event id — exactly one event row, unchanged', async () => {
+  it('answers DUPLICATE on a second delivery of the same webhook-id — exactly one event row, unchanged', async () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
-    const occurredAt = new Date().toISOString();
-    const event = subscriptionEvent({
-      eventId: 'evt_test_5',
-      eventType: 'subscription.created',
-      occurredAt,
-      organizationId: org.organizationId,
-      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
-      subscriptionId: 'sub_test_5',
-      status: 'active',
-    });
-    const signed = signedWebhook(WEBHOOK_SECRET, event);
+    await seedPendingIntent(db, org.organizationId, 'chk_test_5');
+    const signed = signedWebhook(
+      WEBHOOK_SECRET,
+      'msg_test_5',
+      subscriptionEvent({
+        type: 'subscription.created',
+        timestamp: new Date().toISOString(),
+        checkoutId: 'chk_test_5',
+        subscriptionId: 'sub_test_5',
+        status: 'active',
+      }),
+    );
 
-    const first = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: signed.headers, payload: signed.body });
+    const first = await post(signed.headers, signed.body);
     expect(first.statusCode).toBe(200);
     const rowAfterFirst = await getSubscriptionRow(db, org.organizationId);
 
-    const second = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: signed.headers, payload: signed.body });
+    const second = await post(signed.headers, signed.body);
     expect(second.statusCode).toBe(200);
     expect(second.json()).toMatchObject({ received: true, outcome: 'DUPLICATE' });
 
     const rows = await db
       .select()
       .from(schema.billingProviderEvents)
-      .where(eq(schema.billingProviderEvents.providerEventId, 'evt_test_5'));
+      .where(eq(schema.billingProviderEvents.providerEventId, 'msg_test_5'));
     expect(rows).toHaveLength(1);
 
-    const rowAfterSecond = await getSubscriptionRow(db, org.organizationId);
-    expect(rowAfterSecond).toStrictEqual(rowAfterFirst);
+    expect(await getSubscriptionRow(db, org.organizationId)).toStrictEqual(rowAfterFirst);
+  });
+
+  it('dedupes on the webhook-id header, not on the body — the same body under a new id is a new delivery', async () => {
+    const org = await signUpAndGetOrg(auth, db, nextEmail());
+    await seedPendingIntent(db, org.organizationId, 'chk_dedupe_key');
+    const event = subscriptionEvent({
+      type: 'subscription.updated',
+      timestamp: '2026-05-10T00:00:00.000Z',
+      checkoutId: 'chk_dedupe_key',
+      subscriptionId: 'sub_dedupe_key',
+      status: 'active',
+    });
+
+    expect((await send('msg_dedupe_key_a', event)).outcome).toBe('PROCESSED');
+    expect((await send('msg_dedupe_key_b', event)).outcome).toBe('PROCESSED');
+    expect(await getEventRow(db, 'msg_dedupe_key_a')).not.toBeNull();
+    expect(await getEventRow(db, 'msg_dedupe_key_b')).not.toBeNull();
+  });
+
+  it('retries a delivery whose earlier attempt is recorded FAILED', async () => {
+    const org = await signUpAndGetOrg(auth, db, nextEmail());
+    await seedPendingIntent(db, org.organizationId, 'chk_retry');
+    await db.insert(schema.billingProviderEvents).values({
+      provider: 'POLAR',
+      providerEventId: 'msg_retry',
+      eventType: 'subscription.created',
+      occurredAt: new Date('2026-05-01T00:00:00.000Z'),
+      processingStatus: 'FAILED',
+      error: 'connection reset',
+    });
+
+    const result = await send(
+      'msg_retry',
+      subscriptionEvent({
+        type: 'subscription.created',
+        timestamp: '2026-05-01T00:00:00.000Z',
+        checkoutId: 'chk_retry',
+        subscriptionId: 'sub_retry',
+        status: 'active',
+      }),
+    );
+
+    expect(result.outcome).toBe('PROCESSED');
+    expect(await getEventRow(db, 'msg_retry')).toMatchObject({ processingStatus: 'PROCESSED', error: null });
+    expect((await getSubscriptionRow(db, org.organizationId))?.status).toBe('ACTIVE');
   });
 
   it('ignores an out-of-order delivery as a stale event — status stays at the later value', async () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
-    const t0 = new Date('2026-01-01T00:00:00.000Z');
-    const t10 = new Date('2026-01-01T00:00:10.000Z');
-    const checkoutIntentId = await seedPendingIntent(db, org.organizationId);
+    await seedPendingIntent(db, org.organizationId, 'chk_test_6');
 
-    const later = subscriptionEvent({
-      eventId: 'evt_test_6a',
-      eventType: 'subscription.updated',
-      occurredAt: t10.toISOString(),
-      organizationId: org.organizationId,
-      checkoutIntentId,
-      subscriptionId: 'sub_test_6',
-      status: 'past_due',
-    });
-    const laterSigned = signedWebhook(WEBHOOK_SECRET, later);
-    const laterResponse = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: laterSigned.headers, payload: laterSigned.body });
-    expect(laterResponse.statusCode).toBe(200);
-    expect(laterResponse.json()).toMatchObject({ outcome: 'PROCESSED' });
+    const later = await send(
+      'msg_test_6a',
+      subscriptionEvent({
+        type: 'subscription.past_due',
+        timestamp: '2026-01-01T00:00:10.000Z',
+        checkoutId: 'chk_test_6',
+        subscriptionId: 'sub_test_6',
+        status: 'past_due',
+      }),
+    );
+    expect(later.outcome).toBe('PROCESSED');
 
-    const earlier = subscriptionEvent({
-      eventId: 'evt_test_6b',
-      eventType: 'subscription.created',
-      occurredAt: t0.toISOString(),
-      organizationId: org.organizationId,
-      checkoutIntentId,
-      subscriptionId: 'sub_test_6',
-      status: 'active',
-    });
-    const earlierSigned = signedWebhook(WEBHOOK_SECRET, earlier);
-    const earlierResponse = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: earlierSigned.headers, payload: earlierSigned.body });
-    expect(earlierResponse.statusCode).toBe(200);
-    expect(earlierResponse.json()).toMatchObject({ outcome: 'IGNORED' });
+    const earlier = await send(
+      'msg_test_6b',
+      subscriptionEvent({
+        type: 'subscription.created',
+        timestamp: '2026-01-01T00:00:00.000Z',
+        checkoutId: 'chk_test_6',
+        subscriptionId: 'sub_test_6',
+        status: 'active',
+      }),
+    );
+    expect(earlier.outcome).toBe('IGNORED');
 
     const row = await getSubscriptionRow(db, org.organizationId);
     expect(row!.status).toBe('PAST_DUE');
+    expect(row!.lastProviderEventAt!.toISOString()).toBe('2026-01-01T00:00:10.000Z');
 
-    const ignoredEventRow = await getEventRow(db, 'evt_test_6b');
+    const ignoredEventRow = await getEventRow(db, 'msg_test_6b');
     expect(ignoredEventRow?.processingStatus).toBe('IGNORED');
     expect(ignoredEventRow?.error).toBe('stale event');
   });
 
-  it('maps paused / resumed / canceled / past_due through the status vocabulary', async () => {
+  it('maps paused / resumed / past_due / unpaid / trialing / canceled through the status vocabulary', async () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
+    await seedPendingIntent(db, org.organizationId, 'chk_test_7');
     let t = new Date('2026-02-01T00:00:00.000Z').getTime();
-    const checkoutIntentId = await seedPendingIntent(db, org.organizationId);
-    const post = async (eventId: string, eventType: string, status: string) => {
+    const deliver = async (webhookId: string, type: string, status: string) => {
       t += 1000;
-      const event = subscriptionEvent({
-        eventId,
-        eventType,
-        occurredAt: new Date(t).toISOString(),
-        organizationId: org.organizationId,
-        checkoutIntentId,
-        subscriptionId: 'sub_test_7',
-        status,
-      });
-      const signed = signedWebhook(WEBHOOK_SECRET, event);
-      const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: signed.headers, payload: signed.body });
-      expect(response.statusCode).toBe(200);
+      const result = await send(
+        webhookId,
+        subscriptionEvent({
+          type,
+          timestamp: new Date(t).toISOString(),
+          checkoutId: 'chk_test_7',
+          subscriptionId: 'sub_test_7',
+          status,
+        }),
+      );
+      expect(result.outcome).toBe('PROCESSED');
+      return (await getSubscriptionRow(db, org.organizationId))!.status;
     };
 
-    await post('evt_test_7a', 'subscription.created', 'active');
-    await post('evt_test_7b', 'subscription.paused', 'paused');
-    expect((await getSubscriptionRow(db, org.organizationId))!.status).toBe('PAUSED');
-
-    await post('evt_test_7c', 'subscription.resumed', 'active');
-    expect((await getSubscriptionRow(db, org.organizationId))!.status).toBe('ACTIVE');
-
-    await post('evt_test_7d', 'subscription.past_due', 'past_due');
-    expect((await getSubscriptionRow(db, org.organizationId))!.status).toBe('PAST_DUE');
-
-    await post('evt_test_7e', 'subscription.canceled', 'canceled');
-    expect((await getSubscriptionRow(db, org.organizationId))!.status).toBe('CANCELED');
+    expect(await deliver('msg_test_7a', 'subscription.created', 'active')).toBe('ACTIVE');
+    expect(await deliver('msg_test_7b', 'subscription.paused', 'paused')).toBe('PAUSED');
+    expect(await deliver('msg_test_7c', 'subscription.resumed', 'active')).toBe('ACTIVE');
+    expect(await deliver('msg_test_7d', 'subscription.past_due', 'past_due')).toBe('PAST_DUE');
+    expect(await deliver('msg_test_7e', 'subscription.updated', 'unpaid')).toBe('PAST_DUE');
+    expect(await deliver('msg_test_7f', 'subscription.updated', 'trialing')).toBe('ACTIVE');
+    expect(await deliver('msg_test_7g', 'subscription.revoked', 'canceled')).toBe('CANCELED');
   });
 
-  it('records and clears a scheduled cancellation', async () => {
-    const org = await signUpAndGetOrg(auth, db, nextEmail());
-    const t0 = new Date('2026-03-01T00:00:00.000Z');
-    const t1 = new Date('2026-03-02T00:00:00.000Z');
-    const checkoutIntentId = await seedPendingIntent(db, org.organizationId);
+  it.each(['incomplete', 'incomplete_expired', 'some_future_status'])(
+    'ignores a subscription in status %s — never guessed, nothing written',
+    async (status) => {
+      const org = await signUpAndGetOrg(auth, db, nextEmail());
+      await seedPendingIntent(db, org.organizationId, `chk_status_${status}`);
 
-    const scheduled = subscriptionEvent({
-      eventId: 'evt_test_8a',
-      eventType: 'subscription.updated',
-      occurredAt: t0.toISOString(),
-      organizationId: org.organizationId,
-      checkoutIntentId,
-      subscriptionId: 'sub_test_8',
-      status: 'active',
-      scheduledChange: { action: 'cancel', effective_at: '2026-04-01T00:00:00.000Z' },
-    });
-    const scheduledSigned = signedWebhook(WEBHOOK_SECRET, scheduled);
-    const scheduledResponse = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: scheduledSigned.headers, payload: scheduledSigned.body });
-    expect(scheduledResponse.statusCode).toBe(200);
+      const result = await send(
+        `msg_status_${status}`,
+        subscriptionEvent({
+          type: 'subscription.created',
+          timestamp: new Date().toISOString(),
+          checkoutId: `chk_status_${status}`,
+          subscriptionId: `sub_status_${status}`,
+          status,
+        }),
+      );
+
+      expect(result.outcome).toBe('IGNORED');
+      expect(await getSubscriptionRow(db, org.organizationId)).toBeNull();
+      expect((await getEventRow(db, `msg_status_${status}`))?.processingStatus).toBe('IGNORED');
+    },
+  );
+
+  it('records a scheduled cancellation at ends_at and clears it on uncancel', async () => {
+    const org = await signUpAndGetOrg(auth, db, nextEmail());
+    await seedPendingIntent(db, org.organizationId, 'chk_test_8');
+
+    await send(
+      'msg_test_8a',
+      subscriptionEvent({
+        type: 'subscription.canceled',
+        timestamp: '2026-03-01T00:00:00.000Z',
+        checkoutId: 'chk_test_8',
+        subscriptionId: 'sub_test_8',
+        status: 'active',
+        cancelAtPeriodEnd: true,
+        endsAt: '2026-04-01T00:00:00.000Z',
+      }),
+    );
 
     let row = await getSubscriptionRow(db, org.organizationId);
     expect(row!.status).toBe('ACTIVE');
     expect(row!.scheduledChangeAction).toBe('cancel');
     expect(row!.scheduledChangeAt?.toISOString()).toBe('2026-04-01T00:00:00.000Z');
 
-    const cleared = subscriptionEvent({
-      eventId: 'evt_test_8b',
-      eventType: 'subscription.updated',
-      occurredAt: t1.toISOString(),
-      organizationId: org.organizationId,
-      checkoutIntentId,
-      subscriptionId: 'sub_test_8',
-      status: 'active',
-      scheduledChange: null,
-    });
-    const clearedSigned = signedWebhook(WEBHOOK_SECRET, cleared);
-    const clearedResponse = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: clearedSigned.headers, payload: clearedSigned.body });
-    expect(clearedResponse.statusCode).toBe(200);
+    await send(
+      'msg_test_8b',
+      subscriptionEvent({
+        type: 'subscription.uncanceled',
+        timestamp: '2026-03-02T00:00:00.000Z',
+        checkoutId: 'chk_test_8',
+        subscriptionId: 'sub_test_8',
+        status: 'active',
+      }),
+    );
 
     row = await getSubscriptionRow(db, org.organizationId);
     expect(row!.scheduledChangeAction).toBeNull();
     expect(row!.scheduledChangeAt).toBeNull();
   });
 
+  it('falls back to current_period_end for a scheduled cancellation without ends_at', async () => {
+    const org = await signUpAndGetOrg(auth, db, nextEmail());
+    await seedPendingIntent(db, org.organizationId, 'chk_test_8c');
+
+    await send(
+      'msg_test_8c',
+      subscriptionEvent({
+        type: 'subscription.updated',
+        timestamp: '2026-03-01T00:00:00.000Z',
+        checkoutId: 'chk_test_8c',
+        subscriptionId: 'sub_test_8c',
+        status: 'active',
+        cancelAtPeriodEnd: true,
+        endsAt: null,
+      }),
+    );
+
+    const row = await getSubscriptionRow(db, org.organizationId);
+    expect(row!.scheduledChangeAction).toBe('cancel');
+    expect(row!.scheduledChangeAt?.toISOString()).toBe('2026-02-01T00:00:00.000Z');
+  });
+
+  it('records no scheduled change once the subscription is CANCELED', async () => {
+    const org = await signUpAndGetOrg(auth, db, nextEmail());
+    await seedPendingIntent(db, org.organizationId, 'chk_test_8d');
+
+    await send(
+      'msg_test_8d',
+      subscriptionEvent({
+        type: 'subscription.revoked',
+        timestamp: '2026-03-01T00:00:00.000Z',
+        checkoutId: 'chk_test_8d',
+        subscriptionId: 'sub_test_8d',
+        status: 'canceled',
+        cancelAtPeriodEnd: true,
+        endsAt: '2026-03-01T00:00:00.000Z',
+      }),
+    );
+
+    const row = await getSubscriptionRow(db, org.organizationId);
+    expect(row!.status).toBe('CANCELED');
+    expect(row!.scheduledChangeAction).toBeNull();
+    expect(row!.scheduledChangeAt).toBeNull();
+  });
+
   it('ignores a second, different active subscription for the same organization as a mismatch', async () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
-    const first = subscriptionEvent({
-      eventId: 'evt_test_9a',
-      eventType: 'subscription.created',
-      occurredAt: '2026-05-01T00:00:00.000Z',
-      organizationId: org.organizationId,
-      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
-      subscriptionId: 'sub_test_9',
-      status: 'active',
-    });
-    const firstSigned = signedWebhook(WEBHOOK_SECRET, first);
-    await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: firstSigned.headers, payload: firstSigned.body });
+    await seedPendingIntent(db, org.organizationId, 'chk_test_9a');
+    await send(
+      'msg_test_9a',
+      subscriptionEvent({
+        type: 'subscription.created',
+        timestamp: '2026-05-01T00:00:00.000Z',
+        checkoutId: 'chk_test_9a',
+        subscriptionId: 'sub_test_9',
+        status: 'active',
+      }),
+    );
     const rowAfterFirst = await getSubscriptionRow(db, org.organizationId);
     expect(rowAfterFirst!.status).toBe('ACTIVE');
 
-    const second = subscriptionEvent({
-      eventId: 'evt_test_9b',
-      eventType: 'subscription.created',
-      occurredAt: '2026-05-02T00:00:00.000Z',
-      organizationId: org.organizationId,
-      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
-      subscriptionId: 'sub_test_9b',
-      status: 'active',
-    });
-    const secondSigned = signedWebhook(WEBHOOK_SECRET, second);
-    const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: secondSigned.headers, payload: secondSigned.body });
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({ outcome: 'IGNORED' });
+    await seedPendingIntent(db, org.organizationId, 'chk_test_9b');
+    const result = await send(
+      'msg_test_9b',
+      subscriptionEvent({
+        type: 'subscription.created',
+        timestamp: '2026-05-02T00:00:00.000Z',
+        checkoutId: 'chk_test_9b',
+        subscriptionId: 'sub_test_9b',
+        status: 'active',
+      }),
+    );
+    expect(result.outcome).toBe('IGNORED');
 
-    const rowAfterSecond = await getSubscriptionRow(db, org.organizationId);
-    expect(rowAfterSecond).toStrictEqual(rowAfterFirst);
-
-    const eventRow = await getEventRow(db, 'evt_test_9b');
-    expect(eventRow?.error).toBe('subscription mismatch');
+    expect(await getSubscriptionRow(db, org.organizationId)).toStrictEqual(rowAfterFirst);
+    expect((await getEventRow(db, 'msg_test_9b'))?.error).toBe('subscription mismatch');
   });
 
   it.each(['PAST_DUE', 'PAUSED'] as const)(
@@ -518,26 +613,25 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       const storedSubscriptionId = `sub_test_a_${status}`;
       await db.insert(schema.billingSubscriptions).values({
         organizationId: org.organizationId,
-        providerCustomerId: 'ctm_test_1',
+        provider: 'POLAR',
+        providerCustomerId: 'cus_test_1',
         providerSubscriptionId: storedSubscriptionId,
         status,
         lastProviderEventAt: new Date('2026-01-01T00:00:00.000Z'),
       });
+      await seedPendingIntent(db, org.organizationId, `chk_mismatch_${status}`);
 
-      const event = subscriptionEvent({
-        eventId: `evt_mismatch_${status}`,
-        eventType: 'subscription.activated',
-        occurredAt: '2026-01-02T00:00:00.000Z',
-        organizationId: org.organizationId,
-        checkoutIntentId: await seedPendingIntent(db, org.organizationId),
-        subscriptionId: `sub_test_b_${status}`,
-        status: 'active',
-      });
-      const signed = signedWebhook(WEBHOOK_SECRET, event);
-      const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: signed.headers, payload: signed.body });
-
-      expect(response.statusCode).toBe(200);
-      expect(response.json()).toMatchObject({ outcome: 'IGNORED' });
+      const result = await send(
+        `msg_mismatch_${status}`,
+        subscriptionEvent({
+          type: 'subscription.active',
+          timestamp: '2026-01-02T00:00:00.000Z',
+          checkoutId: `chk_mismatch_${status}`,
+          subscriptionId: `sub_test_b_${status}`,
+          status: 'active',
+        }),
+      );
+      expect(result.outcome).toBe('IGNORED');
 
       const rows = await db
         .select()
@@ -547,7 +641,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       expect(rows[0]!.providerSubscriptionId).toBe(storedSubscriptionId);
       expect(rows[0]!.status).toBe(status);
 
-      const eventRow = await getEventRow(db, `evt_mismatch_${status}`);
+      const eventRow = await getEventRow(db, `msg_mismatch_${status}`);
       expect(eventRow?.processingStatus).toBe('IGNORED');
       expect(eventRow?.error).toBe('subscription mismatch');
     },
@@ -557,26 +651,25 @@ describe('POST /api/billing/webhook (Paddle)', () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
     await db.insert(schema.billingSubscriptions).values({
       organizationId: org.organizationId,
-      providerCustomerId: 'ctm_test_1',
+      provider: 'POLAR',
+      providerCustomerId: 'cus_test_1',
       providerSubscriptionId: 'sub_test_old',
       status: 'CANCELED',
       lastProviderEventAt: new Date('2026-01-01T00:00:00.000Z'),
     });
+    await seedPendingIntent(db, org.organizationId, 'chk_resub_1');
 
-    const event = subscriptionEvent({
-      eventId: 'evt_resub_1',
-      eventType: 'subscription.activated',
-      occurredAt: '2026-01-02T00:00:00.000Z',
-      organizationId: org.organizationId,
-      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
-      subscriptionId: 'sub_test_new',
-      status: 'active',
-    });
-    const signed = signedWebhook(WEBHOOK_SECRET, event);
-    const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: signed.headers, payload: signed.body });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({ outcome: 'PROCESSED' });
+    const result = await send(
+      'msg_resub_1',
+      subscriptionEvent({
+        type: 'subscription.active',
+        timestamp: '2026-01-02T00:00:00.000Z',
+        checkoutId: 'chk_resub_1',
+        subscriptionId: 'sub_test_new',
+        status: 'active',
+      }),
+    );
+    expect(result.outcome).toBe('PROCESSED');
 
     const rows = await db
       .select()
@@ -587,43 +680,36 @@ describe('POST /api/billing/webhook (Paddle)', () => {
     expect(rows[0]!.status).toBe('ACTIVE');
   });
 
-  it('ignores an unknown event type but still records the event row', async () => {
-    const org = await signUpAndGetOrg(auth, db, nextEmail());
-    const event = productUpdatedEvent({
-      eventId: 'evt_test_10',
-      occurredAt: new Date().toISOString(),
-      organizationId: org.organizationId,
-    });
-    const signed = signedWebhook(WEBHOOK_SECRET, event);
+  it.each(['order.paid', 'checkout.updated', 'customer.updated'])(
+    'ignores a %s event but still records the event row',
+    async (type) => {
+      const result = await send(`msg_other_${type}`, {
+        type,
+        timestamp: new Date().toISOString(),
+        data: { id: 'obj_test_1' },
+      });
 
-    const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: signed.headers, payload: signed.body });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({ outcome: 'IGNORED' });
-
-    const eventRow = await getEventRow(db, 'evt_test_10');
-    expect(eventRow?.processingStatus).toBe('IGNORED');
-    expect(eventRow?.error).toBeNull();
-  });
+      expect(result.outcome).toBe('IGNORED');
+      const eventRow = await getEventRow(db, `msg_other_${type}`);
+      expect(eventRow).toMatchObject({ processingStatus: 'IGNORED', eventType: type, error: null });
+    },
+  );
 
   it('ignores an event whose organization cannot be resolved', async () => {
-    const event = subscriptionEvent({
-      eventId: 'evt_test_11',
-      eventType: 'subscription.created',
-      occurredAt: new Date().toISOString(),
-      subscriptionId: 'sub_test_unresolvable',
-      status: 'active',
-      // No organizationId — no customData, and no billing_subscriptions row
-      // anywhere has this providerSubscriptionId.
-    });
-    const signed = signedWebhook(WEBHOOK_SECRET, event);
+    const result = await send(
+      'msg_test_11',
+      subscriptionEvent({
+        type: 'subscription.created',
+        timestamp: new Date().toISOString(),
+        subscriptionId: 'sub_test_unresolvable',
+        status: 'active',
+        // No checkout_id, and no billing_subscriptions row anywhere has this
+        // providerSubscriptionId.
+      }),
+    );
 
-    const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: signed.headers, payload: signed.body });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({ outcome: 'IGNORED' });
-
-    const eventRow = await getEventRow(db, 'evt_test_11');
+    expect(result.outcome).toBe('IGNORED');
+    const eventRow = await getEventRow(db, 'msg_test_11');
     expect(eventRow?.error).toBe('organization not found');
     expect(eventRow?.organizationId).toBeNull();
 
@@ -634,67 +720,63 @@ describe('POST /api/billing/webhook (Paddle)', () => {
     expect(rows).toHaveLength(0);
   });
 
-  describe('binding a new subscription to the organization in customData', () => {
-    async function send(event: Record<string, unknown>) {
-      const signed = signedWebhook(WEBHOOK_SECRET, event);
-      const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: signed.headers, payload: signed.body });
-      expect(response.statusCode).toBe(200);
-      return response.json() as { outcome: string };
-    }
-
-    it('ignores a subscription whose customData names an organization with no PENDING checkout intent', async () => {
+  describe("binding a new subscription through its checkout_id", () => {
+    it('ignores forged metadata naming an organization when there is no checkout_id', async () => {
       const victim = await signUpAndGetOrg(auth, db, nextEmail());
+      await seedPendingIntent(db, victim.organizationId, 'chk_bind_victim_open');
 
       const result = await send(
+        'msg_bind_metadata_only',
         subscriptionEvent({
-          eventId: 'evt_bind_no_intent',
-          eventType: 'subscription.created',
-          occurredAt: new Date().toISOString(),
-          organizationId: victim.organizationId,
-          subscriptionId: 'sub_bind_no_intent',
+          type: 'subscription.created',
+          timestamp: new Date().toISOString(),
+          subscriptionId: 'sub_bind_metadata_only',
           status: 'active',
+          metadata: { organizationId: victim.organizationId },
         }),
       );
 
       expect(result.outcome).toBe('IGNORED');
       expect(await getSubscriptionRow(db, victim.organizationId)).toBeNull();
-      expect((await getEventRow(db, 'evt_bind_no_intent'))?.error).toBe('organization not found');
+      expect((await getEventRow(db, 'msg_bind_metadata_only'))?.error).toBe('organization not found');
     });
 
-    it("ignores a subscription that names another organization's PENDING intent", async () => {
+    it("binds to the checkout's organization, never to the organization the metadata names", async () => {
       const victim = await signUpAndGetOrg(auth, db, nextEmail());
-      const attacker = await signUpAndGetOrg(auth, db, nextEmail());
-      const attackerIntentId = await seedPendingIntent(db, attacker.organizationId);
+      const payer = await signUpAndGetOrg(auth, db, nextEmail());
+      const victimIntentId = await seedPendingIntent(db, victim.organizationId, 'chk_bind_victim');
+      await seedPendingIntent(db, payer.organizationId, 'chk_bind_payer');
 
       const result = await send(
+        'msg_bind_forged_metadata',
         subscriptionEvent({
-          eventId: 'evt_bind_other_org',
-          eventType: 'subscription.activated',
-          occurredAt: new Date().toISOString(),
-          organizationId: victim.organizationId,
-          checkoutIntentId: attackerIntentId,
-          subscriptionId: 'sub_bind_other_org',
+          type: 'subscription.created',
+          timestamp: new Date().toISOString(),
+          checkoutId: 'chk_bind_payer',
+          subscriptionId: 'sub_bind_forged_metadata',
           status: 'active',
+          metadata: { organizationId: victim.organizationId, checkoutIntentId: victimIntentId },
         }),
       );
 
-      expect(result.outcome).toBe('IGNORED');
+      expect(result.outcome).toBe('PROCESSED');
       expect(await getSubscriptionRow(db, victim.organizationId)).toBeNull();
+      expect((await getSubscriptionRow(db, payer.organizationId))?.providerSubscriptionId).toBe(
+        'sub_bind_forged_metadata',
+      );
     });
 
-    it("ignores a subscription whose transaction is not the intent's transaction", async () => {
+    it('ignores a checkout_id that is no PENDING intent', async () => {
       const org = await signUpAndGetOrg(auth, db, nextEmail());
-      const intentId = await seedPendingIntent(db, org.organizationId, 'txn_bind_expected');
+      await seedPendingIntent(db, org.organizationId, 'chk_bind_expected');
 
       const result = await send(
+        'msg_bind_unknown_checkout',
         subscriptionEvent({
-          eventId: 'evt_bind_wrong_txn',
-          eventType: 'subscription.created',
-          occurredAt: new Date().toISOString(),
-          organizationId: org.organizationId,
-          checkoutIntentId: intentId,
-          transactionId: 'txn_bind_other',
-          subscriptionId: 'sub_bind_wrong_txn',
+          type: 'subscription.created',
+          timestamp: new Date().toISOString(),
+          checkoutId: 'chk_bind_unknown',
+          subscriptionId: 'sub_bind_unknown_checkout',
           status: 'active',
         }),
       );
@@ -703,22 +785,24 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       expect(await getSubscriptionRow(db, org.organizationId)).toBeNull();
     });
 
-    it.each(['subscription.activated', 'subscription.updated'])(
-      "ignores a %s event without the platform price, which carries no transaction id to check",
-      async (eventType) => {
+    it.each(['COMPLETED', 'EXPIRED', 'FAILED'] as const)(
+      'ignores a checkout_id whose intent is %s',
+      async (status) => {
         const org = await signUpAndGetOrg(auth, db, nextEmail());
-        const intentId = await seedPendingIntent(db, org.organizationId, `txn_bind_${eventType}`);
+        const intentId = await seedPendingIntent(db, org.organizationId, `chk_bind_${status}`);
+        await db
+          .update(schema.billingCheckoutIntents)
+          .set({ status, resolvedAt: new Date() })
+          .where(eq(schema.billingCheckoutIntents.id, intentId));
 
         const result = await send(
+          `msg_bind_${status}`,
           subscriptionEvent({
-            eventId: `evt_bind_no_platform_${eventType}`,
-            eventType,
-            occurredAt: new Date().toISOString(),
-            organizationId: org.organizationId,
-            checkoutIntentId: intentId,
-            subscriptionId: `sub_bind_no_platform_${eventType}`,
+            type: 'subscription.created',
+            timestamp: new Date().toISOString(),
+            checkoutId: `chk_bind_${status}`,
+            subscriptionId: `sub_bind_${status}`,
             status: 'active',
-            itemPriceIds: ['pri_deployment_replace_me'],
           }),
         );
 
@@ -727,18 +811,37 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       },
     );
 
-    it("binds a subscription whose transaction is the PENDING intent's transaction", async () => {
+    it('ignores a subscription for another product, even from a PENDING checkout', async () => {
       const org = await signUpAndGetOrg(auth, db, nextEmail());
-      const intentId = await seedPendingIntent(db, org.organizationId, 'txn_bind_ok');
+      await seedPendingIntent(db, org.organizationId, 'chk_bind_wrong_product');
 
       const result = await send(
+        'msg_bind_wrong_product',
         subscriptionEvent({
-          eventId: 'evt_bind_ok',
-          eventType: 'subscription.created',
-          occurredAt: new Date().toISOString(),
-          organizationId: org.organizationId,
-          checkoutIntentId: intentId,
-          transactionId: 'txn_bind_ok',
+          type: 'subscription.created',
+          timestamp: new Date().toISOString(),
+          checkoutId: 'chk_bind_wrong_product',
+          productId: 'product_other_replace_me',
+          subscriptionId: 'sub_bind_wrong_product',
+          status: 'active',
+        }),
+      );
+
+      expect(result.outcome).toBe('IGNORED');
+      expect(await getSubscriptionRow(db, org.organizationId)).toBeNull();
+      expect((await getEventRow(db, 'msg_bind_wrong_product'))?.error).toBe('organization not found');
+    });
+
+    it("binds a subscription whose checkout_id is the PENDING intent's checkout", async () => {
+      const org = await signUpAndGetOrg(auth, db, nextEmail());
+      await seedPendingIntent(db, org.organizationId, 'chk_bind_ok');
+
+      const result = await send(
+        'msg_bind_ok',
+        subscriptionEvent({
+          type: 'subscription.created',
+          timestamp: new Date().toISOString(),
+          checkoutId: 'chk_bind_ok',
           subscriptionId: 'sub_bind_ok',
           status: 'active',
         }),
@@ -748,155 +851,53 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       expect((await getSubscriptionRow(db, org.organizationId))?.providerSubscriptionId).toBe('sub_bind_ok');
     });
 
-    it.each(['subscription.updated', 'subscription.canceled', 'subscription.past_due'])(
-      'ignores a %s event whose customData names an organization with no PENDING intent',
-      async (eventType) => {
-        const victim = await signUpAndGetOrg(auth, db, nextEmail());
-
-        const result = await send(
-          subscriptionEvent({
-            eventId: `evt_bind_later_${eventType}`,
-            eventType,
-            occurredAt: new Date().toISOString(),
-            organizationId: victim.organizationId,
-            subscriptionId: `sub_bind_later_${eventType}`,
-            status: 'active',
-          }),
-        );
-
-        expect(result.outcome).toBe('IGNORED');
-        expect(await getSubscriptionRow(db, victim.organizationId)).toBeNull();
-      },
-    );
-
-    it('follows the organization on file, not customData, for a known subscription', async () => {
+    it('follows the organization on file for a known subscription, whatever its checkout_id', async () => {
       const owner = await signUpAndGetOrg(auth, db, nextEmail());
-      const victim = await signUpAndGetOrg(auth, db, nextEmail());
+      const other = await signUpAndGetOrg(auth, db, nextEmail());
+      await seedPendingIntent(db, owner.organizationId, 'chk_on_file_owner');
       await send(
+        'msg_on_file_created',
         subscriptionEvent({
-          eventId: 'evt_on_file_created',
-          eventType: 'subscription.created',
-          occurredAt: '2026-06-01T00:00:00.000Z',
-          organizationId: owner.organizationId,
-          checkoutIntentId: await seedPendingIntent(db, owner.organizationId),
+          type: 'subscription.created',
+          timestamp: '2026-06-01T00:00:00.000Z',
+          checkoutId: 'chk_on_file_owner',
           subscriptionId: 'sub_on_file',
           status: 'active',
         }),
       );
+      await seedPendingIntent(db, other.organizationId, 'chk_on_file_other');
 
       const result = await send(
+        'msg_on_file_updated',
         subscriptionEvent({
-          eventId: 'evt_on_file_updated',
-          eventType: 'subscription.updated',
-          occurredAt: '2026-06-02T00:00:00.000Z',
-          organizationId: victim.organizationId,
+          type: 'subscription.updated',
+          timestamp: '2026-06-02T00:00:00.000Z',
+          checkoutId: 'chk_on_file_other',
           subscriptionId: 'sub_on_file',
           status: 'past_due',
+          metadata: { organizationId: other.organizationId },
         }),
       );
 
       expect(result.outcome).toBe('PROCESSED');
-      expect(await getSubscriptionRow(db, victim.organizationId)).toBeNull();
+      expect(await getSubscriptionRow(db, other.organizationId)).toBeNull();
       expect((await getSubscriptionRow(db, owner.organizationId))?.status).toBe('PAST_DUE');
     });
   });
 
-  it('touches lastProviderEventAt on transaction.completed for a known subscription, status unchanged', async () => {
+  it('reflects the new subscription status through GET /api/organization', async () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
-    const created = subscriptionEvent({
-      eventId: 'evt_test_12a',
-      eventType: 'subscription.created',
-      occurredAt: '2026-06-01T00:00:00.000Z',
-      organizationId: org.organizationId,
-      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
-      subscriptionId: 'sub_test_12',
-      status: 'active',
-    });
-    const createdSigned = signedWebhook(WEBHOOK_SECRET, created);
-    await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: createdSigned.headers, payload: createdSigned.body });
-    const rowAfterCreate = await getSubscriptionRow(db, org.organizationId);
-
-    const transaction = transactionEvent({
-      eventId: 'evt_test_12b',
-      eventType: 'transaction.completed',
-      occurredAt: '2026-06-02T00:00:00.000Z',
-      organizationId: org.organizationId,
-      subscriptionId: 'sub_test_12',
-    });
-    const transactionSigned = signedWebhook(WEBHOOK_SECRET, transaction);
-    const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: transactionSigned.headers, payload: transactionSigned.body });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({ outcome: 'PROCESSED' });
-
-    const rowAfterTransaction = await getSubscriptionRow(db, org.organizationId);
-    expect(rowAfterTransaction!.status).toBe(rowAfterCreate!.status);
-    expect(rowAfterTransaction!.lastProviderEventAt!.toISOString()).toBe('2026-06-02T00:00:00.000Z');
-    expect(rowAfterTransaction!.lastProviderEventAt!.getTime()).toBeGreaterThan(
-      rowAfterCreate!.lastProviderEventAt!.getTime(),
-    );
-  });
-
-  it('a delayed transaction event never moves the stale-event watermark backwards', async () => {
-    const org = await signUpAndGetOrg(auth, db, nextEmail());
-    const send = async (event: Record<string, unknown>) => {
-      const signed = signedWebhook(WEBHOOK_SECRET, event);
-      const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: signed.headers, payload: signed.body });
-      expect(response.statusCode).toBe(200);
-      return response.json() as { outcome: string };
-    };
+    await seedPendingIntent(db, org.organizationId, 'chk_test_13');
     await send(
+      'msg_test_13',
       subscriptionEvent({
-        eventId: 'evt_wm_1',
-        eventType: 'subscription.created',
-        occurredAt: '2026-06-01T00:00:10.000Z',
-        organizationId: org.organizationId,
-        checkoutIntentId: await seedPendingIntent(db, org.organizationId),
-        subscriptionId: 'sub_wm',
-        status: 'past_due',
-      }),
-    );
-
-    await send(
-      transactionEvent({
-        eventId: 'evt_wm_2',
-        eventType: 'transaction.payment_failed',
-        occurredAt: '2026-06-01T00:00:05.000Z',
-        organizationId: org.organizationId,
-        subscriptionId: 'sub_wm',
-      }),
-    );
-    const late = await send(
-      subscriptionEvent({
-        eventId: 'evt_wm_3',
-        eventType: 'subscription.activated',
-        occurredAt: '2026-06-01T00:00:07.000Z',
-        organizationId: org.organizationId,
-        subscriptionId: 'sub_wm',
+        type: 'subscription.created',
+        timestamp: new Date().toISOString(),
+        checkoutId: 'chk_test_13',
+        subscriptionId: 'sub_test_13',
         status: 'active',
       }),
     );
-
-    expect(late.outcome).toBe('IGNORED');
-    const row = await getSubscriptionRow(db, org.organizationId);
-    expect(row!.status).toBe('PAST_DUE');
-    expect(row!.lastProviderEventAt!.toISOString()).toBe('2026-06-01T00:00:10.000Z');
-  });
-
-  it('reflects the new subscription status through GET /api/organization', async () => {
-    const org = await signUpAndGetOrg(auth, db, nextEmail());
-    const event = subscriptionEvent({
-      eventId: 'evt_test_13',
-      eventType: 'subscription.created',
-      occurredAt: new Date().toISOString(),
-      organizationId: org.organizationId,
-      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
-      subscriptionId: 'sub_test_13',
-      status: 'active',
-    });
-    const signed = signedWebhook(WEBHOOK_SECRET, event);
-    const webhookResponse = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: signed.headers, payload: signed.body });
-    expect(webhookResponse.statusCode).toBe(200);
 
     const orgResponse = await app.inject({
       method: 'GET',
@@ -907,16 +908,18 @@ describe('POST /api/billing/webhook (Paddle)', () => {
     expect(orgResponse.json()).toMatchObject({ subscriptionStatus: 'ACTIVE' });
   });
 
-  it('answers 503 when Paddle is not configured', async () => {
-    const disabledApp = await buildServer({ auth, db, paddle: null });
+  it('answers 503 when Polar is not configured', async () => {
+    const disabledApp = await buildServer({ auth, db, polar: null });
     try {
-      const event = subscriptionEvent({
-        eventId: 'evt_test_14',
-        eventType: 'subscription.created',
-        occurredAt: new Date().toISOString(),
-        status: 'active',
-      });
-      const signed = signedWebhook(WEBHOOK_SECRET, event);
+      const signed = signedWebhook(
+        WEBHOOK_SECRET,
+        'msg_test_14',
+        subscriptionEvent({
+          type: 'subscription.created',
+          timestamp: new Date().toISOString(),
+          status: 'active',
+        }),
+      );
 
       const response = await disabledApp.inject({
         method: 'POST',
@@ -926,7 +929,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       });
 
       expect(response.statusCode).toBe(503);
-      expect(await getEventRow(db, 'evt_test_14')).toBeNull();
+      expect(await getEventRow(db, 'msg_test_14')).toBeNull();
     } finally {
       await disabledApp.close();
     }

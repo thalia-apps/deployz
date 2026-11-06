@@ -26,8 +26,10 @@ export interface ProductionDeploymentCounts {
   /** Live once, but failed or disconnected now: not billed until it serves again. */
   paused: number;
   included: number;
-  /** max(active − included, 0) — the quantity actually billed. */
+  /** max(active − included, 0) — the live deployments beyond the allowance. */
   billable: number;
+  /** max(billable, 1) — the units the subscription bills (minimum one). */
+  units: number;
 }
 
 /** The §48 billing summary: base platform fee + the pooled deployment line. */
@@ -38,7 +40,7 @@ export interface BillingSummary {
   deploymentPrice: number;
   deployments: BillingDeploymentLine[];
   productionDeployments: ProductionDeploymentCounts;
-  /** base + billable × deploymentPrice, in whole dollars. */
+  /** base + units × deploymentPrice, in whole dollars. */
   total: number;
   /** `null` means the organization has no subscription yet (evaluation). */
   subscription: {
@@ -48,7 +50,7 @@ export interface BillingSummary {
   } | null;
 }
 
-/** A Paddle amount: a string in the currency's minor unit (cents for USD). */
+/** An amount: a string in the currency's minor unit (cents for USD). */
 export interface BillingMoney {
   amount: string;
   currencyCode: string;
@@ -62,7 +64,7 @@ export interface BillingAccount {
         lines: Array<BillingMoney & { description: string; quantity: number }>;
       })
     | null;
-  scheduledChange: { action: 'cancel' | 'pause' | 'resume'; effectiveAt: string } | null;
+  scheduledChange: { action: 'cancel'; effectiveAt: string } | null;
   paymentMethod: {
     type: string;
     cardBrand: string | null;
@@ -73,7 +75,7 @@ export interface BillingAccount {
   transactions: Array<
     BillingMoney & {
       id: string;
-      status: 'billed' | 'paid' | 'completed' | 'past_due';
+      status: 'paid' | 'pending' | 'refunded' | 'partially_refunded';
       billedAt: string | null;
       invoiceNumber: string | null;
     }

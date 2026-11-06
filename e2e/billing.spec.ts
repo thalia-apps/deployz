@@ -2,11 +2,11 @@ import { expect, test, type Page } from '@playwright/test';
 
 // §48 billing display, against the REAL `GET /api/billing/summary` endpoint
 // (previously pointed at a nonexistent /api/billing and always rendered
-// fixture data). A fresh org has base-only billing: Platform $49, no
-// deployment lines, Monthly total $49. §65: all top-level copy is
+// fixture data). A fresh org bills the minimum: Platform $49 plus one
+// deployment unit, no deployment lines, Monthly total $68. §65: all top-level copy is
 // jargon-free (no "Stripe", "meter event", "proration").
 
-const JARGON = /\b(Stripe|Paddle|meter event|proration|usage record|metered)\b/i;
+const JARGON = /\b(Stripe|Paddle|Polar|meter event|proration|usage record|metered)\b/i;
 
 async function signUp(page: Page): Promise<void> {
   const email = `e2e-${crypto.randomUUID().slice(0, 8)}@example.com`;
@@ -29,6 +29,7 @@ test('billing page renders the §48 base-only breakdown for a fresh org', async 
   await expect(page.getByText('Platform', { exact: true })).toBeVisible();
   await expect(page.getByText('$49', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Monthly total')).toBeVisible();
+  await expect(page.getByText('$68', { exact: true })).toBeVisible();
   await expect(page.getByText('No customer deployments are live yet.')).toBeVisible();
 });
 

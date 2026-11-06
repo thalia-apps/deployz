@@ -76,7 +76,7 @@ describe('deployment lifecycle — states, events, and removal', () => {
     cookie = sessionCookie;
     await connectInstallation(db, organizationId);
     // createDeployment() below creates PRODUCTION deployments (the default);
-    // Paddle migration Phase 7 gates those behind an ACTIVE subscription,
+    // Billing Phase 7 gates those behind an ACTIVE subscription,
     // which is unrelated to what this file exercises (states, events, removal).
     await db.insert(schema.billingSubscriptions).values({
       organizationId,

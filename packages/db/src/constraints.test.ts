@@ -285,7 +285,7 @@ describe('constraints and enums', () => {
       });
     });
 
-    // Paddle migration Phase 7 — free evaluation entitlements: at most one
+    // Billing Phase 7 — free evaluation entitlements: at most one
     // non-deleted TEST deployment per application, enforced at the database
     // level as the backstop for the route-level check in
     // apps/api/src/billing-entitlements.ts.

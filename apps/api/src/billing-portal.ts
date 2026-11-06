@@ -4,51 +4,48 @@ import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { ApiError } from './errors.js';
-import type { PaddleBilling } from './paddle.js';
+import type { PolarBilling } from './polar.js';
 
-// Paddle migration Phase 12 — the customer portal. Everything a vendor does
-// with their own subscription (card, invoices, cancel) happens on Paddle's
-// hosted portal, never on a screen Deployz builds: Deployz owns eligibility
-// and the live-deployment count, Paddle owns money, cards and invoices.
+// The customer portal. Everything a vendor does with their own subscription
+// (card, invoices, cancel) happens on Polar's hosted portal, never on a
+// screen Deployz builds: Deployz owns eligibility and the live-deployment
+// count, Polar owns money, cards and invoices.
 //
-// A portal session is a short-lived, pre-authenticated set of links for ONE
-// Paddle customer. It is minted on demand for the signed-in organization's
-// own customer id — that id is the authorization; nothing about the session
-// is ever cached or shared, and it is never embedded in an iframe.
+// A portal session is a short-lived, pre-authenticated link for ONE Polar
+// customer. It is minted on demand for the signed-in organization's own
+// customer id — that id is the authorization; nothing about the session is
+// ever cached or shared, and it is never embedded in an iframe.
 
 export interface PortalDeps {
   db: RuntimeDb;
-  paddle: PaddleBilling | null;
+  polar: PolarBilling | null;
 }
 
+/** Polar's portal has one entry page, where the card form, the invoices and
+ *  the cancel action all are. The three targets the web app asks for land
+ *  there. */
 export interface BillingPortalLinks {
-  /** The portal home: invoices, transaction history, account details. */
   overview: string;
-  /** Straight to the card form for the organization's subscription. */
   updatePaymentMethod: string;
-  /** Paddle's own cancellation flow for the subscription. */
   cancel: string;
 }
 
 /**
- * Mints portal links for the organization's subscription. The organization
- * must have bought something — evaluation has no Paddle customer and nothing
+ * Mints a portal link for the organization's subscription. The organization
+ * must have bought something — evaluation has no Polar customer and nothing
  * to manage, which is a 409 the UI never reaches (it shows no button).
  */
 export async function createBillingPortalLinks(
   deps: PortalDeps,
   organizationId: string,
 ): Promise<BillingPortalLinks> {
-  const { db, paddle } = deps;
-  if (!paddle) {
-    throw new ApiError(503, 'BILLING_DISABLED', 'Paddle billing is not configured');
+  const { db, polar } = deps;
+  if (!polar) {
+    throw new ApiError(503, 'BILLING_DISABLED', 'Polar billing is not configured');
   }
 
   const [subscription] = await db
-    .select({
-      providerCustomerId: schema.billingSubscriptions.providerCustomerId,
-      providerSubscriptionId: schema.billingSubscriptions.providerSubscriptionId,
-    })
+    .select({ providerCustomerId: schema.billingSubscriptions.providerCustomerId })
     .from(schema.billingSubscriptions)
     .where(eq(schema.billingSubscriptions.organizationId, organizationId))
     .limit(1);
@@ -60,11 +57,9 @@ export async function createBillingPortalLinks(
     );
   }
 
-  let session;
+  let url: string;
   try {
-    session = await paddle.client.customerPortalSessions.create(subscription.providerCustomerId, [
-      subscription.providerSubscriptionId,
-    ]);
+    url = await polar.client.createCustomerPortalUrl(subscription.providerCustomerId);
   } catch (error) {
     // Same operability rule as the checkout: log the provider's reason, never
     // return it.
@@ -78,16 +73,5 @@ export async function createBillingPortalLinks(
     throw new ApiError(502, 'PORTAL_UNAVAILABLE', 'Could not open billing. Try again.');
   }
 
-  // Paddle returns one deep-link set per subscription id it was asked for;
-  // it was asked for exactly one. Fall back to the overview rather than fail
-  // if it ever returns none — the vendor can still reach everything from
-  // there.
-  const links = session.urls.subscriptions.find(
-    (entry) => entry.id === subscription.providerSubscriptionId,
-  );
-  return {
-    overview: session.urls.general.overview,
-    updatePaymentMethod: links?.updateSubscriptionPaymentMethod ?? session.urls.general.overview,
-    cancel: links?.cancelSubscription ?? session.urls.general.overview,
-  };
+  return { overview: url, updatePaymentMethod: url, cancel: url };
 }

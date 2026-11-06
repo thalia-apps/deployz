@@ -4,35 +4,36 @@ import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { ApiError } from './errors.js';
-import type { PaddleBilling } from './paddle.js';
+import { PolarApiError, type PolarBilling } from './polar.js';
 
-// The vendor's billing details, read live from Paddle on every request:
-// the next payment, the payment method on file and the invoices. Paddle is
-// the source of truth for money, so nothing here is stored or cached.
+// The vendor's billing details, read live from Polar on every request: the
+// next renewal, the payment method on file and the invoices. Polar is the
+// source of truth for money, so nothing here is stored or cached.
 //
-// Tenant isolation: everything is scoped to the organization's own
-// subscription id. A Paddle customer is keyed by email and can be shared by
-// two organizations, so the customer id alone is not a safe filter.
+// Tenant isolation: orders are scoped to the organization's own subscription
+// id, and an invoice of any other subscription answers 404.
 
 export interface AccountDeps {
   db: RuntimeDb;
-  paddle: PaddleBilling | null;
+  polar: PolarBilling | null;
 }
 
-/** Paddle amounts are strings in the currency's minor unit (cents for USD). */
+/** Amounts are strings in the currency's minor unit (cents for USD). */
 export interface BillingMoney {
   amount: string;
   currencyCode: string;
 }
 
 export interface BillingAccount {
+  /** The next renewal, before tax and before any prorated adjustment Polar
+   *  adds for deployments that started or stopped mid-period. */
   nextPayment:
     | (BillingMoney & {
         date: string;
         lines: Array<BillingMoney & { description: string; quantity: number }>;
       })
     | null;
-  /** A cancel or pause the vendor scheduled for the end of the period. */
+  /** A cancellation the vendor scheduled for the end of the period. */
   scheduledChange: { action: string; effectiveAt: string } | null;
   paymentMethod: {
     type: string;
@@ -51,25 +52,33 @@ export interface BillingAccount {
   >;
 }
 
-const LISTED_TRANSACTION_STATUSES = ['billed', 'paid', 'completed', 'past_due'] as const;
-const TRANSACTION_PAGE_SIZE = 24;
+const LISTED_ORDER_STATUSES: ReadonlySet<string> = new Set(['paid', 'pending', 'refunded', 'partially_refunded']);
+const ORDER_PAGE_SIZE = 24;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function requireSubscription(deps: AccountDeps, organizationId: string) {
-  if (!deps.paddle) {
-    throw new ApiError(503, 'BILLING_DISABLED', 'Paddle billing is not configured');
+  if (!deps.polar) {
+    throw new ApiError(503, 'BILLING_DISABLED', 'Polar billing is not configured');
   }
   const [subscription] = await deps.db
-    .select({ providerSubscriptionId: schema.billingSubscriptions.providerSubscriptionId })
+    .select({
+      providerSubscriptionId: schema.billingSubscriptions.providerSubscriptionId,
+      providerCustomerId: schema.billingSubscriptions.providerCustomerId,
+    })
     .from(schema.billingSubscriptions)
     .where(eq(schema.billingSubscriptions.organizationId, organizationId))
     .limit(1);
   if (!subscription) {
     throw new ApiError(409, 'NO_SUBSCRIPTION', 'There is no subscription yet.');
   }
-  return { paddle: deps.paddle, subscriptionId: subscription.providerSubscriptionId };
+  return {
+    polar: deps.polar,
+    subscriptionId: subscription.providerSubscriptionId,
+    customerId: subscription.providerCustomerId,
+  };
 }
 
-function providerFailure(event: string, organizationId: string, error: unknown): ApiError {
+function logProviderFailure(event: string, organizationId: string, error: unknown): void {
   // Log the provider's reason, never return it.
   console.error(
     JSON.stringify({
@@ -78,6 +87,10 @@ function providerFailure(event: string, organizationId: string, error: unknown):
       error: error instanceof Error ? error.message : String(error),
     }),
   );
+}
+
+function providerFailure(event: string, organizationId: string, error: unknown): ApiError {
+  logProviderFailure(event, organizationId, error);
   return new ApiError(502, 'BILLING_DETAILS_UNAVAILABLE', 'Could not load billing details. Try again.');
 }
 
@@ -85,106 +98,108 @@ export async function getBillingAccount(
   deps: AccountDeps,
   organizationId: string,
 ): Promise<BillingAccount> {
-  const { paddle, subscriptionId } = await requireSubscription(deps, organizationId);
+  const { polar, subscriptionId, customerId } = await requireSubscription(deps, organizationId);
 
   let subscription;
-  let transactions;
+  let orders;
   try {
-    [subscription, transactions] = await Promise.all([
-      paddle.client.subscriptions.get(subscriptionId, { include: ['next_transaction'] }),
-      paddle.client.transactions
-        .list({
-          subscriptionId: [subscriptionId],
-          status: [...LISTED_TRANSACTION_STATUSES],
-          orderBy: 'created_at[DESC]',
-          perPage: TRANSACTION_PAGE_SIZE,
-        })
-        .next(),
+    [subscription, orders] = await Promise.all([
+      polar.client.getSubscription(subscriptionId),
+      polar.client.listSubscriptionOrders(subscriptionId, ORDER_PAGE_SIZE),
     ]);
   } catch (error) {
     throw providerFailure('billing:account-failed', organizationId, error);
   }
 
-  const next = subscription.nextTransaction;
-  const nextPayment =
-    subscription.nextBilledAt && next
-      ? {
-          date: subscription.nextBilledAt,
-          amount: next.details.totals.grandTotal,
-          currencyCode: next.details.totals.currencyCode,
-          lines: next.details.lineItems.map((line) => ({
-            description: line.product.name,
-            quantity: line.quantity,
-            amount: line.totals.total,
-            currencyCode: next.details.totals.currencyCode,
-          })),
-        }
-      : null;
+  // The card is a convenience on this page; without it the rest still shows.
+  let card: BillingAccount['paymentMethod'] = null;
+  try {
+    const [method] = await polar.client.listPaymentMethods(customerId);
+    if (method) {
+      card = {
+        type: method.type,
+        cardBrand: method.method_metadata?.brand ?? null,
+        last4: method.method_metadata?.last4 ?? null,
+        expiryMonth: method.method_metadata?.exp_month ?? null,
+        expiryYear: method.method_metadata?.exp_year ?? null,
+      };
+    }
+  } catch (error) {
+    logProviderFailure('billing:payment-method-failed', organizationId, error);
+  }
 
-  // Transactions arrive newest first. A payment-method change is a $0
-  // transaction, so the newest captured payment is the method on file.
-  const captured = transactions
-    .flatMap((transaction) => transaction.payments)
-    .find((payment) => payment.status === 'captured' && payment.methodDetails);
-  const method = captured?.methodDetails ?? null;
+  const currencyCode = subscription.currency.toUpperCase();
+  const fixed = subscription.prices?.find((price) => price.amount_type === 'fixed')?.price_amount ?? 0;
+  const renews = subscription.status === 'active' && !subscription.cancel_at_period_end;
+  const nextPayment = renews
+    ? {
+        date: subscription.current_period_end,
+        amount: String(subscription.amount),
+        currencyCode,
+        lines: [
+          { description: 'Platform', quantity: 1, amount: String(fixed), currencyCode },
+          {
+            description: 'Customer deployments',
+            quantity: subscription.units ?? 0,
+            amount: String(subscription.amount - fixed),
+            currencyCode,
+          },
+        ],
+      }
+    : null;
 
   return {
     nextPayment,
-    scheduledChange: subscription.scheduledChange
-      ? {
-          action: subscription.scheduledChange.action,
-          effectiveAt: subscription.scheduledChange.effectiveAt,
-        }
-      : null,
-    paymentMethod: method
-      ? {
-          type: method.type,
-          cardBrand: method.card?.type ?? null,
-          last4: method.card?.last4 ?? null,
-          expiryMonth: method.card?.expiryMonth ?? null,
-          expiryYear: method.card?.expiryYear ?? null,
-        }
-      : null,
-    transactions: transactions
-      .filter((transaction) => transaction.origin !== 'subscription_payment_method_change')
-      .map((transaction) => ({
-        id: transaction.id,
-        status: transaction.status,
-        billedAt: transaction.billedAt ?? transaction.createdAt,
-        invoiceNumber: transaction.invoiceNumber,
-        amount: transaction.details?.totals?.grandTotal ?? '0',
-        currencyCode: transaction.currencyCode,
+    scheduledChange:
+      subscription.cancel_at_period_end && subscription.status !== 'canceled'
+        ? { action: 'cancel', effectiveAt: subscription.ends_at ?? subscription.current_period_end }
+        : null,
+    paymentMethod: card,
+    transactions: orders
+      .filter((order) => order.subscription_id === subscriptionId && LISTED_ORDER_STATUSES.has(order.status))
+      .map((order) => ({
+        id: order.id,
+        status: order.status,
+        billedAt: order.created_at,
+        invoiceNumber: order.invoice_number,
+        amount: String(order.total_amount),
+        currencyCode: order.currency.toUpperCase(),
       })),
   };
 }
 
 /**
- * A short-lived link to one invoice PDF. The transaction must belong to the
+ * A short-lived link to one invoice PDF. The order must belong to the
  * organization's own subscription; any other id answers 404, the same as an
- * id that does not exist.
+ * id that does not exist. Polar generates invoices on request: the first
+ * request starts it and answers 409, and a retry a moment later gets the URL.
  */
 export async function getInvoiceUrl(
   deps: AccountDeps,
   organizationId: string,
-  transactionId: string,
+  orderId: string,
 ): Promise<{ url: string }> {
-  const { paddle, subscriptionId } = await requireSubscription(deps, organizationId);
+  const { polar, subscriptionId } = await requireSubscription(deps, organizationId);
   const notFound = new ApiError(404, 'INVOICE_NOT_FOUND', 'Invoice not found.');
-  if (!/^txn_[a-z0-9]+$/.test(transactionId)) throw notFound;
+  if (!UUID.test(orderId)) throw notFound;
 
-  let transaction;
+  let order;
   try {
-    transaction = await paddle.client.transactions.get(transactionId);
+    order = await polar.client.getOrder(orderId);
   } catch (error) {
-    if ((error as { code?: string }).code === 'not_found') throw notFound;
+    if (error instanceof PolarApiError && error.status === 404) throw notFound;
     throw providerFailure('billing:invoice-failed', organizationId, error);
   }
-  if (transaction.subscriptionId !== subscriptionId || !transaction.invoiceNumber) throw notFound;
+  if (order.subscription_id !== subscriptionId || !order.paid) throw notFound;
 
+  let url: string | null;
   try {
-    const pdf = await paddle.client.transactions.getInvoicePDF(transactionId);
-    return { url: pdf.url };
+    url = await polar.client.getOrderInvoiceUrl(order);
   } catch (error) {
     throw providerFailure('billing:invoice-failed', organizationId, error);
   }
+  if (!url) {
+    throw new ApiError(409, 'INVOICE_NOT_READY', 'The invoice is being prepared. Try again in a moment.');
+  }
+  return { url };
 }

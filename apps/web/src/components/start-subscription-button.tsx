@@ -9,19 +9,19 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { errorMessage } from '@/lib/api-client';
 import {
+  CHECKOUT_COMPLETE_PARAM,
   createCheckoutIntent,
-  fetchBillingConfig,
   fetchSubscriptionStatus,
-  openSubscriptionCheckout,
 } from '@/lib/billing-checkout';
 
 const ACTIVATION_POLL_MS = 2_000;
 const ACTIVATION_WAIT_MS = 30_000;
 
-// Starts the platform subscription: a subscribe-only checkout intent opens the
-// billing provider's overlay. The overlay saying "completed" is not the
-// authority — the webhook is — so after payment this waits until the
-// organization reads ACTIVE, then refreshes the page.
+// Starts the subscription: a subscribe-only checkout intent sends the browser
+// to the billing provider's hosted checkout, which returns to this page with
+// ?checkout=complete. The return is not the authority — the webhook is — so
+// after payment this waits until the organization reads ACTIVE, then
+// refreshes the page.
 export function StartSubscriptionButton({
   children,
   onActivated,
@@ -42,6 +42,15 @@ export function StartSubscriptionButton({
     };
   }, []);
 
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get(CHECKOUT_COMPLETE_PARAM) !== 'complete') return;
+    url.searchParams.delete(CHECKOUT_COMPLETE_PARAM);
+    window.history.replaceState(null, '', url);
+    setState('activating');
+    void waitForActivation();
+  }, []);
+
   async function waitForActivation(): Promise<void> {
     const deadline = Date.now() + ACTIVATION_WAIT_MS;
     while (mounted.current && Date.now() < deadline) {
@@ -60,15 +69,8 @@ export function StartSubscriptionButton({
     setError(null);
     setState('opening');
     try {
-      const config = await fetchBillingConfig();
-      const intent = await createCheckoutIntent({});
-      const outcome = await openSubscriptionCheckout(config, intent.transactionId);
-      if (outcome !== 'completed') {
-        setState('idle');
-        return;
-      }
-      setState('activating');
-      await waitForActivation();
+      const intent = await createCheckoutIntent({ returnPath: window.location.pathname });
+      window.location.assign(intent.checkoutUrl);
     } catch (caught) {
       setError(errorMessage(caught));
       setState('idle');

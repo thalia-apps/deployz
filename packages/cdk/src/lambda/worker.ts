@@ -27,7 +27,7 @@ import {
   hasStartedInstall,
   newerReadyReleaseExists,
 } from '@deployz/api/jobs';
-import type { PaddleBilling } from '@deployz/api/paddle';
+import type { PolarBilling } from '@deployz/api/polar';
 import type { QueueMessage } from '@deployz/api/queue';
 import {
   RELEASE_VERSION_PATTERN,
@@ -1183,7 +1183,7 @@ export async function sweepStuckBuilds(deps: WorkerDeps, now: Date = new Date())
 
 // ── Billing safety job (Paddle migration Phase 10) ───────────────────────
 //
-// Every billing write in the request path is best-effort by design: a Paddle
+// Every billing write in the request path is best-effort by design: a Polar
 // failure or a lost write must never fail a deployment. This sweep is what
 // makes that safe — it runs on the same 15-minute schedule as the watchdogs
 // and closes the three gaps that leaves. It is also where billing pauses and
@@ -1200,9 +1200,9 @@ export interface BillingSweepResult {
   promoted: number;
   /** Live deployments whose billing paused or resumed with their serving state. */
   servingChanged: number;
-  /** Webhook event rows released so Paddle's next redelivery is processed. */
+  /** Webhook event rows released so Polar's next redelivery is processed. */
   unstuck: number;
-  /** Organizations whose subscription quantity was re-checked against Paddle. */
+  /** Organizations whose subscription quantity was re-checked against Polar. */
   reconciled: number;
 }
 
@@ -1224,13 +1224,13 @@ export interface BillingSweepResult {
  *     PAUSED one that is connected and HEALTHY / UPDATE_AVAILABLE again
  *     (syncServingBilling). DISCONNECTED is persisted only after
  *     RELAY_STALE_AFTER_MS, and this pass runs every 15 minutes, so a short
- *     heartbeat gap never changes the Paddle quantity. The relay write paths
+ *     heartbeat gap never changes the Polar unit count. The relay write paths
  *     resume a PAUSED deployment sooner, at its next verified READY stage.
  *
  *  2. Releases `billing_provider_events` rows abandoned in RECEIVED. A crash
- *     between the insert and processing leaves a row that makes Paddle's
+ *     between the insert and processing leaves a row that makes Polar's
  *     redelivery read as a duplicate, so the event is never processed at all.
- *     FAILED is the state handlePaddleWebhook retries.
+ *     FAILED is the state handlePolarWebhook retries.
  *
  *  3. Re-checks subscriptions whose quantity has not been reconciled for an
  *     hour. This is what lets the request path skip reconciling on every
@@ -1242,7 +1242,7 @@ export interface BillingSweepResult {
  */
 export async function sweepBilling(
   db: RuntimeDb,
-  paddle: PaddleBilling | null,
+  polar: PolarBilling | null,
   now: Date = new Date(),
 ): Promise<BillingSweepResult> {
   const organizationsToReconcile = new Set<string>();
@@ -1306,7 +1306,7 @@ export async function sweepBilling(
     )
     .returning({ id: schema.billingProviderEvents.id });
 
-  // 3. Drift sweep over subscriptions Paddle will still accept updates for.
+  // 3. Drift sweep over subscriptions Polar will still accept updates for.
   const stale = await db
     .select({ organizationId: schema.billingSubscriptions.organizationId })
     .from(schema.billingSubscriptions)
@@ -1325,7 +1325,7 @@ export async function sweepBilling(
   for (const row of stale) organizationsToReconcile.add(row.organizationId);
 
   for (const organizationId of organizationsToReconcile) {
-    await reconcileBilling({ db, paddle, now: () => now }, organizationId);
+    await reconcileBilling({ db, polar, now: () => now }, organizationId);
   }
 
   return { promoted, servingChanged, unstuck: unstuck.length, reconciled: organizationsToReconcile.size };

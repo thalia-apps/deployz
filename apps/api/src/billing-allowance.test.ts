@@ -7,35 +7,37 @@ import * as schema from '@deployz/db/schema';
 
 import { updateIncludedProductionDeployments } from './billing-allowance.js';
 import { reconcileBilling } from './billing-reconcile.js';
-import type { PaddleBilling } from './paddle.js';
+import type { PolarBilling } from './polar.js';
 
 // Included production deployments — the write path itself, below the admin
 // route: what it reports, what it refuses, and that the allowance survives
 // everything that happens to the organization around it.
 
-const PRICE_PLATFORM = 'pri_platform_test';
-const PRICE_DEPLOYMENT = 'pri_deployment_test';
 const ORG = 'org_allowance';
 
-function fakePaddle(updates: { items: { priceId: string; quantity: number }[] }[]): PaddleBilling {
+interface UpdateCall {
+  subscriptionId: string;
+  units: number;
+}
+
+/** A Polar double whose subscription holds `units` until an update sets them. */
+function fakePolar(updates: UpdateCall[], units: number): PolarBilling {
+  let current = units;
   return {
     config: {
-      apiKey: 'test_replace_me',
+      token: 'polar_oat_test_replace_me',
       webhookSecret: 'test_replace_me',
-      clientToken: 'pdl_sdbx_replace_me',
-      pricePlatform: PRICE_PLATFORM,
-      priceDeployment: PRICE_DEPLOYMENT,
+      productId: 'prod_test_1',
       environment: 'sandbox',
     },
     client: {
-      subscriptions: {
-        get: async () => ({ items: [{ price: { id: PRICE_PLATFORM }, quantity: 1, status: 'active' }] }),
-        update: async (_id: string, body: { items: { priceId: string; quantity: number }[] }) => {
-          updates.push(body);
-          return {};
-        },
+      getSubscription: async (id: string) => ({ id, status: 'active', units: current }),
+      updateSubscriptionUnits: async (subscriptionId: string, next: number) => {
+        updates.push({ subscriptionId, units: next });
+        current = next;
+        return { id: subscriptionId, status: 'active', units: next };
       },
-    } as unknown as PaddleBilling['client'],
+    } as unknown as PolarBilling['client'],
   };
 }
 
@@ -149,19 +151,17 @@ describe('updateIncludedProductionDeployments', () => {
       status: 'ACTIVE',
     });
     await addLive(2);
-    const updates: { items: { priceId: string; quantity: number }[] }[] = [];
-    const paddle = fakePaddle(updates);
+    const updates: UpdateCall[] = [];
+    // The subscription still bills the 2 live deployments from before the allowance.
+    const polar = fakePolar(updates, 2);
 
     // Allowance change and a new live deployment interleave in either order;
-    // whichever reconcile runs last pushes the quantity for the final state.
+    // whichever reconcile runs last pushes the unit count for the final state.
     await updateIncludedProductionDeployments(db, ORG, 2);
     await addLive(1);
-    const result = await reconcileBilling({ db, paddle }, ORG);
-    expect(result).toMatchObject({ active: 3, included: 2, expected: 1 });
-    expect(updates.at(-1)!.items).toEqual([
-      { priceId: PRICE_PLATFORM, quantity: 1 },
-      { priceId: PRICE_DEPLOYMENT, quantity: 1 },
-    ]);
+    const result = await reconcileBilling({ db, polar }, ORG);
+    expect(result).toMatchObject({ active: 3, included: 2, expected: 1, provider: 2 });
+    expect(updates.at(-1)).toEqual({ subscriptionId: 'sub_1', units: 1 });
   });
 
   it('survives cancellation and is reused on reactivation', async () => {
@@ -173,19 +173,17 @@ describe('updateIncludedProductionDeployments', () => {
       providerSubscriptionId: 'sub_1',
       status: 'CANCELED',
     });
-    const updates: { items: { priceId: string; quantity: number }[] }[] = [];
-    const paddle = fakePaddle(updates);
+    const updates: UpdateCall[] = [];
+    // The new checkout bills all 3 live deployments until reconciliation applies the allowance.
+    const polar = fakePolar(updates, 3);
 
-    expect(await reconcileBilling({ db, paddle }, ORG)).toMatchObject({ status: 'SKIPPED', included: 2, expected: 1 });
+    expect(await reconcileBilling({ db, polar }, ORG)).toMatchObject({ status: 'SKIPPED', included: 2, expected: 1 });
     expect(await allowance()).toBe(2);
 
     // Reactivated (a new subscription row after a fresh checkout, R6 semantics).
     await db.update(schema.billingSubscriptions).set({ status: 'ACTIVE', providerSubscriptionId: 'sub_2' });
-    expect(await reconcileBilling({ db, paddle }, ORG)).toMatchObject({ status: 'SUCCEEDED', included: 2, expected: 1 });
-    expect(updates[0]!.items).toEqual([
-      { priceId: PRICE_PLATFORM, quantity: 1 },
-      { priceId: PRICE_DEPLOYMENT, quantity: 1 },
-    ]);
+    expect(await reconcileBilling({ db, polar }, ORG)).toMatchObject({ status: 'SUCCEEDED', included: 2, expected: 1 });
+    expect(updates).toEqual([{ subscriptionId: 'sub_2', units: 1 }]);
   });
 
   it('belongs to the organization: ownership transfer and a member leaving do not touch it', async () => {

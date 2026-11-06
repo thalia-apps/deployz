@@ -54,32 +54,37 @@ release never reaches `FAILED`, so it stays billed.
 sums it into the active production deployment count.
 
 `billableDeploymentQuantity(active, included) = max(active − included, 0)`,
-with `included = organization.included_production_deployments` (default 0),
-is the ONLY number reconciliation ever pushes to Paddle
-(`billing-domain.test.ts`, `billing-reconcile.test.ts`):
+with `included = organization.included_production_deployments` (default 0).
+`subscriptionUnits(billable) = max(billable, 1)` is the ONLY number
+reconciliation ever pushes to Polar: a subscription always bills at least
+one unit ($49 + $19 = $68) (`billing-domain.test.ts`,
+`billing-reconcile.test.ts`):
 
-| active | included | billable | Paddle deployment item |
+| active | included | billable | Polar units |
 |---|---|---|---|
-| 5 | 0 | 5 | quantity 5 (unchanged behavior) |
-| 5 | 2 | 3 | quantity 3 |
-| 3 | 3 | 0 | removed |
-| 1 | 10000 | 0 | removed — never negative |
-| 0..4 | 2 | 0, 0, 0, 1, 2 | crosses the threshold one at a time |
+| 5 | 0 | 5 | 5 |
+| 5 | 2 | 3 | 3 |
+| 3 | 3 | 0 | 1 — the minimum |
+| 1 | 10000 | 0 | 1 — never under the minimum |
+| 0 | 0 | 0 | 1 — subscribed, nothing live yet |
+| 0..4 | 2 | 0, 0, 0, 1, 2 | 1, 1, 1, 1, 2 |
 | TEST rows, any state | any | not counted | never consume the allowance |
 | PAUSED rows | any | not counted | shown as `paused`, never consume the allowance |
 
-## 3. Paddle subscription status → Deployz status
+## 3. Polar subscription status → Deployz status
 
 `mapSubscriptionStatus` — `apps/api/src/billing-webhooks.ts`. In
 `billing-matrix.test.ts`.
 
-| Paddle | Deployz | Note |
+| Polar | Deployz | Note |
 |---|---|---|
-| `active` | ACTIVE | |
-| `trialing` | ACTIVE | Deployz sells no trials; if Paddle reports one it bills, so it is ACTIVE |
+| `incomplete`, `incomplete_expired` | *ignored* | not a paid subscription yet |
+| `active` | ACTIVE | `cancel_at_period_end` is stored as a scheduled `cancel` at the period end |
+| `trialing` | ACTIVE | Deployz sells no trials; if Polar reports one it bills, so it is ACTIVE |
 | `past_due` | PAST_DUE | |
-| `paused` | PAUSED | |
-| `canceled` | CANCELED | |
+| `unpaid` | PAST_DUE | the fix is the card form on the portal |
+| `paused` | PAUSED | the portal's pause is switched off; kept for safety |
+| `canceled` | CANCELED | the subscription has ended |
 | anything else | *ignored* | the event is recorded IGNORED, never guessed |
 
 ## 4. Entitlements by subscription status (R13-1)
@@ -107,19 +112,19 @@ Payment state never touches running customer infrastructure.
 
 | Situation | Status | Action | Ledger row? |
 |---|---|---|---|
-| Billing disabled (no Paddle) | SKIPPED | SKIPPED | no |
-| No subscription, nothing live | SKIPPED | SKIPPED | no |
-| No subscription, something live | SKIPPED | SKIPPED | yes — anomaly |
-| PAUSED / CANCELED, something live | SKIPPED | SKIPPED | yes — anomaly |
-| ACTIVE / PAST_DUE, provider already matches | SUCCEEDED | NONE | no — `lastReconciledAt` only |
-| first live deployment | SUCCEEDED | ITEM_ADDED | yes |
-| count changed | SUCCEEDED | QUANTITY_UPDATED | yes |
-| last live deployment removed | SUCCEEDED | ITEM_REMOVED (item dropped, never qty 0) | yes |
-| Paddle refused | FAILED | NONE | yes, with reason |
+| Billing disabled (no Polar token) | SKIPPED | SKIPPED | no |
+| No subscription, nothing billable | SKIPPED | SKIPPED | no |
+| No subscription, a live deployment beyond the allowance | SKIPPED | SKIPPED | yes — anomaly |
+| PAUSED / CANCELED, a live deployment beyond the allowance | SKIPPED | SKIPPED | yes — anomaly |
+| ACTIVE / PAST_DUE, Polar units already match | SUCCEEDED | NONE | no — `lastReconciledAt` only |
+| units differ | SUCCEEDED | QUANTITY_UPDATED (`prorate`) | yes |
+| Polar refused | FAILED | NONE | yes, with reason |
 
-Always the ABSOLUTE quantity (`max(active − included, 0)`), never a delta:
-two runs produce the same subscription as one. Inactive Paddle items are
-never resent. The result also carries `active` and `included` so the admin
+`ITEM_ADDED` and `ITEM_REMOVED` belong to the Paddle period and are no
+longer produced: the unit price never leaves the subscription.
+
+Always the ABSOLUTE unit count (`max(active − included, 1)`), never a
+delta: two runs produce the same subscription as one. The result also carries `active` and `included` so the admin
 view and the audit trail can show the three numbers behind `expected`.
 
 ## 7. Included-deployment allowance changes (admin)
@@ -135,7 +140,7 @@ view and the audit trail can show the three numbers behind `expected`.
 | ACTIVE / PAST_DUE, value changed | yes | yes, with outcome | yes — absolute quantity |
 | PAUSED / CANCELED, value changed | yes | yes | SKIPPED (not updatable) |
 | Same value | no write | yes (`changed: false`) | no |
-| Paddle fails | yes — kept | yes, `FAILED` | ledger row; Reconcile action / sweep repair it |
+| Polar fails | yes — kept | yes, `FAILED` | ledger row; Reconcile action / sweep repair it |
 | Two admins race | serialized on the row lock | both, true previous values | converges to the last write |
 
 ## 6. Webhook delivery handling (Phase 6)
@@ -144,10 +149,12 @@ view and the audit trail can show the three numbers behind `expected`.
 
 | Delivery | Response | Recorded as |
 |---|---|---|
-| Missing / invalid signature | 401 (Paddle retries) | nothing written |
-| Same `event_id` again, earlier attempt PROCESSED/IGNORED | 200 | DUPLICATE |
-| Same `event_id` again, earlier attempt FAILED | processed again | RECEIVED → … |
-| Older `occurred_at` than what is on file | 200 | IGNORED (stale) |
+| Missing `webhook-*` headers, invalid signature, or a timestamp more than 5 min off | 401 (Polar retries) | nothing written |
+| Same `webhook-id` again, earlier attempt PROCESSED/IGNORED | 200 | DUPLICATE |
+| Same `webhook-id` again, earlier attempt FAILED | processed again | RECEIVED → … |
+| Not a `subscription.*` event | 200 | IGNORED |
+| Subscription not on file, and its `checkout_id` is no PENDING intent's checkout or its product is not `POLAR_PRODUCT_ID` | 200 | IGNORED (organization not found) |
+| Older `timestamp` than what is on file | 200 | IGNORED (stale) |
 | Different subscription id while stored one is not CANCELED | 200 | IGNORED (mismatch) |
-| Processing threw | 500 (Paddle retries) | FAILED |
+| Processing threw | 500 (Polar retries) | FAILED |
 | Row abandoned in RECEIVED > 10 min | — | reset to FAILED by the safety job |

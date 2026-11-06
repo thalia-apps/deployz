@@ -169,13 +169,14 @@ see [`user-flows.md#who-chooses-the-aws-region`](user-flows.md#who-chooses-the-a
   cache but retains the database, its credentials and the bucket; Purge
   deletes the retained items. The customer deletes the connector (bootstrap)
   stack themselves.
-- **Billing**: Paddle subscription, $49/month platform fee from the moment
+- **Billing**: Polar subscription, $49/month platform fee from the moment
   the vendor subscribes (before a customer can confirm an invitation) plus
   $19/month per
   production deployment while it serves the customer (a failed or
   disconnected deployment is paused and not billed); the
   evaluation (analysis, configuration, releases, one TEST deployment) is
-  free. See [`../billing/paddle-billing.md`](../billing/paddle-billing.md).
+  free. The subscription always bills at least one deployment, so it starts
+  at $68/month. See [`../billing/polar-billing.md`](../billing/polar-billing.md).
 - **Team Admin**: an internal support and recovery console with read-only
   "view as vendor" sessions and audited recovery actions
   ([`../admin/team-admin.md`](../admin/team-admin.md)).

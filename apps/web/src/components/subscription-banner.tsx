@@ -44,7 +44,7 @@ export function SubscriptionBanner({ status }: { status: SubscriptionStatus | nu
       <AlertTitle>{banner.title}</AlertTitle>
       <AlertDescription className="flex flex-wrap items-center gap-3">
         <span>{banner.description}</span>
-        {/* Phase 12: a failed payment goes straight to Paddle's card form —
+        {/* Phase 12: a failed payment goes straight to the billing portal —
             the one action that actually fixes it — rather than to a page
             that then asks the vendor to click again. */}
         {status === 'PAST_DUE' ? (

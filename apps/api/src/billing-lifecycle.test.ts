@@ -11,8 +11,8 @@ import { healthyReleaseEvidence, webOnlySpec } from './release-evidence-fixture.
 import { hashRelayToken } from './relay-store.js';
 import { buildServer } from './server.js';
 
-// Paddle migration Phase 2: the billing state machine is wired into the
-// deployment lifecycle at exactly three points (docs/billing/paddle-billing.md,
+// Billing Phase 2: the billing state machine is wired into the
+// deployment lifecycle at exactly three points (docs/billing/polar-billing.md,
 // "The lifecycle, end to end") — the relay-authenticated write paths that can observe
 // derived stage READY, and the destroy/force-complete family that accepts a
 // removal. This exercises those hook sites end to end, through the real
