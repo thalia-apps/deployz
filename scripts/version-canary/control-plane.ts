@@ -71,6 +71,7 @@ export interface DeploymentDetail {
   applicationId: string;
   customerId: string;
   installLinkId: string;
+  applicationName: string;
   installationId: string | null;
   bootstrapStackName: string | null;
   currentReleaseId: string | null;
@@ -493,8 +494,10 @@ export class ControlPlane {
     return this.request('POST', `/api/deployments/${deploymentId}/destroy`, {});
   }
 
+  /** Purge needs the application name as confirmation, as in the dashboard. */
   async purge(deploymentId: string): Promise<{ status: number; body: unknown }> {
-    return this.request('POST', `/api/deployments/${deploymentId}/purge`, {});
+    const { applicationName } = await this.getDeployment(deploymentId);
+    return this.request('POST', `/api/deployments/${deploymentId}/purge`, { confirmName: applicationName });
   }
 
   async events(deploymentId: string): Promise<EventRow[]> {
