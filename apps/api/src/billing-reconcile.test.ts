@@ -195,12 +195,13 @@ describe('reconcileBilling', () => {
       const prorations: string[] = [];
 
       const result = await reconcileBilling(
-        { db, polar: fakePolar({ units: 1, updates, invoiceError: new PolarApiError(500, 'Polar down') }) },
+        { db, polar: fakePolar({ units: 1, updates, prorations, invoiceError: new PolarApiError(500, 'Polar down') }) },
         ORG,
       );
 
       expect(result).toMatchObject({ status: 'FAILED', reason: 'Polar down' });
       expect(updates).toEqual([]);
+      expect(prorations).toEqual([]);
     });
 
     it('a subscription set to end is SKIPPED without a Polar call, and stamped', async () => {
@@ -211,12 +212,13 @@ describe('reconcileBilling', () => {
       const prorations: string[] = [];
 
       const result = await reconcileBilling(
-        { db, polar: fakePolar({ units: 1, updates, getError: new Error('must not be called') }) },
+        { db, polar: fakePolar({ units: 1, updates, prorations, getError: new Error('must not be called') }) },
         ORG,
       );
 
       expect(result).toMatchObject({ status: 'SKIPPED', reason: 'cancellation scheduled' });
       expect(updates).toEqual([]);
+      expect(prorations).toEqual([]);
       expect(await reconciliationRows()).toHaveLength(0);
       const [subscription] = await db.select().from(schema.billingSubscriptions);
       expect(subscription!.lastReconciledAt).not.toBeNull();
