@@ -238,7 +238,9 @@ export async function handlePolarWebhook(
   // Dedupe at the database, not only in application code: the unique index
   // on providerEventId is the actual guarantee. A row that exists with
   // FAILED is retried — Polar only re-delivers when we did not 2xx, so a
-  // FAILED row means our own earlier attempt crashed, not a duplicate.
+  // FAILED row means our own earlier attempt crashed, not a duplicate. An
+  // IGNORED row is evaluated again: an operator redelivers an event after
+  // fixing what made it unattributable, and every check below is guarded.
   const [inserted] = await db
     .insert(schema.billingProviderEvents)
     .values({
@@ -260,7 +262,7 @@ export async function handlePolarWebhook(
       .from(schema.billingProviderEvents)
       .where(eq(schema.billingProviderEvents.providerEventId, providerEventId))
       .limit(1);
-    if (!existing || existing.processingStatus !== 'FAILED') {
+    if (!existing || (existing.processingStatus !== 'FAILED' && existing.processingStatus !== 'IGNORED')) {
       return { outcome: 'DUPLICATE' };
     }
     await db

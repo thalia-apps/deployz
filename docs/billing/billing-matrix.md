@@ -150,8 +150,8 @@ view and the audit trail can show the three numbers behind `expected`.
 | Delivery | Response | Recorded as |
 |---|---|---|
 | Missing `webhook-*` headers, invalid signature, or a timestamp more than 5 min off | 401 (Polar retries) | nothing written |
-| Same `webhook-id` again, earlier attempt PROCESSED/IGNORED | 200 | DUPLICATE |
-| Same `webhook-id` again, earlier attempt FAILED | processed again | RECEIVED → … |
+| Same `webhook-id` again, earlier attempt PROCESSED | 200 | DUPLICATE |
+| Same `webhook-id` again, earlier attempt FAILED or IGNORED | processed again | RECEIVED → … |
 | Not a `subscription.*` event | 200 | IGNORED |
 | Subscription not on file, and its `checkout_id` is no intent's checkout or its product is not `POLAR_PRODUCT_ID` | 200 | IGNORED (organization not found) |
 | Older `timestamp` than what is on file | 200 | IGNORED (stale) |

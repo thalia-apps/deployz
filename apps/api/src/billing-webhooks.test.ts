@@ -373,6 +373,31 @@ describe('POST /api/billing/webhook (Polar)', () => {
     expect(await getEventRow(db, 'msg_dedupe_key_b')).not.toBeNull();
   });
 
+  it('evaluates a redelivered event again when its earlier attempt was IGNORED', async () => {
+    const org = await signUpAndGetOrg(auth, db, nextEmail());
+    const event = subscriptionEvent({
+      type: 'subscription.created',
+      timestamp: new Date().toISOString(),
+      checkoutId: 'chk_redeliver_ignored',
+      subscriptionId: 'sub_redeliver_ignored',
+      status: 'active',
+    });
+
+    expect((await send('msg_redeliver_ignored', event)).outcome).toBe('IGNORED');
+    await seedPendingIntent(db, org.organizationId, 'chk_redeliver_ignored');
+
+    expect((await send('msg_redeliver_ignored', event)).outcome).toBe('PROCESSED');
+    expect(await getSubscriptionRow(db, org.organizationId)).toMatchObject({
+      providerSubscriptionId: 'sub_redeliver_ignored',
+      status: 'ACTIVE',
+    });
+    const rows = await db
+      .select()
+      .from(schema.billingProviderEvents)
+      .where(eq(schema.billingProviderEvents.providerEventId, 'msg_redeliver_ignored'));
+    expect(rows).toHaveLength(1);
+  });
+
   it('retries a delivery whose earlier attempt is recorded FAILED', async () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
     await seedPendingIntent(db, org.organizationId, 'chk_retry');
