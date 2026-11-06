@@ -16,6 +16,12 @@ the frozen spec's graph → planner → IR chain; the size profile only decides
 | `medium-v1` | Medium | 1 vCPU / 2 GiB × 1 task | `db.t3.medium`, 20 GB (autoscaling to 100 GB), gp3 | `cache.t4g.small` × 1 |
 | `large-v1` | Large | 2 vCPU / 4 GiB × 1 task | `db.t3.large`, 20 GB (autoscaling to 100 GB), gp3 | `cache.t4g.medium` × 1 |
 
+- **Pilot:** only Small is offered for new selections
+  (`SELECTABLE_SIZE_TIERS`), because Medium and Large are not certified on
+  real AWS. Published profiles do not change. A deployment that froze a
+  Medium or Large profile keeps it. An application or link setting that
+  names Medium or Large resolves to Small. A request for Medium or Large is
+  refused with `422 SIZE_PROFILE_NOT_ALLOWED`.
 - Each tier maps to one **current** version, which new deployments freeze:
   Small → `small-v2`, Medium → `medium-v1`, Large → `large-v1`
   (`currentInfrastructureSizeProfile`). `small-v1` is frozen for the
@@ -116,7 +122,11 @@ throws and nothing is guessed. Both ride on `DeploymentPlan` as optional
 `footprint` and `costEstimate` fields.
 
 The footprint is **derived, never persisted** beyond the compiler's frozen
-spec. Pricing is deliberately approximate and labelled as such. The vendor
+spec. The ALB range includes two public IPv4 addresses and the stack's
+secrets, alarms and logs. The NAT range includes one public IPv4 address.
+These are baseline service ranges, not profile values, so a change to them
+needs no new profile version. Pricing is deliberately approximate and
+labelled as such. The vendor
 configuration page shows the resources and the estimate for each size; the
 customer install page shows them for the selected size and Region. An
 undeployable Region shows *Estimate unavailable* rather than a number.

@@ -6,7 +6,7 @@ import { ChevronDown } from 'lucide-react';
 import {
   allowedSizeTiers,
   currentInfrastructureSizeProfile,
-  INFRASTRUCTURE_SIZE_TIERS,
+  SELECTABLE_SIZE_TIERS,
   type DeploymentPlan,
   type InfrastructureSizeTier,
 } from '@deployz/contracts';
@@ -73,7 +73,7 @@ export function DeploymentSize({
   useEffect(() => {
     let cancelled = false;
     setPlans({});
-    for (const tier of INFRASTRUCTURE_SIZE_TIERS) {
+    for (const tier of SELECTABLE_SIZE_TIERS) {
       fetchApplicationPlan(application.id, tier).then(
         (sizePlan) => !cancelled && setPlans((current) => ({ ...current, [tier]: sizePlan })),
         () => !cancelled && setPlans((current) => ({ ...current, [tier]: null })),
@@ -118,7 +118,7 @@ export function DeploymentSize({
   const hasCache = plan ? plan.components.some((component) => component.kind === 'cache') : application.redisRequired;
 
   const allowed = allowedSizeTiers(minimumSize);
-  const presets = INFRASTRUCTURE_SIZE_TIERS.map((tier) => {
+  const presets = SELECTABLE_SIZE_TIERS.map((tier) => {
     const sizePlan = plans[tier];
     const profile = currentInfrastructureSizeProfile(tier);
     const workloads = sizePlan?.footprint?.workloads ?? [];
@@ -257,7 +257,7 @@ export function DeploymentSize({
             <SizeSelect
               id={minimumId}
               value={minimumSize}
-              tiers={INFRASTRUCTURE_SIZE_TIERS}
+              tiers={SELECTABLE_SIZE_TIERS}
               onValueChange={changeMinimum}
               disabled={saving}
               describedBy={minimumHelpId}
