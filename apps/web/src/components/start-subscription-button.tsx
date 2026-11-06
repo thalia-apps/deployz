@@ -46,6 +46,8 @@ export function StartSubscriptionButton({
     const url = new URL(window.location.href);
     if (url.searchParams.get(CHECKOUT_COMPLETE_PARAM) !== 'complete') return;
     url.searchParams.delete(CHECKOUT_COMPLETE_PARAM);
+    // Polar appends a short-lived portal session token; keep it out of history.
+    url.searchParams.delete('customer_session_token');
     window.history.replaceState(null, '', url);
     setState('activating');
     void waitForActivation();
