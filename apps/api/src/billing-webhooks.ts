@@ -75,15 +75,18 @@ async function intentForCheckout(
  * Resolves the organization an event belongs to. A subscription already on
  * file always follows the organization on file. A subscription not yet on
  * file is bound only when its `checkout_id` is the checkout of an
- * organization's PENDING intent and it is for POLAR_PRODUCT_ID. Only
- * Deployz creates those checkouts (with its server token), so client-chosen
- * metadata can never bind a subscription to another organization.
+ * organization's intent and it is for POLAR_PRODUCT_ID. Only Deployz creates
+ * those checkouts (with its server token), so client-chosen metadata can
+ * never bind a subscription to another organization. The intent's status
+ * does not matter: a subscription the vendor paid for through Deployz's own
+ * checkout is never dropped because the intent expired meanwhile. Only a
+ * PENDING intent goes on to create its parked deployment.
  */
 async function resolveOrganizationId(
   tx: RuntimeDb,
   data: PolarSubscription,
   productId: string,
-  intent: { organizationId: string; status: string } | undefined,
+  intent: { organizationId: string } | undefined,
 ): Promise<string | undefined> {
   const [existing] = await tx
     .select({ organizationId: schema.billingSubscriptions.organizationId })
@@ -91,7 +94,7 @@ async function resolveOrganizationId(
     .where(eq(schema.billingSubscriptions.providerSubscriptionId, data.id))
     .limit(1);
   if (existing) return existing.organizationId;
-  if (intent?.status === 'PENDING' && data.product_id === productId) return intent.organizationId;
+  if (intent && data.product_id === productId) return intent.organizationId;
   return undefined;
 }
 

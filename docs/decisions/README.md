@@ -1767,7 +1767,7 @@ uses the unit bought at checkout. The unit count is
 above one. Unit changes use Polar's `prorate` behavior, so the difference
 lands on the next renewal invoice. Paddle is removed, not kept beside Polar:
 there was nothing to migrate. Migration 0060 sets Paddle subscriptions to
-CANCELED and expires parked checkouts. The only hand-set secret is
+CANCELED and expires parked Paddle checkouts. The only hand-set secret is
 `POLAR_TOKEN`; the deploy finds or creates the product and the webhook
 endpoint ([`../billing/polar-billing.md`](../billing/polar-billing.md)).
 

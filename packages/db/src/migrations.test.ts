@@ -211,10 +211,10 @@ describe('migrations', () => {
   });
 
   // 0060 moves billing from Paddle to Polar: the enum gains POLAR, the
-  // provider columns default to it, and every Paddle subscription and parked
-  // checkout is closed. Re-applied over seeded Paddle rows, as a database
+  // provider columns default to it, every Paddle subscription is closed, and
+  // every parked Paddle checkout (a txn_ id) expires; a Polar checkout stays. Re-applied over seeded Paddle rows, as a database
   // migrated before 0060 sees it.
-  it('0060 adds POLAR, cancels Paddle subscriptions and expires PENDING intents', async () => {
+  it('0060 adds POLAR, cancels Paddle subscriptions and expires PENDING Paddle intents', async () => {
     const { rows: seeded } = await client!.query<{ organization_id: string; application_id: string; customer_id: string }>(
       `WITH org AS (
          INSERT INTO organization (id, name, slug, created_at)
@@ -235,9 +235,16 @@ describe('migrations', () => {
       [ids.organization_id],
     );
     await client!.query(
-      `INSERT INTO billing_checkout_intents (organization_id, application_id, customer_id, region, provider, status)
-       VALUES ($1, $2, $3, 'us-east-1', 'PADDLE', 'PENDING')`,
+      `INSERT INTO billing_checkout_intents (organization_id, application_id, customer_id, region, provider, provider_transaction_id, status)
+       VALUES ($1, $2, $3, 'us-east-1', 'PADDLE', 'txn_test_0060', 'PENDING')`,
       [ids.organization_id, ids.application_id, ids.customer_id],
+    );
+    await client!.query(
+      `INSERT INTO organization (id, name, slug, created_at) VALUES ('org_0060_polar', 'Polar first', 'polar-first', now())`,
+    );
+    await client!.query(
+      `INSERT INTO billing_checkout_intents (organization_id, provider, provider_transaction_id, status)
+       VALUES ('org_0060_polar', 'PADDLE', '00000000-0000-4000-8000-000000000060', 'PENDING')`,
     );
 
     const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'drizzle');
@@ -265,6 +272,11 @@ describe('migrations', () => {
     expect(intents).toHaveLength(1);
     expect(intents[0]?.status).toBe('EXPIRED');
     expect(intents[0]?.resolved_at).not.toBeNull();
+
+    const { rows: polarIntents } = await client!.query<{ status: string }>(
+      `SELECT status FROM billing_checkout_intents WHERE organization_id = 'org_0060_polar'`,
+    );
+    expect(polarIntents).toEqual([{ status: 'PENDING' }]);
 
     const { rows: polar } = await client!.query<{ provider: string }>(
       `INSERT INTO billing_provider_events (provider_event_id, event_type, occurred_at)

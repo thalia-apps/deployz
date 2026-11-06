@@ -786,7 +786,7 @@ describe('POST /api/billing/webhook (Polar)', () => {
     });
 
     it.each(['COMPLETED', 'EXPIRED', 'FAILED'] as const)(
-      'ignores a checkout_id whose intent is %s',
+      'binds a checkout_id whose intent is %s: the vendor paid through Deployz\'s checkout',
       async (status) => {
         const org = await signUpAndGetOrg(auth, db, nextEmail());
         const intentId = await seedPendingIntent(db, org.organizationId, `chk_bind_${status}`);
@@ -806,8 +806,16 @@ describe('POST /api/billing/webhook (Polar)', () => {
           }),
         );
 
-        expect(result.outcome).toBe('IGNORED');
-        expect(await getSubscriptionRow(db, org.organizationId)).toBeNull();
+        expect(result.outcome).toBe('PROCESSED');
+        expect(await getSubscriptionRow(db, org.organizationId)).toMatchObject({
+          providerSubscriptionId: `sub_bind_${status}`,
+          status: 'ACTIVE',
+        });
+        const [intent] = await db
+          .select({ status: schema.billingCheckoutIntents.status })
+          .from(schema.billingCheckoutIntents)
+          .where(eq(schema.billingCheckoutIntents.id, intentId));
+        expect(intent!.status).toBe(status);
       },
     );
 

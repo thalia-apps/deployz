@@ -114,10 +114,13 @@ install link — exist.
 
 A subscription already on file always follows the organization on file. A
 subscription not yet on file is bound only when its `checkout_id` is the
-checkout of an organization's PENDING intent and its product is
+checkout of an organization's intent and its product is
 `POLAR_PRODUCT_ID`. Only Deployz creates those checkouts, with its server
 token, so client-chosen metadata can never bind a subscription to another
-organization. Otherwise the event is IGNORED (`organization not found`).
+organization. The intent's status does not matter: a subscription paid
+through Deployz's own checkout is never dropped because its intent expired
+meanwhile; only a PENDING intent goes on to create its parked deployment.
+Otherwise the event is IGNORED (`organization not found`).
 
 ### 3. Going live → billing starts
 
