@@ -4,13 +4,16 @@ import { and, eq, inArray } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { applicationStackNameForInstallation } from '@deployz/contracts';
+import { SELECTABLE_SIZE_TIERS, applicationStackNameForInstallation } from '@deployz/contracts';
 import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { createAuth, type Auth } from './auth.js';
 import { env } from './env.js';
 import { buildServer } from './server.js';
+
+// These tests cover the size rules of every tier. The pilot offers Small only.
+SELECTABLE_SIZE_TIERS.splice(0, SELECTABLE_SIZE_TIERS.length, 'small', 'medium', 'large');
 
 // Phase 1 Deploy Links (docs/deploy-links.md) — vendor generation, the public
 // resolve endpoint, revoke/regenerate, and the shared-deployment-creation

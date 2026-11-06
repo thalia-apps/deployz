@@ -489,6 +489,15 @@ variables (and of `BOOTSTRAP_REPUBLISH`, `PADDLE_ENVIRONMENT`,
 repository settings, not in this repository: read them with
 `gh variable list`.
 
+The pilot value of the variable is
+`us-east-1,us-east-2,us-west-2,eu-west-1,eu-central-1`. These are the
+Regions with real-AWS evidence. The variable only gates new installs
+(deployment, checkout, link and invitation creation, and the bootstrap
+template links). A deployment in a Region that leaves the list keeps
+running, and its status, release and destroy commands go through the relay
+and do not read the list. Its install link and connector-update link are
+not offered, because they need the published template for that Region.
+
 ## Enabling a Region
 
 1. Create the `deployz-templates-<region>` bucket with public read.

@@ -83,6 +83,15 @@ sets a recommended size and a minimum size per application and can
 override the recommendation per link. The customer chooses any permitted
 size before installing. A size changes capacity only, never topology.
 
+**Pilot boundary.** Queues and scheduled jobs are not certified on real AWS.
+During the public pilot the analysis refuses a repository that needs one
+(see "Explicit MVP non-goals"). `ASYNC_WORKLOADS_DEPLOYABLE` in
+`packages/analysis/src/rejection.ts` is the one switch; set it to `true`
+to provision them again. Medium and Large are also not certified: new
+selections offer Small only (`SELECTABLE_SIZE_TIERS` in
+`packages/contracts/src/profile.ts`). A deployment that already froze a
+Medium or Large profile keeps it.
+
 Plan and status payloads may also name `worker`, `queue` and `schedule`
 component kinds. All three are real, provisioned components: a `queue` is
 an SQS Standard queue, and a `schedule` is an EventBridge Scheduler
@@ -175,6 +184,12 @@ see [`user-flows.md#who-chooses-the-aws-region`](user-flows.md#who-chooses-the-a
 
 Rejected at analysis time, with evidence, never silently adapted:
 
+- During the pilot: any queue or scheduled job. The analysis marks the
+  application NOT_DEPLOYABLE and the vendor sees "this application needs a
+  message queue / a scheduled job. Deployz does not provision queues or
+  scheduled jobs in the pilot." A vendor dispute cannot dismiss this
+  reason. The rules below still describe what is detected.
+
 - Scheduled work is provisioned only from a `render.yaml` `type: cron`
   service or a Kubernetes `CronJob` manifest. In-process cron libraries, CI-level
   schedules (GitHub Actions, etc.), Vercel `crons` and crontab files never
@@ -260,7 +275,7 @@ Deliberate trade-offs that are documented rather than hidden:
 - **A failed first install can leave empty credential secrets** in the
   customer account; they hold no customer data.
 - **Per-deployment isolation is expensive.** A dedicated VPC with NAT and a
-  dedicated ALB dominates the per-deployment AWS cost (roughly $77–114 per
+  dedicated ALB dominates the per-deployment AWS cost (roughly $87–124 per
   month before the application's own usage).
 - **The shared control-plane ECR repository** is protected by unguessable
   UUID-namespaced tags, not per-application repositories.

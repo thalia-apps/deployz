@@ -57,8 +57,10 @@ interface PricingAdapter {
 // RDS, Valkey) carries one range per size the profile registry publishes,
 // keyed by `sizeKey`; a size with no range prices as unavailable.
 const BASELINE_PRICING: Readonly<Record<string, PricingAdapter>> = {
-  alb: { monthly: { min: 15, max: 25 }, usageNote: 'Load balancer capacity (LCUs)' },
-  'nat-gateway': { monthly: { min: 30, max: 40 }, usageNote: 'Data processed by the NAT gateway' },
+  // The ALB range includes two public IPv4 addresses, plus the Secrets Manager
+  // secrets, alarms and logs of the stack; the NAT range includes one.
+  alb: { monthly: { min: 24, max: 34 }, usageNote: 'Load balancer capacity (LCUs)' },
+  'nat-gateway': { monthly: { min: 36, max: 46 }, usageNote: 'Data processed by the NAT gateway' },
   s3: { monthly: null, usageNote: 'Files stored in S3 and data transfer' },
   sqs: { monthly: null, usageNote: 'Messages sent to and received from queues' },
   'eventbridge-scheduler': { monthly: null, usageNote: 'Scheduled invocations' },

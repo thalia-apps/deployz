@@ -2,9 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { makeApplicationDeployable } from './seed-ready-manifest.js';
 
-// Deployment sizes (docs/infrastructure-profiles.md): the vendor sets a
-// default, overrides it on one invitation, and the customer installs a
-// different permitted size. The deployment freezes the customer's choice.
+// Deployment sizes (docs/infrastructure-profiles.md): the pilot offers Small
+// only (SELECTABLE_SIZE_TIERS). The deployment freezes the customer's choice.
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
@@ -17,7 +16,7 @@ async function signUp(page: Page): Promise<void> {
   await page.waitForURL('/dashboard');
 }
 
-test('the customer installs its chosen size from an invitation with a vendor override', async ({ page }) => {
+test('the customer installs Small from an invitation and Medium and Large are not offered', async ({ page }) => {
   test.setTimeout(120_000);
   await signUp(page);
   const suffix = crypto.randomUUID().slice(0, 8);
@@ -35,40 +34,30 @@ test('the customer installs its chosen size from an invitation with a vendor ove
   expect((await page.request.post(`${API_URL}/api/applications/${application.id}/analyse`, {})).ok()).toBeTruthy();
   await makeApplicationDeployable(page.request, application.id);
 
-  // Vendor: Medium by default, Small allowed; this one customer gets a Large recommendation.
-  const sizes = await page.request.patch(`${API_URL}/api/applications/${application.id}`, {
-    data: { defaultSizeProfile: 'medium', minimumSizeProfile: 'small' },
-  });
-  expect(sizes.ok(), await sizes.text()).toBeTruthy();
   const customer = (await page.request
     .post(`${API_URL}/api/customers`, { data: { name: `Size Customer ${suffix}`, email: `size-${suffix}@example.com` } })
     .then((response) => response.json())) as { id: string };
   const invitationResponse = await page.request.post(`${API_URL}/api/customers/${customer.id}/invitations`, {
-    data: { applicationId: application.id, recommendedSizeProfile: 'large' },
+    data: { applicationId: application.id },
   });
   expect(invitationResponse.ok()).toBeTruthy();
   const invitation = (await invitationResponse.json()) as { id: string; token: string };
 
-  // Customer: the link's recommendation is preselected and labelled.
   await page.goto(`/install/${invitation.id}#${invitation.token}`);
-  const sizeSection = page.locator('section[aria-labelledby="public-size"]');
-  await expect(sizeSection).toBeVisible();
-  await expect(page.locator('#size-large')).toHaveAttribute('aria-checked', 'true');
-  await expect(page.locator('label[for="size-large"]')).toContainText('Recommended by your software provider');
-  await expect(page.locator('#size-small')).toBeVisible();
+  await expect(page.locator('section[aria-labelledby="public-size"]')).toBeVisible();
+  await expect(page.locator('#size-small')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('#size-medium')).toHaveCount(0);
+  await expect(page.locator('#size-large')).toHaveCount(0);
 
   await page.locator('section[aria-labelledby="public-region"]').getByRole('combobox').click();
   await page.getByRole('option', { name: 'US East (N. Virginia)' }).click();
-  await page.locator('label[for="size-medium"]').click();
-  await expect(page.locator('#size-medium')).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByTestId('selected-size')).toContainText('Medium');
+  await expect(page.getByTestId('selected-size')).toContainText('Small');
 
   const continueButton = page.getByRole('button', { name: 'Continue to setup' });
   await expect(continueButton).toBeEnabled();
   await continueButton.click();
   await page.waitForURL((url) => /\/install\/[0-9a-f-]{36}$/.test(url.pathname) && !url.pathname.endsWith(invitation.id));
 
-  // The deployment froze the customer's choice, not the recommendation.
   const { deployments } = (await page.request.get(`${API_URL}/api/deployments`).then((response) => response.json())) as {
     deployments: { id: string; customerId: string }[];
   };
@@ -77,13 +66,13 @@ test('the customer installs its chosen size from an invitation with a vendor ove
   const detail = (await page.request.get(`${API_URL}/api/deployments/${deployment!.id}`).then((response) => response.json())) as {
     size: { id: string; profileKey: string } | null;
   };
-  expect(detail.size).toMatchObject({ id: 'medium', profileKey: 'medium-v1' });
+  expect(detail.size).toMatchObject({ id: 'small', profileKey: 'small-v2' });
 
   await page.goto(`/dashboard/deployments/${deployment!.id}`);
-  await expect(page.getByTestId('deployment-size-label')).toHaveText('Size: Medium');
+  await expect(page.getByTestId('deployment-size-label')).toHaveText('Size: Small');
 });
 
-test('the vendor sets the recommended and minimum sizes and they persist after a reload', async ({ page }, testInfo) => {
+test('the vendor sizes card offers Small only and keeps its estimate after a reload', async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   await signUp(page);
   const appResponse = await page.request.post(`${API_URL}/api/applications`, {
@@ -104,29 +93,12 @@ test('the vendor sets the recommended and minimum sizes and they persist after a
   await expect(page.getByTestId('config-tab-sizes')).toHaveAttribute('aria-selected', 'true');
   await expect(card.getByTestId('deployment-size-small')).toContainText('Default');
   await expect(card.getByTestId('deployment-size-small-cost')).toHaveText(/^~\$\d+–\d+\/month/);
-  await expect(card.getByTestId('deployment-size-large-compute')).toHaveText('2 vCPU · 4 GiB per service');
+  await expect(card.getByTestId('deployment-size-medium')).toHaveCount(0);
+  await expect(card.getByTestId('deployment-size-large')).toHaveCount(0);
   await card.scrollIntoViewIfNeeded();
   await card.screenshot({ path: testInfo.outputPath('size-card-desktop.png') });
-
-  // Default Large, minimum Medium: Small is below the minimum.
-  await card.getByLabel('Default size').click();
-  await page.getByRole('option', { name: /^Large/ }).click();
-  await card.getByLabel('Minimum allowed size').click();
-  await page.getByRole('option', { name: /^Medium/ }).click();
   await card.getByRole('button', { name: 'Estimate details' }).click();
   await expect(card.getByTestId('deployment-cost-details')).toContainText('730 hours a month');
-  await card.getByTestId('deployment-size-save').click();
-  await expect(card.getByText('Saved.')).toBeVisible();
-  await expect(card.getByTestId('deployment-size-small')).toContainText('Below minimum');
-
-  await page.reload();
-  await expect(card.getByLabel('Default size')).toContainText('Large');
-  await expect(card.getByLabel('Minimum allowed size')).toContainText('Medium');
-  await expect(card.getByTestId('deployment-size-large')).toContainText('Default');
-  await expect(card.getByTestId('deployment-size-small')).toContainText('Below minimum');
-  await card.getByLabel('Default size').click();
-  await expect(page.getByRole('option', { name: /^Small/ })).toHaveCount(0);
-  await page.keyboard.press('Escape');
 
   await page.setViewportSize({ width: 375, height: 812 });
   await card.scrollIntoViewIfNeeded();

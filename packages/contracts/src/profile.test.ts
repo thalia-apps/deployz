@@ -7,6 +7,7 @@ import {
   INFRASTRUCTURE_SIZE_PROFILES,
   LARGE_PROFILE,
   MEDIUM_PROFILE,
+  SELECTABLE_SIZE_TIERS,
   profileKey,
   resolveInfrastructureSizeProfile,
   resolveStoredInfrastructureSizeProfile,
@@ -79,9 +80,23 @@ describe('infrastructure-size profile registry', () => {
     expect(sizeTierMeetsMinimum('small', 'small')).toBe(true);
     expect(sizeTierMeetsMinimum('small', 'medium')).toBe(false);
     expect(sizeTierMeetsMinimum('large', 'medium')).toBe(true);
-    expect(allowedSizeTiers('small')).toEqual(['small', 'medium', 'large']);
-    expect(allowedSizeTiers('medium')).toEqual(['medium', 'large']);
-    expect(allowedSizeTiers('large')).toEqual(['large']);
+    const pilot = [...SELECTABLE_SIZE_TIERS];
+    SELECTABLE_SIZE_TIERS.splice(0, SELECTABLE_SIZE_TIERS.length, 'small', 'medium', 'large');
+    try {
+      expect(allowedSizeTiers('small')).toEqual(['small', 'medium', 'large']);
+      expect(allowedSizeTiers('medium')).toEqual(['medium', 'large']);
+      expect(allowedSizeTiers('large')).toEqual(['large']);
+    } finally {
+      SELECTABLE_SIZE_TIERS.splice(0, SELECTABLE_SIZE_TIERS.length, ...pilot);
+    }
+  });
+
+  it('offers only Small for new selections in the pilot', () => {
+    expect(SELECTABLE_SIZE_TIERS).toEqual(['small']);
+    expect(allowedSizeTiers('small')).toEqual(['small']);
+    expect(allowedSizeTiers('medium')).toEqual([]);
+    expect(currentInfrastructureSizeProfile('medium')).toBe(MEDIUM_PROFILE);
+    expect(resolveStoredInfrastructureSizeProfile({ infrastructureProfile: { id: 'medium', version: 1 } })).toBe(MEDIUM_PROFILE);
   });
 
   it('defaults to small-v2 for newly created deployments', () => {

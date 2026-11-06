@@ -61,10 +61,10 @@ describe('estimateFootprintCost', () => {
     expect(cache.pricingStatus).toBe('estimated');
     expect(cache.monthlyMin).toBe(12);
     expect(cache.monthlyMax).toBe(15);
-    // web 8–11 + cache 12–15 + database 14–19 + alb 15–25 + nat 30–40:
-    // min 79 -> 75; max 110 -> 110
-    expect(estimate.monthlyMin).toBe(75);
-    expect(estimate.monthlyMax).toBe(110);
+    // web 8–11 + cache 12–15 + database 14–19 + alb 24–34 + nat 36–46:
+    // min 94 -> 90; max 125 -> 125
+    expect(estimate.monthlyMin).toBe(90);
+    expect(estimate.monthlyMax).toBe(125);
     expect(estimate.complete).toBe(true);
     expect(estimate.usageDependent).toContain('Files stored in S3 and data transfer');
     expect(estimate).toEqual(footprintCostEstimateSchema.parse(estimate));
@@ -113,8 +113,8 @@ describe('estimateFootprintCost', () => {
 
   it('a stateless deployment still estimates (workload + endpoint + NAT)', () => {
     const estimate = estimateFootprintCost(resolveDeploymentFootprint({ manifest: STATELESS, region: 'us-east-1' }));
-    expect(estimate.monthlyMin).toBe(50); // 8+15+30=53 -> floor5 50
-    expect(estimate.monthlyMax).toBe(80); // 11+25+40=76 -> ceil5 80
+    expect(estimate.monthlyMin).toBe(65); // 8+24+36=68 -> floor5 65
+    expect(estimate.monthlyMax).toBe(95); // 11+34+46=91 -> ceil5 95
   });
 
   it('region-aware: sa-east-1 multiplies the baseline', () => {
