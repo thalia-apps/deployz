@@ -564,7 +564,10 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // skips the judge: the judge reads the answers, and its block in a disputed
 // category only asks. Stored v81 rows skip the judge after a dispute and
 // never ask about a soft finding.
-export const ANALYSIS_VERSION = 82;
+// Version 83 (2026-11 pilot scope): a repository that needs a queue or a
+// scheduled job is not deployable while `ASYNC_WORKLOADS_DEPLOYABLE` is off.
+// Stored v82 rows can call such a repository deployable.
+export const ANALYSIS_VERSION = 83;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
