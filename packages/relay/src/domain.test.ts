@@ -278,6 +278,40 @@ describe('createDomainExecutors — CONFIGURE_DOMAIN', () => {
     expect(elb.setHttpRedirectCalls).toHaveLength(0);
   });
 
+  it('replaces a FAILED certificate with a new request and a different idempotency token', async () => {
+    const acm = new FakeAcmClient();
+    acm.certificates.set('arn:failed-cert', { status: 'FAILED' });
+    const elb = new FakeElbClient();
+    elb.loadBalancer = makeLb();
+
+    const executors = createDomainExecutors({ acm, elb, installationId: INSTALLATION_ID });
+    const command = configureCommand({ certificateArn: 'arn:failed-cert' });
+    const domainId = (command.payload as { domainId: string }).domainId;
+    const result = await executors.CONFIGURE_DOMAIN(command);
+
+    expect(acm.deleteCalls).toEqual(['arn:failed-cert']);
+    expect(acm.requestCalls).toHaveLength(1);
+    expect(acm.requestCalls[0]?.idempotencyToken).toHaveLength(32);
+    expect(acm.requestCalls[0]?.idempotencyToken).not.toBe(domainId.replace(/-/g, ''));
+    expect(result.success).toBe(true);
+    expect(result.output?.certificateArn).not.toBe('arn:failed-cert');
+    expect(result.output?.certificateStatus).toBe('PENDING_VALIDATION');
+  });
+
+  it('does not delete a FAILED certificate that belongs to another installation', async () => {
+    const acm = new FakeAcmClient();
+    acm.certificates.set('arn:foreign', { status: 'VALIDATION_TIMED_OUT', tags: { [DEPLOYZ_INSTALLATION_TAG]: 'other' } });
+    const elb = new FakeElbClient();
+    elb.loadBalancer = makeLb();
+
+    const executors = createDomainExecutors({ acm, elb, installationId: INSTALLATION_ID });
+    const result = await executors.CONFIGURE_DOMAIN(configureCommand({ certificateArn: 'arn:foreign' }));
+
+    expect(acm.deleteCalls).toEqual([]);
+    expect(acm.requestCalls).toHaveLength(1);
+    expect(result.success).toBe(true);
+  });
+
   it('configure with certificateArn in payload does not request a new certificate', async () => {
     const acm = new FakeAcmClient();
     acm.certificates.set('arn:existing-cert', { status: 'PENDING_VALIDATION' });

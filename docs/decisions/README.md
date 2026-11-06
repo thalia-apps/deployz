@@ -57,6 +57,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-27 | An app with a migration starts no task at install; a migration that fails on that first start is a failed environment (`FAILED`) | Active |
 | 2026-10-30 | A final AI judge reviews a DEPLOYABLE or DEPLOYABLE_WITH_CHANGES outcome and can only make it stricter or ask the vendor to confirm | Active |
 | 2026-11-06 | Vendor two-factor sign-in is optional and uses an emailed code from the Better Auth two-factor plugin | Active |
+| 2026-11-06 | The public pilot offers only certified shapes: Small size, no queue or scheduled job, five Regions | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1640,3 +1641,53 @@ option, and an organization rule that makes 2FA mandatory.
 
 What would change it: a customer or compliance need for mandatory 2FA or a
 factor that does not depend on the email inbox.
+
+## Control-plane database: single-AZ with 14-day backups (2026-11-06)
+
+Context: the launch-readiness audit flagged that the control-plane database
+is single-AZ and has no documented restore.
+
+Decision:
+
+- Keep one `db.t4g.micro` instance in one AZ. Keep deletion protection.
+  Raise automated-backup retention from 7 to 14 days. Backup storage up to
+  the database size is free, so the cost change is small.
+- Recovery from a lost instance or AZ is a point-in-time restore to a new
+  instance (`docs/operations/control-plane.md`, *Database restore*).
+- Do not enable Multi-AZ for the MVP. It doubles the instance cost, and the
+  pilot accepts a restore time of tens of minutes.
+
+What would change it: a customer recovery-time promise, or a restore drill
+that takes longer than that promise. The owner runs the drill on real AWS.
+
+Also in this change: migrations are expand-only, and a destructive change
+takes two releases, so that a rollback can run the old API on the new schema.
+The HTTP API (v2) cannot take a WAF web ACL, so a WAF is deferred (post-MVP:
+it needs a REST API or CloudFront in front).
+
+## The public pilot offers only certified shapes (2026-11-06)
+
+Context: the launch-readiness audit found three shapes that no real-AWS run
+has certified: the Medium and Large sizes, SQS queues, and EventBridge
+Scheduler schedules. The same audit found that only five Regions have
+evidence.
+
+Decision:
+
+- New selections offer Small only. `SELECTABLE_SIZE_TIERS` in
+  `packages/contracts/src/profile.ts` is the switch. No published profile
+  changes. A deployment that froze `medium-v1` or `large-v1` keeps it.
+  An application setting that names Medium or Large resolves to Small.
+- The analysis refuses a repository that needs a queue or a scheduled job.
+  `ASYNC_WORKLOADS_DEPLOYABLE` in `packages/analysis/src/rejection.ts` is
+  the switch. A vendor dispute cannot dismiss the reason, because the
+  limit is a Deployz limit and not a wrong finding.
+- Production offers `us-east-1`, `us-east-2`, `us-west-2`, `eu-west-1` and
+  `eu-central-1`. This is the `DEPLOYABLE_AWS_REGIONS` repository variable;
+  the code default stays `us-east-1` so a missing variable fails closed.
+- The cost estimate adds the public IPv4 addresses, secrets, alarms and
+  logs to the ALB and NAT ranges.
+
+What would change it: a passing real-AWS certification of each shape
+([`../testing/aws-e2e.md`](../testing/aws-e2e.md)). Then turn on the
+switch for that shape.

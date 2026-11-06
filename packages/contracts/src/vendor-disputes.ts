@@ -43,6 +43,7 @@ export function isDisputableFinding(findingId: string): boolean {
 export const STORAGE_DISPUTE_FINDING_IDS: ReadonlySet<string> = new Set([
   'unsupported-persistent-volume',
   'local-file-storage',
+  'unsupported-database-sqlite',
 ]);
 
 export const MAX_VENDOR_DISMISSED_REJECTIONS = 20;

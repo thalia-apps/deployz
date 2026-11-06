@@ -40,6 +40,7 @@ import {
   createFixtureReleaseImageClient,
   type FixtureReleaseImageClient,
 } from './release-images.js';
+import { restoreMaskedInstallSecrets } from './claimed-payload.js';
 import { AI_EXPLAINABLE_FAILURE_CODES, buildServer, redactClaimedPayload } from './server.js';
 
 // ── Shared test helpers (used by the describe blocks below) ────────────────
@@ -1602,6 +1603,24 @@ describe('redactClaimedPayload', () => {
     });
   });
 
+  it('restores fresh generated secrets into a re-offered, already redacted INSTALL', () => {
+    const redacted = redactClaimedPayload({
+      type: 'INSTALL',
+      payload: { parameters: { [APP_API_KEY_PARAMETER]: 'a', [IMAGE_REFERENCE_PARAMETER]: 'img' } },
+    });
+    const restored = restoreMaskedInstallSecrets({ type: 'INSTALL', payload: redacted }) as {
+      parameters: Record<string, string>;
+    };
+    expect(restored.parameters[APP_API_KEY_PARAMETER]).not.toBe('***');
+    expect(restored.parameters[APP_API_KEY_PARAMETER]!.length).toBeGreaterThan(20);
+    expect(restored.parameters[IMAGE_REFERENCE_PARAMETER]).toBe('img');
+    const fresh = { parameters: { [APP_API_KEY_PARAMETER]: 'real' } };
+    expect(restoreMaskedInstallSecrets({ type: 'INSTALL', payload: fresh })).toEqual(fresh);
+    expect(restoreMaskedInstallSecrets({ type: 'CONFIG_UPDATE', payload: { secrets: [{ key: 'K' }] } })).toEqual({
+      secrets: [{ key: 'K' }],
+    });
+  });
+
   it('leaves payloads without secrets untouched', () => {
     const payload = { releaseId: 'rel-1', imageDigest: 'sha256:abc' };
     expect(redactClaimedPayload({ type: 'DEPLOY_RELEASE', payload })).toEqual(payload);
@@ -2093,6 +2112,43 @@ describe('server — relay bearer auth, INSTALL job, and command/result/health f
     // Promotion resolved UPDATE_AVAILABLE → HEALTHY: the promoted release is
     // the newest READY one, so no update remains available.
     expect(updated!.state).toBe('HEALTHY');
+  });
+
+  it.each([
+    ['UPDATING', 'HEALTHY'],
+    ['FAILED', 'FAILED'],
+  ] as const)('a successful RESTART from %s leaves the deployment %s', async (from, expected) => {
+    const token = `relay-restart-${from}`;
+    const application = await insertApplication(db, org.organizationId);
+    const fresh = await insertDeployment(db, org.organizationId, application.id, deployment.customerId, {
+      state: from,
+      installationId: `inst-restart-${from}`,
+      enrollmentCode: crypto.randomUUID(),
+      enrollmentUsedAt: new Date(),
+      relayTokenHash: hashRelayToken(token),
+      relayStatus: 'CONNECTED',
+    });
+    const [job] = await db
+      .insert(schema.deploymentJobs)
+      .values({
+        deploymentId: fresh.id,
+        type: 'RESTART',
+        state: 'RUNNING',
+        idempotencyKey: `${fresh.id}:RESTART`,
+        payload: {},
+      })
+      .returning();
+
+    const response = await postJson(
+      app,
+      `/api/relay/commands/${job!.id}/result`,
+      { success: true },
+      { authorization: `Bearer ${token}` },
+    );
+    expect(response.statusCode).toBe(200);
+
+    const [updated] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, fresh.id));
+    expect(updated!.state).toBe(expected);
   });
 
   it('promoting the newest release resolves UPDATE_AVAILABLE even when created_at has microseconds', async () => {
@@ -4356,6 +4412,19 @@ describe('server — GitHub installation binding', () => {
     expect(rows.map((row) => row.id)).not.toContain('9999');
   });
 
+  it('rate limits the setup callback', async () => {
+    const statuses: number[] = [];
+    for (let attempt = 0; attempt < 25; attempt += 1) {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/github/setup?installation_id=${5000 + attempt}`,
+        headers: { cookie: org.cookie },
+      });
+      statuses.push(response.statusCode);
+    }
+    expect(statuses).toContain(429);
+  });
+
   it('lists the bound installation for its own organization only', async () => {
     const mine = await app.inject({
       method: 'GET',
@@ -6127,6 +6196,24 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     expect(dep!.enrollmentCode).not.toBe(deployment.enrollmentCode);
   });
 
+  it.each(['DELETING', 'DELETED'] as const)('relay/reset refuses a %s deployment and changes nothing', async (state) => {
+    const application = await insertApplication(db, org.organizationId, { name: `${state} Reset App` });
+    const customer = await insertCustomer(db, org.organizationId);
+    const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state,
+      installationId: `inst-${state}`,
+    });
+
+    const response = await postJson(app, `/api/deployments/${deployment.id}/relay/reset`, {}, { cookie: org.cookie });
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ error: { code: 'DEPLOYMENT_NOT_RESETTABLE' } });
+
+    const [dep] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deployment.id));
+    expect(dep!.state).toBe(state);
+    expect(dep!.installationId).toBe(`inst-${state}`);
+    expect(dep!.enrollmentCode).toBe(deployment.enrollmentCode);
+  });
+
   it('relay/reset renews an expired install link so the customer can open it again', async () => {
     const application = await insertApplication(db, org.organizationId, { name: 'Expired Link App' });
     await insertDeployableRelease(db, application.id);
@@ -6532,6 +6619,26 @@ describe('server — retry-install (first-install recovery)', () => {
       .where(and(eq(schema.deploymentJobs.deploymentId, deployment.id), eq(schema.deploymentJobs.type, 'INSTALL')));
     expect(jobs.find((j) => j.idempotencyKey === `${deployment.id}:INSTALL`)!.state).toBe('CANCELLED');
     expect(jobs.find((j) => j.idempotencyKey === `${deployment.id}:INSTALL:RETRY:1`)!.state).toBe('REQUESTED');
+  });
+
+  it('keeps a long INSTALL on a connected relay that still shows progress, and supersedes it once progress stopped', async () => {
+    const startedAt = new Date(Date.now() - 45 * 60 * 1000);
+    const live = await seedFailedInstall(
+      { state: 'INSTALLING', relayStatus: 'CONNECTED' },
+      { state: 'RUNNING', startedAt, lastProgressAt: new Date() },
+    );
+    const refused = await postJson(app, `/api/deployments/${live.id}/retry-install`, {}, { cookie: org.cookie });
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toMatchObject({ error: { code: 'INSTALL_NOT_RETRYABLE' } });
+    const [job] = await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.deploymentId, live.id));
+    expect(job!.state).toBe('RUNNING');
+
+    const silent = await seedFailedInstall(
+      { state: 'INSTALLING', relayStatus: 'CONNECTED' },
+      { state: 'RUNNING', startedAt, lastProgressAt: new Date(Date.now() - 35 * 60 * 1000) },
+    );
+    const accepted = await postJson(app, `/api/deployments/${silent.id}/retry-install`, {}, { cookie: org.cookie });
+    expect(accepted.statusCode).toBe(202);
   });
 });
 
@@ -7630,7 +7737,7 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     const purge = await postJson(
       app,
       `/api/deployments/${deployment.id}/purge`,
-      {},
+      { confirmName: application.name },
       { cookie: org.cookie },
     );
     expect(purge.statusCode).toBe(202);

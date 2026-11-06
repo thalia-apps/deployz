@@ -5,6 +5,7 @@ import {
   currentInfrastructureSizeProfile,
   DEFAULT_INFRASTRUCTURE_SIZE_TIER,
   profileKey,
+  SELECTABLE_SIZE_TIERS,
   sizeTierMeetsMinimum,
   type DeploymentFootprint,
   type FootprintCostEstimate,
@@ -36,13 +37,18 @@ export interface SizeSelection {
   readonly minimum: InfrastructureSizeTier;
 }
 
+// A stored setting for a tier that is not selectable now resolves to the Deployz default.
+function selectableOrDefault(tier: InfrastructureSizeTier | null | undefined): InfrastructureSizeTier {
+  return tier && SELECTABLE_SIZE_TIERS.includes(tier) ? tier : DEFAULT_INFRASTRUCTURE_SIZE_TIER;
+}
+
 /** The recommendation and minimum that apply to a new deployment. */
 export function sizingBounds(
   application: Pick<ApplicationRow, 'defaultSizeProfile' | 'minimumSizeProfile'>,
   link?: LinkSizing,
 ): { recommended: InfrastructureSizeTier; minimum: InfrastructureSizeTier } {
-  const minimum = link?.minimum ?? application.minimumSizeProfile ?? DEFAULT_INFRASTRUCTURE_SIZE_TIER;
-  const preferred = link?.recommended ?? application.defaultSizeProfile ?? DEFAULT_INFRASTRUCTURE_SIZE_TIER;
+  const minimum = selectableOrDefault(link?.minimum ?? application.minimumSizeProfile);
+  const preferred = selectableOrDefault(link?.recommended ?? application.defaultSizeProfile);
   return { recommended: sizeTierMeetsMinimum(preferred, minimum) ? preferred : minimum, minimum };
 }
 
@@ -57,12 +63,15 @@ export function resolveSizeSelection(
 ): SizeSelection {
   const { recommended, minimum } = sizingBounds(application, link);
   const tier = requested ?? recommended;
-  if (!sizeTierMeetsMinimum(tier, minimum)) {
+  const allowed = allowedSizeTiers(minimum);
+  if (!allowed.includes(tier)) {
     throw new ApiError(
       422,
       'SIZE_PROFILE_NOT_ALLOWED',
-      `The ${tier} size is below the minimum size (${minimum}) for this application.`,
-      { minimum, allowed: allowedSizeTiers(minimum) },
+      sizeTierMeetsMinimum(tier, minimum)
+        ? `The ${tier} size is not available yet.`
+        : `The ${tier} size is below the minimum size (${minimum}) for this application.`,
+      { minimum, allowed },
     );
   }
   return { tier, profile: currentInfrastructureSizeProfile(tier), recommended, minimum };

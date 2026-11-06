@@ -33,6 +33,7 @@ import { getScenario } from './simulation/scenarios/index.js';
 import { API_URL, buildApi, expectPlanMatchesInventory, waitForInstallAutoDeploy } from './simulation/fixtures.js';
 import { installLinkHeaders } from './install-link.js';
 import { fixtureSha } from './fixture-sha.js';
+import { purgeDeployment } from './purge.js';
 
 interface DeploymentResponse {
   state: string;
@@ -105,6 +106,8 @@ test.describe('phase5-composition', () => {
   test('@scenario:phase5-composition queues, dead-letter, scheduled job: readiness, verification, deploy/restart/rollback, standalone-task destroy, purge', async ({
     request,
   }) => {
+    // Pilot: the analysis refuses queues and scheduled jobs. Remove this skip when ASYNC_WORKLOADS_DEPLOYABLE is true.
+    test.skip(true, 'Queues and scheduled jobs are off in the pilot');
     test.setTimeout(240_000);
     const suffix = crypto.randomUUID().slice(0, 8);
 
@@ -409,7 +412,7 @@ test.describe('phase5-composition', () => {
       expect(retainedKinds['schedule']).toBe('removed');
 
       // ── PURGE: the generic sweep deletes the retained MySQL instance. ──────
-      const purge = await request.post(`${API_URL}/api/deployments/${deploymentId}/purge`, { data: {} });
+      const purge = await purgeDeployment(request, deploymentId);
       expect(purge.status()).toBe(202);
       await expect
         .poll(async () => (await getDeployment(request, deploymentId)).cleanupState, {

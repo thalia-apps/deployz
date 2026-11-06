@@ -20,9 +20,15 @@ const RULES: Array<[RegExp, string]> = [
   [/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g, '[REDACTED_JWT]'],
   // Authorization headers
   [/\b(authorization\s*[:=]\s*)(?:bearer\s+)?\S+/gi, '$1[REDACTED]'],
-  // KEY=value pairs whose key looks secret (covers .env-style lines and log echoes)
+  // Common vendor API keys (OpenAI/Anthropic, Slack, Google, Stripe, GitLab, npm)
   [
-    /\b([A-Z0-9_]*(?:PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY|CREDENTIAL)[A-Z0-9_]*\s*[=:]\s*)\S+/g,
+    /\b(?:sk-[A-Za-z0-9_-]{20,}|xox[abprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{16,}|glpat-[A-Za-z0-9_-]{20,}|npm_[A-Za-z0-9]{36})/g,
+    '[REDACTED_API_KEY]',
+  ],
+  // key=value, key: value and JSON "key": "value" pairs whose key looks secret
+  // (covers .env-style lines, log echoes and config files, any letter case)
+  [
+    /(["']?[\w.-]{0,64}(?:password|passwd|secret|token|api[_-]?key|private[_-]?key|credential)[\w.-]{0,64}["']?\s*[=:]\s*)(?!\[REDACTED)(?:"[^"\n]*"|'[^'\n]*'|\S+)/gi,
     '$1[REDACTED]',
   ],
   // PEM blocks
@@ -34,7 +40,7 @@ const RULES: Array<[RegExp, string]> = [
 
 /**
  * Redact known secret shapes (URL credentials, cloud/VCS tokens, JWTs,
- * Authorization headers, secret-looking KEY=value pairs, PEM private keys)
+ * Authorization headers, vendor API keys, secret-looking key/value pairs, PEM private keys)
  * from arbitrary text. Idempotent — redacting already-redacted text is a
  * no-op.
  */

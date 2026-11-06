@@ -178,7 +178,9 @@ when the customer abandoned the attempt, but not while a connected relay is
 running the INSTALL job (`409 INSTALL_IN_PROGRESS`). A FAILED
 install is the vendor's to retry (retry-install, or a relay reset when the
 connector is disconnected), so the customer pages show no retry for it and
-the route refuses it.
+the route refuses it. The vendor retry-install cancels an in-flight INSTALL only
+when it started over 30 minutes ago and shows no progress: a connected relay
+with a recent `lastProgressAt` keeps its INSTALL (`409 INSTALL_NOT_RETRYABLE`).
 When a previous attempt reached the customer account (a connector registered,
 or an earlier retry already kept its stack) the retry keeps the same bootstrap
 stack name. The API returns `quickCreateUrl: null` and `existingStackUpdate`,
@@ -544,6 +546,10 @@ still roll, and would hide a crash loop.
   unexecuted (`POST /api/relay/commands/:id/release` → REQUESTED); a job
   whose claimed payload was redacted (INSTALL, CONFIG_UPDATE) is never
   handed back. Domain jobs are not affected.
+  On a configured first start (`awaitsFirstStart`) the exception is the
+  deploy that waits for configuration: it changes nothing until the
+  CONFIG_UPDATE attaches the configured revision, so the CONFIG_UPDATE is
+  handed out first and a running DEPLOY_RELEASE does not block it.
 - While the customer updates the connector (bootstrap) stack, the relay
   polls with `claim=0` and claims no new command; it still finishes the
   commands it claimed and sends heartbeats, so the watchdog does not time
@@ -589,6 +595,13 @@ still roll, and would hide a crash loop.
   queued and does not resume. So `requireDeployableState` refuses deploy,
   rollback and restart (`409 DEPLOYMENT_NOT_DEPLOYABLE`) for a `FAILED`
   deployment whose newest job is a DESTROY; the vendor disconnects again.
+- **A removed deployment cannot be reset.** `relay/reset` (vendor and admin)
+  gets `409 DEPLOYMENT_NOT_RESETTABLE` for a `DELETING` or `DELETED`
+  deployment, so a reset cannot return it to `NOT_INSTALLED`.
+- **A restart keeps the prior state unless it ran from `UPDATING`.** A
+  successful RESTART returns `UPDATING` to `UPDATE_AVAILABLE` or `HEALTHY`.
+  From any other state (for example `FAILED`) it changes nothing; the
+  heartbeat self-heal clears `FAILED`.
 - AWS-side, every relay executor reads before it writes
   (describe-before-create/delete, running-digest short-circuit), so a
   re-delivered or re-offered command converges on real AWS state instead of
@@ -661,6 +674,14 @@ relay's active INSTALL can never complete, so it must not block the
 teardown the vendor asked for. A CONNECTED relay's in-flight INSTALL still
 blocks DESTROY through operation exclusivity.
 
+A re-offered INSTALL or CONFIG_UPDATE has a redacted payload. For an INSTALL,
+the poll route restores a fresh value for each masked generated secret. This is
+safe because the relay uses the parameters only to create a stack and adopts a
+stack that exists. The relay still refuses to create a stack with a masked
+(`***`) parameter. A CONFIG_UPDATE that names a secret without a usable value
+fails, unless an earlier pass already stored that secret. The vendor enters the
+value again.
+
 ## Reconciliation: the watchdog repairs, it does not guess
 
 `sweepStuckJobs` (worker Lambda, 15-minute schedule) runs two clocks per
@@ -693,7 +714,9 @@ active mutating job:
   (`POST /api/deployments/:id/disconnect/force-complete`, also a Team Admin
   action): allowed only when the relay is `DISCONNECTED` and the pending
   DESTROY has been stale for at least 60 minutes, or at least two
-  consecutive DESTROY attempts have failed and 60 minutes have passed;
+  consecutive DESTROY attempts have failed and 60 minutes have passed, or
+  (relay `CONNECTED` but wedged) the DESTROY has run for at least 60 minutes
+  and the watchdog has re-offered it three times;
   otherwise `409 DESTROY_NOT_STALE`, `RELAY_NOT_OFFLINE` or
   `NO_PENDING_DESTROY`. It records `cleanupState: SKIPPED_RELAY_OFFLINE` —
   explicitly *not* claiming AWS resources were removed; PURGE later verifies
@@ -779,7 +802,10 @@ forwarded.
 ## Disconnect retains data on purpose: DESTROY vs PURGE
 
 DESTROY (disconnect) is a data-preserving teardown, and **a DESTROY that
-retains data is a success**. Before the delete call, the relay stops any
+retains data is a success**. The control plane authorizes data deletion
+(`dataDeletionAuthorized`) only when the relay reported the newest INSTALL as
+failed in AWS. A watchdog timeout, a cancelled INSTALL or an unknown outcome
+keeps the retained database. Before the delete call, the relay stops any
 standalone task still running in the stack's own cluster — an ECS task whose
 `group` starts with `family:` (a scheduled-job run, or a migration mid-run)
 rather than a service. Nothing else stops these: CloudFormation's own

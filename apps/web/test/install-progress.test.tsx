@@ -522,7 +522,7 @@ describe('InstallProgress — failure flow', () => {
     });
     expect(text()).toContain('AWS account connected');
     // Default next steps: the vendor owns the retry.
-    expect(text()).toContain('No action is required.');
+    expect(text()).toContain('Contact your software provider and ask them to retry the deployment.');
     expect(text()).not.toContain('ROLLBACK_COMPLETE');
     expect(text()).not.toContain('is not a valid password');
 
@@ -562,7 +562,7 @@ describe('InstallProgress — failure flow', () => {
     expect(text()).toContain(
       'Something in the AWS account or setup must change before a retry can succeed. Contact your software provider to retry after that change.',
     );
-    expect(text()).not.toContain('No action is required.');
+    expect(text()).not.toContain('Contact your software provider and ask them to retry the deployment.');
   });
 
   it('a FAILED payload whose resources may remain shows the retained-resources cleanup sentence', async () => {
@@ -588,7 +588,7 @@ describe('InstallProgress — failure flow', () => {
 
     const text = () => container!.textContent ?? '';
     expect(text()).toContain('Some data or resources may remain in your AWS account.');
-    expect(text()).toContain('No action is required.');
+    expect(text()).toContain('Contact your software provider and ask them to retry the deployment.');
   });
 });
 

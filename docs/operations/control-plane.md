@@ -155,6 +155,11 @@ gh workflow run deploy-api.yml --ref main -f environment=production -f sha=<comm
 The `environment` input defaults to `staging`, so a dispatch that names no
 environment deploys staging.
 
+A rollback does not undo database migrations. The old API then runs on the
+newer schema. This is safe only when every migration is expand-only (see
+*Database migrations*). Before a rollback, check that the releases since the
+target commit did not drop or rename anything the old code reads.
+
 ## Configuration keys
 
 Names only. Every environment-specific value is a variable on the GitHub
@@ -170,7 +175,7 @@ API reads is validated in `apps/api/src/env.ts`.
 | Public URLs | `API_URL`, `WEB_URL`, `MARKETING_URL`, `COOKIE_DOMAIN`, `COOKIE_PREFIX`, `BETTER_AUTH_URL`, `EMAIL_FROM` | Variables on the GitHub Environment. `COOKIE_PREFIX` is optional. It changes the session-cookie name. A different name keeps a second control plane in the same cookie domain out of this one's session. Change the name when `COOKIE_DOMAIN` changes: browsers keep the old cookie until it expires, and an old cookie with the same name can hide the new one. Build the web image with the same value as the `NEXT_PUBLIC_COOKIE_PREFIX` build argument, or the dashboard looks for a cookie name the API never sets. |
 | API domain | `API_DOMAIN_NAME`, `API_CERTIFICATE_ARN` | Both required or the `api.deployz.dev` mapping is removed. The certificate is requested out of band; the Cloudflare `api` CNAME must be DNS-only or TLS fails with 525. Installed relays (their `ControlPlaneUrl` stack parameter) and the GitHub and Paddle webhooks call this host, so it stays mapped. |
 | Browser API domain | `API_BROWSER_DOMAIN_NAME` (variable), `API_BROWSER_CERTIFICATE_ARN` (secret) | Optional pair. A second mapping of the same API, for the browser. It lets `COOKIE_DOMAIN` exclude the customer hostnames (see [`../networking-and-https.md`](../networking-and-https.md#session-cookies-and-customer-hostnames)). The stack exports its DNS target as `<stack>-BrowserApiRegionalDomain`; the CNAME must be DNS-only. The deploy checks the record only through the readiness poll on `API_URL`. |
-| Auth and GitHub | `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_APP_INSTALL_URL` | The GitHub App's **Setup URL** must be `<WEB_URL>/github/setup` with "Redirect on update" enabled; that page binds the installation to the vendor's organisation and offers sign-in when needed. The dashboard's Connect link goes through `GET /api/github/connect`, which adds a signed 10-minute `state` (organisation id, the dashboard page to return to, HMAC with `BETTER_AUTH_SECRET`) to `GITHUB_APP_INSTALL_URL`. GitHub returns `state` to the Setup URL only from `https://github.com/apps/<slug>/installations/new`, so the route adds `/installations/new` when the value is the App's public page; the setup callback creates a binding only when that `state` matches the session's organisation, otherwise the vendor lands on `?github=failed`. The `state` proves only that the organisation started an install, so a new binding also needs proof that the caller controls that installation: when GitHub sends a `code`, the callback exchanges it with the App's client id and secret (`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` must be the GitHub App's own credentials) and requires the installation in `GET /user/installations`; without a `code`, the installation must have been created by GitHub in the last 15 minutes. Keep "Request user authorization (OAuth) during installation" off in the GitHub App settings: it disables the Setup URL and sends the vendor to the Callback URL, which this flow does not use, so Connect GitHub stops binding installations. Any other new binding is refused and the vendor lands on `?github=unverified`, which asks them to connect GitHub again. An installation already bound to the same organisation is refreshed without this check. GitHub API calls time out after 10 seconds (120 seconds for repository archive downloads). A request that carries the session cookie and changes data must send an `Origin` (or `Referer`) from `WEB_URL` or `MARKETING_URL`; otherwise it gets 403 `ORIGIN_NOT_ALLOWED`. Rate limits use the right-most `X-Forwarded-For` hop (the one API Gateway appends). An installation already bound to another organisation is never rebound (the vendor lands on `?github=failed`); restoring a wrong binding is an operator DB edit. The deploy stores `GITHUB_APP_PRIVATE_KEY` in a Secrets Manager secret and gives the Lambdas only `GITHUB_APP_PRIVATE_KEY_SECRET_ARN`, because Lambda refuses an environment over 4 KB; the API and worker read the key at cold start (`packages/cdk/src/lambda/github-app-key.ts`). |
+| Auth and GitHub | `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_APP_INSTALL_URL` | The GitHub App's **Setup URL** must be `<WEB_URL>/github/setup` with "Redirect on update" enabled; that page binds the installation to the vendor's organisation and offers sign-in when needed. The dashboard's Connect link goes through `GET /api/github/connect`, which adds a signed 10-minute `state` (organisation id, the dashboard page to return to, HMAC with `BETTER_AUTH_SECRET`) to `GITHUB_APP_INSTALL_URL`. GitHub returns `state` to the Setup URL only from `https://github.com/apps/<slug>/installations/new`, so the route adds `/installations/new` when the value is the App's public page; the setup callback creates a binding only when that `state` matches the session's organisation, otherwise the vendor lands on `?github=failed`. The `state` proves only that the organisation started an install, so a new binding also needs proof that the caller controls that installation: when GitHub sends a `code`, the callback exchanges it with the App's client id and secret (`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` must be the GitHub App's own credentials) and requires the installation in `GET /user/installations`; without a `code`, the installation must have been created by GitHub in the last minute. Keep "Request user authorization (OAuth) during installation" off in the GitHub App settings: it disables the Setup URL and sends the vendor to the Callback URL, which this flow does not use, so Connect GitHub stops binding installations. Any other new binding is refused and the vendor lands on `?github=unverified`, which asks them to connect GitHub again. An installation already bound to the same organisation is refreshed without this check. GitHub API calls time out after 10 seconds (120 seconds for repository archive downloads). A request that carries the session cookie and changes data must send an `Origin` (or `Referer`) from `WEB_URL` or `MARKETING_URL`; otherwise it gets 403 `ORIGIN_NOT_ALLOWED`. Rate limits use the right-most `X-Forwarded-For` hop (the one API Gateway appends). An installation already bound to another organisation is never rebound (the vendor lands on `?github=failed`); restoring a wrong binding is an operator DB edit. The deploy stores `GITHUB_APP_PRIVATE_KEY` in a Secrets Manager secret and gives the Lambdas only `GITHUB_APP_PRIVATE_KEY_SECRET_ARN`, because Lambda refuses an environment over 4 KB; the API and worker read the key at cold start (`packages/cdk/src/lambda/github-app-key.ts`). |
 | Email | `AWS_SES_ACCESS_KEY_ID`, `AWS_SES_SECRET_ACCESS_KEY` | Organisation membership email only. The sender name is `Deployz`. The HTML body loads the logo from `WEB_URL/brand/deployz/deployz-icon-512.png`. |
 | Default HTTPS | `CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_ZONE_NAME`, `DEPLOYZ_DEFAULT_HOSTNAME_PREFIX`, `CLOUDFLARE_ZONE_EDIT_API_TOKEN` | [`../networking-and-https.md`](../networking-and-https.md) |
 | AI | `AI_GATEWAY_BASE_URL`, `AI_PROVIDER_API_KEY`, `AI_MODEL` (optional), `AI_GATEWAY_TOKEN` (only for an authenticated gateway) | Unset is safe: deterministic copy is served |
@@ -185,7 +190,10 @@ API reads is validated in `apps/api/src/env.ts`.
 | Set by CDK | `DATABASE_URL`, `JOB_QUEUE_URL`, `DEPLOYZ_ECR_REPOSITORY_NAME`, `BUILD_LOG_GROUP_NAME`, `SOURCE_BUCKET`, `BUILD_PROJECT_NAME` | Not in the workflow. CDK also gives the Lambda `DEPLOYZ_TEMPLATE_BUCKET_PREFIX` outside production; in production the API defaults it to `deployz-templates`. |
 
 `TEAM_ADMIN_EMAILS` and `GITHUB_FIXTURE_MODE` are local-development only and
-are ignored or excluded inside Lambda. Production Team Admin access is
+are ignored or excluded inside Lambda. A Lambda does not start without
+`BETTER_AUTH_SECRET`, or with any `*_FIXTURE_MODE` or
+`DEPLOYZ_DEFAULT_HTTPS_FIXTURE` value set to `true` or `1`. Better Auth counts
+its rate limits in the `rate_limit` table, so all containers share the count. Production Team Admin access is
 `user.platform_role = 'ADMIN'`, set by SQL
 ([`../admin/team-admin.md`](../admin/team-admin.md)). The `JEV_*` keys are
 allowlisted but never set; Jev is off in production by decision.
@@ -237,8 +245,8 @@ once. The rules are:
   `API_BROWSER_CERTIFICATE_ARN`.
 - `COOKIE_DOMAIN` starts with a dot, and the hosts of `API_URL` and `WEB_URL`
   are inside it.
-- A `COOKIE_DOMAIN` that covers `CLOUDFLARE_ZONE_NAME` gives a warning: the
-  session cookie then reaches every customer application.
+- `COOKIE_DOMAIN` does not cover `CLOUDFLARE_ZONE_NAME`. Otherwise the session
+  cookie reaches every customer application.
 - `DEPLOYZ_DEFAULT_HOSTNAME_PREFIX` is lowercase letters or digits and a
   trailing dash.
 - In the web deploy, `API_URL` starts with `https://` and carries no path, and
@@ -307,6 +315,56 @@ migrator runs each migration in a transaction, so `CONCURRENTLY` is not
 possible. The build blocks writes to that table while it runs. Measure the
 build time on a dataset larger than production before you merge it
 (`0054_hot_path_indexes` took about 2 seconds for 2.2 million rows).
+
+Migrations are expand-only. A migration only adds: a table, a nullable
+column, a column with a default, or an index. It never drops or renames a
+column or table, never tightens a constraint, and never changes a type in a
+way the previous release cannot read. The reason is rollback: the previous
+API must run on the new schema. A destructive change takes two releases.
+Release one stops all use of the column or table. Release two, after release
+one is stable in production, drops it.
+
+## Database restore
+
+The control-plane database (`db.t4g.micro`, PostgreSQL 16, single-AZ) keeps
+automated backups for 14 days and has deletion protection. Automated backups
+stay when the instance is deleted (`deleteAutomatedBackups: false`). A
+point-in-time restore always makes a new instance; it never overwrites the
+old one. The restore has not been drilled on real AWS (owner task, below).
+
+Restore to a new instance:
+
+1. Open an incident (see [`incident-response.md`](incident-response.md)).
+   Decide the restore time. To undo a bad change, use the last time before it.
+2. In the RDS console (`us-east-1`), select the instance, then Actions,
+   Restore to point in time. Use a new identifier, for example
+   `deployz-restore-<date>`. Use the same VPC, the isolated subnet group, the
+   `DbSecurityGroup` and the same instance class. Do not make it public.
+3. Wait until the new instance is `available`. Connect from inside the VPC
+   and check the data: the newest rows in `deployments`, `deployment_jobs`
+   and `drizzle.__drizzle_migrations`.
+4. Switch the API and worker to the new instance. Both read the database
+   host and credentials from the secret in `DB_SECRET_ARN`. Edit that
+   secret: set `host` to the new endpoint. The restored instance keeps the
+   old master password, so the other fields stay. To make running containers
+   read the secret again, deploy the API and worker again (dispatch
+   `deploy-api.yml`).
+5. Check `/health/ready`, sign in, and open one deployment page.
+6. To roll back the switch, set `host` in the secret to the old endpoint and
+   deploy again. Keep the old instance until the restore is accepted.
+7. CloudFormation still owns the old instance. Do not delete it by hand. Plan
+   the stack change that adopts the new instance before you remove the old
+   one.
+
+Jobs that were in flight at the restore time are reconciled by the watchdog
+(see [`../deployment-resilience.md`](../deployment-resilience.md)).
+
+Owner task: run this drill once on real AWS and record how long it took.
+The result sets the recovery time that you promise to customers.
+
+Multi-AZ is not enabled (MVP): it doubles the instance cost, and the
+recovery from a lost AZ is a point-in-time restore. See
+[`../decisions/README.md`](../decisions/README.md).
 
 ## Database connections
 
@@ -489,6 +547,15 @@ variables (and of `BOOTSTRAP_REPUBLISH`, `PADDLE_ENVIRONMENT`,
 repository settings, not in this repository: read them with
 `gh variable list`.
 
+The pilot value of the variable is
+`us-east-1,us-east-2,us-west-2,eu-west-1,eu-central-1`. These are the
+Regions with real-AWS evidence. The variable only gates new installs
+(deployment, checkout, link and invitation creation, and the bootstrap
+template links). A deployment in a Region that leaves the list keeps
+running, and its status, release and destroy commands go through the relay
+and do not read the list. Its install link and connector-update link are
+not offered, because they need the published template for that Region.
+
 ## Enabling a Region
 
 1. Create the `deployz-templates-<region>` bucket with public read.
@@ -539,7 +606,7 @@ production), and expiry of pending secrets. Timings and rules are in
 
 ## Alarms
 
-The stack has one SNS topic and six CloudWatch alarms. Each alarm sends a
+The stack has one SNS topic and twelve CloudWatch alarms. Each alarm sends a
 message to the topic when it goes to ALARM and again when it returns to OK.
 Missing data counts as good. Set the `ALERT_EMAIL` variable on the GitHub
 Environment to subscribe an address. The first deploy after the change sends
@@ -555,8 +622,72 @@ operator can add a subscriber on the topic by hand.
 | HTTP API 5xx | 10 or more 5xx responses in 5 minutes | Check the API Lambda errors alarm and the database alarms. A 5xx without a Lambda error often means a timeout or throttling. The browser hostname and the relay hostname share this one API. |
 | Database free memory | Under 64 MiB for 15 minutes | Look for a long query or too many connections (see *Database connections*). Make the instance larger if the load is real. |
 | Database free storage | Under 2 GiB | Storage grows on its own up to 100 GB. Under 2 GiB means growth is near its limit or stalled. Find the large tables and raise `maxAllocatedStorage`. |
+| Database CPU | 80 percent or more for 15 minutes | Look for a long query or a retry loop. Check the connection count. Make the instance larger if the load is real. |
+| Job queue age | The oldest job message waited 15 minutes or more | The worker is slow, throttled or failing. Read the worker log group. Check the worker throttles alarm. |
+| Worker throttles | 1 or more in 5 minutes | The account or Region concurrency limit is reached. Check the Lambda concurrency quota. |
+| API throttles | 1 or more in 5 minutes | Same as above, for the API Lambda. |
+| Watchdog job sweep failed | 1 or more `watchdog:job-sweep-failed` log lines in 15 minutes | The watchdog could not settle a stuck job. Read the line for the job id, then open that job (see `troubleshooting.md`, *Stuck operations*). |
+| Watchdog relay liveness skipped | 1 or more `watchdog:relay-liveness-skipped` log lines in 15 minutes | No relay sent a heartbeat in the liveness window. Check the API for errors first, then the relay path. Deployments are not marked disconnected while this is true. |
+
+The two watchdog alarms use metric filters on the worker log group. Who is
+on call for these alarms is an owner decision. Until it is made, the alarm
+email address is the only route.
 
 The production stack has termination protection. A staging stack does not.
+
+## Log retention
+
+The API and worker Lambda log groups keep 30 days of logs.
+
+## Access to control-plane secrets
+
+The API and worker keep their credentials as Lambda environment variables
+(`collectEnvVars` in `packages/cdk/src/deployz-stack.ts`), except the GitHub
+App private key, which is in Secrets Manager. Anyone with
+`lambda:GetFunctionConfiguration` on the two functions can read the values.
+Limit that permission, and the console and CLI access that includes it, to
+the deploy role and the named administrators. To move all values to Secrets
+Manager is a post-MVP item: it changes every deploy and cold-start path, and
+the access limit covers the MVP risk.
+
+## Secret rotation
+
+Rotate on a schedule, and at once when a person with access leaves or a value
+leaks. Set the new value in the GitHub Environment, then deploy the API
+(`deploy-api.yml`). The deploy replaces the Lambda variables.
+
+| Secret | Procedure | Effect |
+| --- | --- | --- |
+| `BETTER_AUTH_SECRET` | Set a new random value and deploy. | All sessions end. Users sign in again. |
+| GitHub App private key | Make a new key in the GitHub App settings, set `GITHUB_APP_PRIVATE_KEY`, deploy, check a repository connection, then delete the old key in GitHub. | None, if done in this order. |
+| `GITHUB_WEBHOOK_SECRET` | Change it in the GitHub App settings and in the Environment in the same minute, then deploy. | Webhooks sent between the two changes fail. GitHub can redeliver them. |
+| `CLOUDFLARE_ZONE_EDIT_API_TOKEN` | Make a new token with the same scope, set it, deploy, then revoke the old token. | None. |
+| AI provider keys (`AI_PROVIDER_API_KEY`, `OPENROUTER_API_KEY`, `AI_GATEWAY_TOKEN`, `JEV_API_KEY`) | Make a new key at the provider, set it, deploy, then revoke the old key. | None. |
+| Config-secret KMS key | Yearly automatic rotation is on, and old key material stays. Never delete the key or change the construct id: all stored vendor secrets become unreadable. | None. |
+| Database master password | Rotate the secret in Secrets Manager, then deploy the API and worker. | Short errors while containers use the old password. |
+
+A second administrator must hold AWS access and GitHub organization admin
+access, so that one lost account does not block a rotation or a restore.
+To name that person is an owner task.
+
+## Vendor lost access to the 2FA mailbox
+
+A vendor who turned on two-factor sign-in gets the sign-in code by email. If
+the vendor can no longer read that mailbox:
+
+1. Check identity outside the product, for example a reply from the address
+   on the contract, or a call to a known number. Do not act on a request from
+   an unverified address.
+2. No admin route turns off 2FA or changes the account email. Open a
+   database session and set `two_factor_enabled` to false for that user:
+   `UPDATE "user" SET two_factor_enabled = false WHERE email = '<address>';`.
+   Then delete that user's rows from `session` so that old sessions end.
+3. The vendor signs in with the password. If the password is also lost, the
+   reset link goes to the old mailbox. In that case first change `email` in
+   the `user` table to the new verified address.
+4. Tell the vendor to turn 2FA on again.
+5. Record the action in the incident note (see
+   [`incident-response.md`](incident-response.md)).
 
 ## Local development
 

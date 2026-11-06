@@ -452,10 +452,11 @@ describe('github — installation live state and repository access', () => {
     });
   });
 
-  it('treats only an installation created in the last 15 minutes as fresh', () => {
+  it('treats only an installation created in the last minute as fresh', () => {
     const now = Date.parse('2026-10-29T12:00:00Z');
-    expect(isFreshInstallation('2026-10-29T11:50:00Z', now)).toBe(true);
-    expect(isFreshInstallation('2026-10-29T11:40:00Z', now)).toBe(false);
+    expect(isFreshInstallation('2026-10-29T11:59:30Z', now)).toBe(true);
+    expect(isFreshInstallation('2026-10-29T11:58:30Z', now)).toBe(false);
+    expect(isFreshInstallation('2026-10-29T11:50:00Z', now)).toBe(false);
     expect(isFreshInstallation('2026-10-29T13:00:00Z', now)).toBe(false);
     expect(isFreshInstallation(null, now)).toBe(false);
   });
@@ -1832,7 +1833,7 @@ describe('github — getFileTreeForAnalysis (fixture + real branching)', () => {
 });
 
 describe('github — deployz-demo/async-app fixture (Phase 5 — async & scheduled workloads)', () => {
-  it('analyses to a READY manifest with the expected queues, DLQ, and scheduled job', async () => {
+  it('analyses the queues, DLQ, and scheduled job, and the pilot gate makes it not deployable', async () => {
     const tree = await getFileTreeForAnalysis('deployz-demo/async-app', { fixtureMode: true });
     const analysis = analyseRepo(tree);
     const manifest = normalizeDeploymentManifest(analysis, {});
@@ -1851,7 +1852,10 @@ describe('github — deployz-demo/async-app fixture (Phase 5 — async & schedul
 
     expect(manifest.database.engine).toBe('mysql');
     expect(manifest.storage.required).toBe(true);
-    expect(manifest.unsupported).toEqual([]);
+    // The pilot switch ASYNC_WORKLOADS_DEPLOYABLE is off (docs/product/mvp-scope.md).
+    expect(manifest.unsupported).toEqual([
+      expect.stringContaining('Deployz does not provision queues or scheduled jobs in the pilot'),
+    ]);
 
     const graph = manifestToApplicationGraph(manifest);
     expect(graph.workloads.map((w) => w.id).sort()).toEqual(['cleanup', 'web', 'worker']);
@@ -1869,7 +1873,7 @@ describe('github — deployz-demo/async-app fixture (Phase 5 — async & schedul
     expect(() => planApplicationGraph({ graph, region: null })).not.toThrow();
 
     const readiness = buildReadinessReport(analysis, { workerCommandResolved: true });
-    expect(readiness.state).toBe('READY');
+    expect(readiness.state).not.toBe('READY');
   });
 });
 

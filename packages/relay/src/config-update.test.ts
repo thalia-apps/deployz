@@ -657,6 +657,34 @@ describe('createConfigUpdateExecutor — generated secrets (Phase 4)', () => {
     expect(env).toContainEqual({ name: 'LOG_LEVEL', value: 'info' });
   });
 
+  it('fails a redacted re-offer whose secret never reached the store, and a masked value', async () => {
+    const entries: EffectiveConfigEntry[] = [{ key: 'API_KEY', isSecret: true, source: 'customer' }];
+    for (const secret of [{ key: 'API_KEY' }, { key: 'API_KEY', value: '***' }]) {
+      const registered: unknown[] = [];
+      const secrets = fakeSecretsWriter();
+      const result = await createConfigUpdateExecutor(deps(entries, { registered }, secrets))(
+        configCommand({ changedKeys: ['API_KEY'], secrets: [secret] }),
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('API_KEY');
+      expect(secrets.current()).toEqual({});
+      expect(registered).toHaveLength(0);
+    }
+  });
+
+  it('accepts a redacted re-offer when an earlier pass already stored the secret', async () => {
+    const secrets = fakeSecretsWriter();
+    const entries: EffectiveConfigEntry[] = [{ key: 'API_KEY', isSecret: true, source: 'customer' }];
+    await createConfigUpdateExecutor(deps(entries, {}, secrets))(
+      configCommand({ changedKeys: ['API_KEY'], secrets: [{ key: 'API_KEY', value: 'v-12345' }] }),
+    );
+    const result = await createConfigUpdateExecutor(deps(entries, {}, secrets))(
+      configCommand({ changedKeys: ['API_KEY'], secrets: [{ key: 'API_KEY' }] }),
+    );
+    expect(result.success).toBe(true);
+    expect(secrets.current()).toEqual({ API_KEY: 'v-12345' });
+  });
+
   it('uses 256 bits of URL-safe randomness by default', () => {
     const a = generateSecretValue();
     const b = generateSecretValue();

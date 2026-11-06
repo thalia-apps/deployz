@@ -530,8 +530,8 @@ export function retryDefaultHttps(deploymentId: string): Promise<{ status: 'retr
  * resource before deleting it, and a successful purge clears the
  * retained-resources warning.
  */
-export function purgeDeployment(deploymentId: string): Promise<JobResult> {
-  return postJson<JobResult>(`/api/deployments/${encodeURIComponent(deploymentId)}/purge`, {});
+export function purgeDeployment(deploymentId: string, confirmName: string): Promise<JobResult> {
+  return postJson<JobResult>(`/api/deployments/${encodeURIComponent(deploymentId)}/purge`, { confirmName });
 }
 
 /**

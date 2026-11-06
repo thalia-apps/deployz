@@ -10,6 +10,8 @@
  * is the thin, untested-by-design real implementation wired in `./index.ts`.
  */
 
+import { createHash } from 'node:crypto';
+
 import {
   ACMClient,
   DeleteCertificateCommand,
@@ -148,24 +150,41 @@ function isCertificateInUse(err: unknown): boolean {
   );
 }
 
+/** ACM certificate states that end without an issued certificate. */
+const UNRECOVERABLE_CERTIFICATE_STATUSES: ReadonlySet<string> = new Set(['FAILED', 'VALIDATION_TIMED_OUT']);
+
 async function configureDomain(command: RelayCommand, deps: DomainExecutorDeps): Promise<RelayCommandResult> {
   const payload = readPayload(command);
 
   try {
-    const certificateArn =
-      payload.certificateArn ??
-      (await deps.acm.requestCertificate({
+    const requestCertificate = (idempotencyToken: string): Promise<string> =>
+      deps.acm.requestCertificate({
         domainName: payload.hostname,
-        idempotencyToken: payload.domainId.replace(/-/g, ''),
+        idempotencyToken,
         // The certificate is the one component the pre-synthesized template
         // cannot tag — it is requested here, at domain-configuration time.
         tags: {
           [DEPLOYZ_INSTALLATION_TAG]: deps.installationId,
           [DEPLOYZ_COMPONENT_TAG]: 'tls',
         },
-      }));
+      });
 
-    const certificate = await deps.acm.describeCertificate(certificateArn);
+    let certificateArn = payload.certificateArn ?? (await requestCertificate(payload.domainId.replace(/-/g, '')));
+    let certificate = await deps.acm.describeCertificate(certificateArn);
+
+    if (UNRECOVERABLE_CERTIFICATE_STATUSES.has(certificate.status)) {
+      // A failed certificate never recovers. ACM returns the same certificate
+      // for a repeated idempotency token, so the replacement takes a token
+      // derived from the failed ARN. Only a certificate of this installation
+      // is deleted.
+      const tags = await deps.acm.certificateTags(certificateArn);
+      if (tags?.[DEPLOYZ_INSTALLATION_TAG] === deps.installationId) {
+        await deps.acm.deleteCertificate(certificateArn);
+      }
+      certificateArn = await requestCertificate(createHash('sha256').update(certificateArn).digest('hex').slice(0, 32));
+      certificate = await deps.acm.describeCertificate(certificateArn);
+    }
+
     const loadBalancer = await deps.elb.findTaggedLoadBalancer(DEPLOYZ_INSTALLATION_TAG, deps.installationId);
 
     let httpsConfigured = false;
