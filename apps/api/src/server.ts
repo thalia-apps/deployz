@@ -113,7 +113,7 @@ import {
 import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
-import type { Auth } from './auth.js';
+import { fixtureTwoFactorCodes, type Auth } from './auth.js';
 import { resolveExplanation, type ExplanationText } from './ai-explanation.js';
 import { createFixtureAiGateway } from './ai-fixture.js';
 import {
@@ -8531,49 +8531,56 @@ export async function buildServer({
 
   // Better Auth over Fastify: construct a Fetch Request, call auth.handler,
   // forward status/headers/body. Official recipe from the docs.
-  app.route({
-    method: ['GET', 'POST'],
-    url: '/api/auth/*',
-    handler: async (request, reply) => {
-      // Resolve against the canonical API origin rather than the request's
-      // Host header. Two reasons: API Gateway terminates TLS, so the old
-      // hardcoded `http://` handed Better Auth an http origin that failed its
-      // own https origin check; and Host is client-controlled, which made this
-      // a header-injection surface on the auth endpoint. request.url is a path
-      // plus query, so this keeps both and guarantees the origin matches the
-      // baseURL Better Auth was configured with.
-      const url = new URL(request.url, env.apiUrl);
-      const headers = fromNodeHeaders(request.headers);
-      // Better Auth rate-limits on the first X-Forwarded-For entry, which the
-      // caller controls; hand it the trusted address instead.
-      headers.set('x-forwarded-for', request.ip);
-      const init: RequestInit = {
-        method: request.method,
-        headers,
-        ...(request.body ? { body: JSON.stringify(request.body) } : {}),
-      };
+  async function authHandler(request: FastifyRequest, reply: FastifyReply) {
+    // Resolve against the canonical API origin rather than the request's
+    // Host header. Two reasons: API Gateway terminates TLS, so the old
+    // hardcoded `http://` handed Better Auth an http origin that failed its
+    // own https origin check; and Host is client-controlled, which made this
+    // a header-injection surface on the auth endpoint. request.url is a path
+    // plus query, so this keeps both and guarantees the origin matches the
+    // baseURL Better Auth was configured with.
+    const url = new URL(request.url, env.apiUrl);
+    const headers = fromNodeHeaders(request.headers);
+    // Better Auth rate-limits on the first X-Forwarded-For entry, which the
+    // caller controls; hand it the trusted address instead.
+    headers.set('x-forwarded-for', request.ip);
+    const init: RequestInit = {
+      method: request.method,
+      headers,
+      ...(request.body ? { body: JSON.stringify(request.body) } : {}),
+    };
 
-      const response = await auth.handler(new Request(url.toString(), init));
+    const response = await auth.handler(new Request(url.toString(), init));
 
-      reply.status(response.status);
-      // set-cookie must survive as separate header lines (squashing breaks the
-      // browser); content-length is recomputed by Fastify.
-      response.headers.forEach((value, key) => {
-        const lower = key.toLowerCase();
-        if (lower !== 'set-cookie' && lower !== 'content-length') {
-          reply.header(key, value);
-        }
-      });
-      const setCookies =
-        typeof response.headers.getSetCookie === 'function'
-          ? response.headers.getSetCookie()
-          : [];
-      if (setCookies.length > 0) {
-        reply.header('set-cookie', setCookies);
+    reply.status(response.status);
+    // set-cookie must survive as separate header lines (squashing breaks the
+    // browser); content-length is recomputed by Fastify.
+    response.headers.forEach((value, key) => {
+      const lower = key.toLowerCase();
+      if (lower !== 'set-cookie' && lower !== 'content-length') {
+        reply.header(key, value);
       }
-      return reply.send(response.body ? await response.text() : null);
-    },
-  });
+    });
+    const setCookies =
+      typeof response.headers.getSetCookie === 'function'
+        ? response.headers.getSetCookie()
+        : [];
+    if (setCookies.length > 0) {
+      reply.header('set-cookie', setCookies);
+    }
+    return reply.send(response.body ? await response.text() : null);
+  }
+  app.route({ method: ['GET', 'POST'], url: '/api/auth/*', handler: authHandler });
+  // The two-factor code routes get the same per-IP limits as the customer
+  // sign-in code routes.
+  app.post('/api/auth/two-factor/send-otp', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, authHandler);
+  app.post('/api/auth/two-factor/verify-otp', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, authHandler);
+  if (env.emailVerificationFixtureMode) {
+    app.get('/internal/fixture/two-factor-code', async (request) => {
+      const { email } = request.query as { email?: string };
+      return { code: (email && fixtureTwoFactorCodes.get(email)) ?? null };
+    });
+  }
 
   // ── Relay endpoints (bearer-token auth, not session cookie) ─────────
   //

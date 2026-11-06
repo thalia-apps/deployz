@@ -3,7 +3,14 @@ import { cookies } from 'next/headers';
 import type { OrgRole, OrganizationSummary, SubscriptionStatus } from './organization-vocabulary';
 
 interface Me {
-  user: { id: string; name: string; email: string; emailVerified: boolean; image: string | null };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    emailVerified: boolean;
+    twoFactorEnabled: boolean;
+    image: string | null;
+  };
   organization: {
     id: string;
     name: string;

@@ -1,3 +1,4 @@
+import { twoFactorClient } from 'better-auth/client/plugins';
 import { createAuthClient } from 'better-auth/react';
 
 import { apiUrl } from '@/lib/api-url';
@@ -8,4 +9,5 @@ import { apiUrl } from '@/lib/api-url';
 export const authClient = createAuthClient({
   baseURL: apiUrl,
   fetchOptions: { credentials: 'include' },
+  plugins: [twoFactorClient()],
 });

@@ -29,7 +29,7 @@ describe('Better Auth table shape', () => {
     return rows.map((r) => r.column_name);
   }
 
-  it('user has the Better Auth core columns + the Deployz last-active tenant pointer + platform role', async () => {
+  it('user has the Better Auth core columns + the Deployz last-active tenant pointer + platform role + two-factor flag', async () => {
     expect(await columnsOf('user')).toEqual([
       'created_at',
       'email',
@@ -39,6 +39,7 @@ describe('Better Auth table shape', () => {
       'last_active_organization_id',
       'name',
       'platform_role',
+      'two_factor_enabled',
       'updated_at',
     ]);
   });
