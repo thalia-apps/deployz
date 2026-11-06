@@ -1691,3 +1691,23 @@ Decision:
 What would change it: a passing real-AWS certification of each shape
 ([`../testing/aws-e2e.md`](../testing/aws-e2e.md)). Then turn on the
 switch for that shape.
+
+## The control-plane database is encrypted at rest (2026-11-06)
+
+Context: the launch audit found that the control-plane database storage was
+not encrypted. RDS cannot encrypt an instance in place. The application is
+not public yet, so a short outage is acceptable.
+
+Decision: restore each stage from an encrypted copy of a snapshot
+(`DatabaseInstanceFromSnapshot`, AWS managed key `alias/aws/rds`). The
+procedure and the snapshot names are in
+[`../operations/control-plane.md`](../operations/control-plane.md#database-encryption).
+The AWS managed key costs nothing and needs no key policy. A customer
+managed key is a post-MVP item.
+
+## On-call, support mailbox and administrators (2026-11-06)
+
+Decision: production alarms go at once by email to `help@deployz.dev`, which
+is also the support mailbox. `tejas@deployz.dev` and
+`sumit@thaliatechnologies.com` are the second administrators. A hosted
+status page is a later item.

@@ -35,6 +35,12 @@ export interface StageNames {
    * prefixes is a prefix of the other, in either direction.
    */
   readonly templateBucketPrefix: string;
+  /**
+   * The encrypted snapshot the control-plane database was restored from
+   * (docs/operations/control-plane.md#database-encryption). Never change it:
+   * a new value replaces the database with a restore of that snapshot.
+   */
+  readonly databaseSnapshot: string;
 }
 
 const PRODUCTION_NAMES: StageNames = {
@@ -42,6 +48,7 @@ const PRODUCTION_NAMES: StageNames = {
   kmsAlias: 'alias/deployz-config-secrets',
   ecrRepositoryName: 'deployz-images',
   templateBucketPrefix: 'deployz-templates',
+  databaseSnapshot: 'deployz-encrypted-20261106',
 };
 
 const STAGING_NAMES: StageNames = {
@@ -49,6 +56,7 @@ const STAGING_NAMES: StageNames = {
   kmsAlias: 'alias/deployz-staging-config-secrets',
   ecrRepositoryName: 'deployz-staging-images',
   templateBucketPrefix: 'deployz-staging-templates',
+  databaseSnapshot: 'deployzstaging-encrypted-20261106',
 };
 
 /**
