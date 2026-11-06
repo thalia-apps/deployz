@@ -84,6 +84,9 @@ export function createAuth(
         }
       : {}),
     database: drizzleAdapter(db, { provider: 'pg', schema }),
+    // Count requests in the database, not in container memory, so the limits
+    // hold across all Lambda containers.
+    rateLimit: { storage: 'database' },
     disabledPaths: DISABLED_TWO_FACTOR_PATHS,
     // Optional two-factor sign-in: after a correct password, a user with
     // twoFactorEnabled gets no session until they enter a 6-digit code sent
@@ -94,11 +97,31 @@ export function createAuth(
     plugins: [
       twoFactor({
         totpOptions: { disable: true },
+        // Failed codes count per account across resends. After 10 failures the
+        // account cannot sign in with a code for 15 minutes. The plugin keeps
+        // the count in the two_factor row, which sendOTP creates below.
+        accountLockout: { enabled: true, maxFailedAttempts: 10, durationSeconds: 15 * 60 },
         otpOptions: {
           period: 5,
           allowedAttempts: 5,
           storeOTP: 'hashed',
           sendOTP: async ({ user, otp }) => {
+            if (user.twoFactorEnabled) {
+              const existing = await db
+                .select({ id: schema.twoFactor.id })
+                .from(schema.twoFactor)
+                .where(eq(schema.twoFactor.userId, user.id))
+                .limit(1);
+              if (existing.length === 0) {
+                await db.insert(schema.twoFactor).values({
+                  id: crypto.randomUUID(),
+                  userId: user.id,
+                  secret: '',
+                  backupCodes: '',
+                  verified: false,
+                });
+              }
+            }
             if (emailVerificationFixtureMode) fixtureTwoFactorCodes.set(user.email, otp);
             await sendQuietly(emailSender, {
               to: user.email,

@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { boolean, check, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { bigint, boolean, check, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 import { INCLUDED_PRODUCTION_DEPLOYMENTS_MAX } from '@deployz/contracts';
 
@@ -104,6 +104,19 @@ export const verification = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [index('verification_identifier_idx').on(t.identifier)],
+);
+
+// Better Auth rate-limit counters. Stored in the database so every Lambda
+// container shares one count (rateLimit.storage = 'database').
+export const rateLimit = pgTable(
+  'rate_limit',
+  {
+    id: text('id').primaryKey(),
+    key: text('key').notNull(),
+    count: integer('count').notNull(),
+    lastRequest: bigint('last_request', { mode: 'number' }).notNull(),
+  },
+  (t) => [uniqueIndex('rate_limit_key_idx').on(t.key)],
 );
 
 // Better Auth two-factor plugin table. Deployz uses only the emailed code,
