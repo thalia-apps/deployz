@@ -158,7 +158,7 @@ function PlanCard({
         <CardDescription>
           {status === 'PAST_DUE'
             ? 'Update your payment details to keep your subscription. Your customers’ deployments keep running.'
-            : status === 'PAUSED'
+            : status === 'PAUSED' || details?.scheduledChange
               ? 'Existing deployments keep running. Resume your subscription to add customer deployments.'
               : 'Customers can confirm invitations, and you can add customer deployments.'}
         </CardDescription>
