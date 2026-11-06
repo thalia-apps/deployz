@@ -591,6 +591,37 @@ describe('failure semantics, duplicate results and operation exclusivity', () =>
       expect(await claim(first)).toEqual([config, autoDeploy]);
     });
 
+    it('does not let a deploy and a config update wait on each other at a configured first start', async () => {
+      const seedFirstStart = async () => {
+        const deployment = await seedDeployment();
+        const install = await seedAt(deployment.id, 'INSTALL', 'SUCCEEDED', 60);
+        await db
+          .update(schema.deploymentJobs)
+          .set({ payload: { startAfterConfig: true } })
+          .where(eq(schema.deploymentJobs.id, install));
+        return deployment;
+      };
+
+      // The deploy is older: the config update still goes first.
+      const queued = await seedFirstStart();
+      const deploy = await seedAt(queued.id, 'DEPLOY_RELEASE', 'REQUESTED', 20);
+      const config = await seedAt(queued.id, 'CONFIG_UPDATE', 'REQUESTED', 10);
+      expect(await claim(queued)).toEqual([config, deploy]);
+
+      // The deploy already runs and waits for the configuration: the config update is not blocked.
+      const waiting = await seedFirstStart();
+      await seedAt(waiting.id, 'DEPLOY_RELEASE', 'RUNNING', 20);
+      const lateConfig = await seedAt(waiting.id, 'CONFIG_UPDATE', 'REQUESTED', 10);
+      expect(await claim(waiting)).toEqual([lateConfig]);
+
+      // After the application started, a running deploy blocks a config update again.
+      const started = await seedDeployment();
+      await seedAt(started.id, 'DEPLOY_RELEASE', 'SUCCEEDED', 40);
+      await seedAt(started.id, 'DEPLOY_RELEASE', 'RUNNING', 20);
+      await seedAt(started.id, 'CONFIG_UPDATE', 'REQUESTED', 10);
+      expect(await claim(started)).toEqual([]);
+    });
+
     it('lets the relay hand back a claimed command it did not start, never one whose payload was redacted', async () => {
       const deployment = await seedDeployment();
       const config = await seedAt(deployment.id, 'CONFIG_UPDATE', 'REQUESTED', 20);
