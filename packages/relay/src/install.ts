@@ -305,6 +305,9 @@ export async function installApplicationStack(options: InstallOptions): Promise<
   }
 }
 
+/** The placeholder the control plane stores in place of a secret it already delivered. */
+export const MASKED_SECRET_VALUE = '***';
+
 async function run(options: InstallOptions): Promise<InstallOutcome> {
   const {
     installer,
@@ -330,6 +333,14 @@ async function run(options: InstallOptions): Promise<InstallOutcome> {
   });
 
   const createStack = async (): Promise<InstallOutcome | null> => {
+    if (Object.values(parameters).includes(MASKED_SECRET_VALUE)) {
+      return {
+        state: 'failed',
+        reason:
+          'Install parameters hold a masked secret value, so the stack was not created. Retry the install to get new values.',
+        outputs: {},
+      };
+    }
     // Recovery recreates a stack the control plane authorized. The grant is
     // re-read immediately before the write, so one that expired while this
     // install waited cannot leak into a create.

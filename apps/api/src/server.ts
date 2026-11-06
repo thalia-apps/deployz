@@ -145,7 +145,7 @@ import { getBillingAccount, getInvoiceUrl } from './billing-account.js';
 import { createBillingPortalLinks } from './billing-portal.js';
 import { reconcileBilling } from './billing-reconcile.js';
 import { handlePaddleWebhook } from './billing-webhooks.js';
-import { redactClaimedPayload } from './claimed-payload.js';
+import { redactClaimedPayload, restoreMaskedInstallSecrets } from './claimed-payload.js';
 import { createPaddle, type PaddleBilling } from './paddle.js';
 import {
   createConfigStore,
@@ -1822,7 +1822,8 @@ const UNDEPLOYABLE_STATES = new Set<DeploymentRow['state']>([
 // An in-flight INSTALL older than this is dead: a single executor pass fits
 // well inside the relay's 5-minute timeout, so 30 minutes without a result
 // mean the invocation is never coming back (crashed Lambda, expired
-// container). Only then may retry-install supersede the job.
+// container). Only then may retry-install supersede the job, and only when
+// the relay is not live and the job shows no recent progress.
 const INSTALL_JOB_STALE_AFTER_MS = 30 * 60 * 1000;
 
 // §9.4 force-complete on a LIVE relay: how many consecutive FAILED DESTROY
@@ -1830,6 +1831,7 @@ const INSTALL_JOB_STALE_AFTER_MS = 30 * 60 * 1000;
 // still reads online. One failure is retryable by the vendor; two failures
 // on a connected relay mean the delete itself is wedged.
 const REPEATED_DESTROY_FAILURES_REQUIRED = 2;
+const DESTROY_WEDGED_REOFFERS_REQUIRED = 3;
 
 // The failure codes the diagnostics route may spend a model call on:
 // UNKNOWN plus the app-owned startup/config failures, where the §16-bounded
@@ -1920,6 +1922,24 @@ async function hasSucceededInstall(db: RuntimeDb, deploymentId: string): Promise
       ),
     );
   return installJobs.some((j) => j.state === 'SUCCEEDED' || j.state === 'SUCCESS');
+}
+
+/**
+ * Whether the newest INSTALL is known to have failed in AWS: the relay saw the
+ * stack fail and reported it. A watchdog timeout, a cancelled job or a missing
+ * install is not evidence — the stack may have completed with its result lost,
+ * so a retained database may hold customer data.
+ */
+async function newestInstallFailedInAws(db: RuntimeDb, deploymentId: string): Promise<boolean> {
+  const [latest] = await db
+    .select({ state: schema.deploymentJobs.state, result: schema.deploymentJobs.result })
+    .from(schema.deploymentJobs)
+    .where(and(eq(schema.deploymentJobs.deploymentId, deploymentId), eq(schema.deploymentJobs.type, 'INSTALL')))
+    .orderBy(desc(schema.deploymentJobs.createdAt))
+    .limit(1);
+  return (
+    latest?.state === 'FAILED' && (latest.result as { timeout?: unknown } | null)?.timeout !== true
+  );
 }
 
 // resolveAppUrl now lives in ./fleet-row.js, alongside toFleetRow.
@@ -6976,12 +6996,14 @@ export async function buildServer({
       }
     }
     await requireDeploymentIdle(db, deployment.id, idempotencyKey);
-    // Data deletion during a wedged destroy is authorized ONLY for a
-    // deployment that never completed an install — its retained database is
-    // an empty artifact of a failed create, not customer data. Anything
-    // that ever ran keeps the data-preserving destroy path (the relay
-    // finishes the stack delete RETAINING what it cannot remove).
-    const neverInstalled = !(await hasSucceededInstall(db, deployment.id));
+    // Data deletion during a wedged destroy is authorized ONLY when the
+    // relay reported the newest install as failed in AWS — its retained
+    // database is an empty artifact of a failed create, not customer data.
+    // Anything that ever ran, or whose install outcome is unknown, keeps the
+    // data-preserving destroy path (the relay finishes the stack delete
+    // RETAINING what it cannot remove).
+    const neverInstalled =
+      !(await hasSucceededInstall(db, deployment.id)) && (await newestInstallFailedInAws(db, deployment.id));
     const { job, created } = await createOrReuseJob(db, {
       deploymentId: deployment.id,
       type: 'DESTROY',
@@ -7081,23 +7103,30 @@ export async function buildServer({
           'Only a disconnect that is still in progress can be completed this way.',
         );
       }
-      // Persisted liveness is the gate: the worker sweep only writes
-      // DISCONNECTED after the relay missed its check-in window, so this
-      // cannot fire on a relay that is merely between polls.
-      if (deployment.relayStatus !== 'DISCONNECTED') {
-        throw new ApiError(
-          409,
-          'RELAY_NOT_OFFLINE',
-          'The relay for this deployment is not confirmed offline.',
-        );
-      }
-      const lastSignal = job.lastProgressAt ?? job.startedAt ?? job.createdAt;
-      if (Date.now() - lastSignal.getTime() < DESTROY_PENDING_STALE_AFTER_MS) {
-        throw new ApiError(
-          409,
-          'DESTROY_NOT_STALE',
-          'The disconnect has not been pending long enough to complete it this way.',
-        );
+      // A connected relay keeps refreshing lastProgressAt, so a wedged
+      // DESTROY on it is detected by its age and its exhausted re-offers.
+      const wedgedOnLiveRelay =
+        job.reconcileCount >= DESTROY_WEDGED_REOFFERS_REQUIRED &&
+        Date.now() - (job.startedAt ?? job.createdAt).getTime() >= DESTROY_PENDING_STALE_AFTER_MS;
+      if (!wedgedOnLiveRelay) {
+        // Persisted liveness is the gate: the worker sweep only writes
+        // DISCONNECTED after the relay missed its check-in window, so this
+        // cannot fire on a relay that is merely between polls.
+        if (deployment.relayStatus !== 'DISCONNECTED') {
+          throw new ApiError(
+            409,
+            'RELAY_NOT_OFFLINE',
+            'The relay for this deployment is not confirmed offline.',
+          );
+        }
+        const lastSignal = job.lastProgressAt ?? job.startedAt ?? job.createdAt;
+        if (Date.now() - lastSignal.getTime() < DESTROY_PENDING_STALE_AFTER_MS) {
+          throw new ApiError(
+            409,
+            'DESTROY_NOT_STALE',
+            'The disconnect has not been pending long enough to complete it this way.',
+          );
+        }
       }
     } else {
       // Path 2 — repeated FAILED destroys, no job in flight.
@@ -7565,9 +7594,14 @@ export async function buildServer({
       ['REQUESTED', 'QUEUED', 'RUNNING', 'WAITING'].includes(j.state),
     );
     const retryKeyPrefix = `${deployment.id}:INSTALL:RETRY`;
+    // A job is dead only when it is old and nothing shows progress. A connected
+    // relay refreshes lastProgressAt on every heartbeat, so its long install
+    // is alive; the watchdog re-offers or fails that job, not this route.
+    const staleBefore = Date.now() - INSTALL_JOB_STALE_AFTER_MS;
     const inFlightIsFresh =
       inFlight !== undefined &&
-      (inFlight.startedAt ?? inFlight.createdAt).getTime() > Date.now() - INSTALL_JOB_STALE_AFTER_MS;
+      ((inFlight.startedAt ?? inFlight.createdAt).getTime() > staleBefore ||
+        (deployment.relayStatus === 'CONNECTED' && (inFlight.lastProgressAt?.getTime() ?? 0) > staleBefore));
 
     if (inFlight !== undefined && inFlightIsFresh) {
       // A double-click on a live retry is an idempotent replay, not a new
@@ -9258,17 +9292,36 @@ export async function buildServer({
           inArray(schema.deploymentJobs.state, ['REQUESTED', 'QUEUED', 'WAITING', 'RUNNING']),
         ),
       );
-    const mutationRunning = candidates.some(
-      (job) => job.state === 'RUNNING' && SERVICE_MUTATING_JOB_TYPES.has(job.type),
-    );
+    // A configured first start: the DEPLOY_RELEASE changes nothing until the
+    // CONFIG_UPDATE attaches the configured revision. So here the CONFIG_UPDATE
+    // goes first and a waiting DEPLOY_RELEASE does not block it. Without this
+    // the two wait on each other until the watchdog re-offers the deploy.
+    const configFirst =
+      candidates.some((job) => job.type === 'CONFIG_UPDATE') &&
+      candidates.some((job) => job.type === 'DEPLOY_RELEASE') &&
+      (await awaitsFirstStart(db, deployment.id));
+    const blockedByRunning = (type: string): boolean =>
+      candidates.some(
+        (job) =>
+          job.state === 'RUNNING' &&
+          SERVICE_MUTATING_JOB_TYPES.has(job.type) &&
+          !(configFirst && type === 'CONFIG_UPDATE' && job.type === 'DEPLOY_RELEASE'),
+      );
+    const claimOrder = (a: (typeof candidates)[number], b: (typeof candidates)[number]): number => {
+      if (configFirst && a.type !== b.type) {
+        if (a.type === 'CONFIG_UPDATE') return -1;
+        if (b.type === 'CONFIG_UPDATE') return 1;
+      }
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    };
     const claimIds: string[] = [];
     let mutationClaimed = false;
     // `claim=0`: the customer is updating the connector stack, so the relay
     // asks for the deployment facts only and claims nothing.
-    for (const job of claim === '0' ? [] : candidates.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())) {
+    for (const job of claim === '0' ? [] : candidates.sort(claimOrder)) {
       if (job.state === 'RUNNING') continue;
       if (SERVICE_MUTATING_JOB_TYPES.has(job.type)) {
-        if (mutationRunning || (job.type === 'CONFIG_UPDATE' && mutationClaimed)) continue;
+        if (blockedByRunning(job.type) || (job.type === 'CONFIG_UPDATE' && mutationClaimed)) continue;
         mutationClaimed = true;
       }
       claimIds.push(job.id);
@@ -9294,7 +9347,7 @@ export async function buildServer({
                 ),
               )
               .returning()
-          ).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+          ).sort(claimOrder);
 
     // Payload redaction rides the claim: the relay reads the value ONCE from
     // this response (built from the pre-redaction rows below); the stored row
@@ -9346,7 +9399,7 @@ export async function buildServer({
         deploymentId: deployment.id,
         type: job.type,
         idempotencyKey: job.idempotencyKey,
-        payload: job.payload,
+        payload: restoreMaskedInstallSecrets(job),
       })),
       deployment: {
         ...(requirements

@@ -40,6 +40,7 @@ import {
   createFixtureReleaseImageClient,
   type FixtureReleaseImageClient,
 } from './release-images.js';
+import { restoreMaskedInstallSecrets } from './claimed-payload.js';
 import { AI_EXPLAINABLE_FAILURE_CODES, buildServer, redactClaimedPayload } from './server.js';
 
 // ── Shared test helpers (used by the describe blocks below) ────────────────
@@ -1599,6 +1600,24 @@ describe('redactClaimedPayload', () => {
       [APP_SIGNING_SECRET_PARAMETER]: '***',
       [IMAGE_REFERENCE_PARAMETER]: 'registry@sha256:abc',
       [DESIRED_COUNT_PARAMETER]: '0',
+    });
+  });
+
+  it('restores fresh generated secrets into a re-offered, already redacted INSTALL', () => {
+    const redacted = redactClaimedPayload({
+      type: 'INSTALL',
+      payload: { parameters: { [APP_API_KEY_PARAMETER]: 'a', [IMAGE_REFERENCE_PARAMETER]: 'img' } },
+    });
+    const restored = restoreMaskedInstallSecrets({ type: 'INSTALL', payload: redacted }) as {
+      parameters: Record<string, string>;
+    };
+    expect(restored.parameters[APP_API_KEY_PARAMETER]).not.toBe('***');
+    expect(restored.parameters[APP_API_KEY_PARAMETER]!.length).toBeGreaterThan(20);
+    expect(restored.parameters[IMAGE_REFERENCE_PARAMETER]).toBe('img');
+    const fresh = { parameters: { [APP_API_KEY_PARAMETER]: 'real' } };
+    expect(restoreMaskedInstallSecrets({ type: 'INSTALL', payload: fresh })).toEqual(fresh);
+    expect(restoreMaskedInstallSecrets({ type: 'CONFIG_UPDATE', payload: { secrets: [{ key: 'K' }] } })).toEqual({
+      secrets: [{ key: 'K' }],
     });
   });
 
@@ -6532,6 +6551,26 @@ describe('server — retry-install (first-install recovery)', () => {
       .where(and(eq(schema.deploymentJobs.deploymentId, deployment.id), eq(schema.deploymentJobs.type, 'INSTALL')));
     expect(jobs.find((j) => j.idempotencyKey === `${deployment.id}:INSTALL`)!.state).toBe('CANCELLED');
     expect(jobs.find((j) => j.idempotencyKey === `${deployment.id}:INSTALL:RETRY:1`)!.state).toBe('REQUESTED');
+  });
+
+  it('keeps a long INSTALL on a connected relay that still shows progress, and supersedes it once progress stopped', async () => {
+    const startedAt = new Date(Date.now() - 45 * 60 * 1000);
+    const live = await seedFailedInstall(
+      { state: 'INSTALLING', relayStatus: 'CONNECTED' },
+      { state: 'RUNNING', startedAt, lastProgressAt: new Date() },
+    );
+    const refused = await postJson(app, `/api/deployments/${live.id}/retry-install`, {}, { cookie: org.cookie });
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toMatchObject({ error: { code: 'INSTALL_NOT_RETRYABLE' } });
+    const [job] = await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.deploymentId, live.id));
+    expect(job!.state).toBe('RUNNING');
+
+    const silent = await seedFailedInstall(
+      { state: 'INSTALLING', relayStatus: 'CONNECTED' },
+      { state: 'RUNNING', startedAt, lastProgressAt: new Date(Date.now() - 35 * 60 * 1000) },
+    );
+    const accepted = await postJson(app, `/api/deployments/${silent.id}/retry-install`, {}, { cookie: org.cookie });
+    expect(accepted.statusCode).toBe(202);
   });
 });
 

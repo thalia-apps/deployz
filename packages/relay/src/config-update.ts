@@ -64,6 +64,7 @@ import {
 } from './deploy.js';
 import type { TargetHealthReader } from './ecs-health.js';
 import { essentialContainerNames } from './ecs-observe.js';
+import { MASKED_SECRET_VALUE } from './install.js';
 import { pruneSupersededRevisions } from './task-revisions.js';
 import {
   reportSettled,
@@ -319,6 +320,7 @@ async function settleConfigUpdate(
   deps: ConfigUpdateDeps,
   removedKeys: readonly string[] = [],
   secretValues: Readonly<Record<string, string>> = {},
+  undeliveredKeys: readonly string[] = [],
 ): Promise<ConfigUpdateOutcome> {
   const desired = await deps.fetchEffectiveConfig();
 
@@ -363,7 +365,7 @@ async function settleConfigUpdate(
   const availableSecretKeys = new Set<string>();
   let secretArn: string | null = null;
   let storeChanged = false;
-  if (desiredSecrets.length > 0 || hasIncomingValues || removedKeys.length > 0) {
+  if (desiredSecrets.length > 0 || hasIncomingValues || removedKeys.length > 0 || undeliveredKeys.length > 0) {
     const arn = findAppConfigSecretArn(resources);
     if (arn === null) {
       return {
@@ -395,6 +397,15 @@ async function settleConfigUpdate(
         delete merged[key];
         changed = true;
       }
+    }
+    // A secret the command names without a usable value was redacted after an
+    // earlier claim. It is fine only when an earlier pass stored it already.
+    const missingKeys = undeliveredKeys.filter((key) => !merged[key]);
+    if (missingKeys.length > 0) {
+      return {
+        state: 'failed',
+        reason: `Secret values for ${missingKeys.join(', ')} were not delivered to the relay. Enter the values again.`,
+      };
     }
     // Mint each generated secret exactly once: a value already in the store
     // (an earlier pass, or a value the vendor chose to set) is kept.
@@ -766,13 +777,17 @@ export function createConfigUpdateExecutor(deps: ConfigUpdateDeps): CommandExecu
 
     const payloadSecrets = payload.secrets;
     const secretValues: Record<string, string> = {};
+    const undeliveredKeys: string[] = [];
     if (Array.isArray(payloadSecrets)) {
       for (const entry of payloadSecrets) {
         if (typeof entry !== 'object' || entry === null) continue;
         const key = (entry as { key?: unknown }).key;
         const value = (entry as { value?: unknown }).value;
-        if (typeof key === 'string' && key.length > 0 && typeof value === 'string') {
+        if (typeof key !== 'string' || key.length === 0) continue;
+        if (typeof value === 'string' && value !== MASKED_SECRET_VALUE) {
           secretValues[key] = value;
+        } else {
+          undeliveredKeys.push(key);
         }
       }
     }
@@ -826,7 +841,7 @@ export function createConfigUpdateExecutor(deps: ConfigUpdateDeps): CommandExecu
       }
       if (authority === null) return { ...base, success: false, deferred: true };
 
-      outcome = await settleConfigUpdate(deps, removedKeys, secretValues);
+      outcome = await settleConfigUpdate(deps, removedKeys, secretValues, undeliveredKeys);
     } catch (err) {
       return await reportSettled(deps.pending, marker, {
         ...base,
