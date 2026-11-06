@@ -106,8 +106,6 @@ test.describe('phase5-composition', () => {
   test('@scenario:phase5-composition queues, dead-letter, scheduled job: readiness, verification, deploy/restart/rollback, standalone-task destroy, purge', async ({
     request,
   }) => {
-    // Pilot: the analysis refuses queues and scheduled jobs. Remove this skip when ASYNC_WORKLOADS_DEPLOYABLE is true.
-    test.skip(true, 'Queues and scheduled jobs are off in the pilot');
     test.setTimeout(240_000);
     const suffix = crypto.randomUUID().slice(0, 8);
 

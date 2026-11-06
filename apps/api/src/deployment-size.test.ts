@@ -5,9 +5,9 @@ import { SELECTABLE_SIZE_TIERS } from '@deployz/contracts';
 import { resolveSizeSelection, sizingBounds } from './deployment-size.js';
 import { ApiError } from './errors.js';
 
-describe('pilot size selection', () => {
-  it('offers only Small', () => {
-    expect(SELECTABLE_SIZE_TIERS).toEqual(['small']);
+describe('size selection', () => {
+  it('offers Small, Medium and Large', () => {
+    expect(SELECTABLE_SIZE_TIERS).toEqual(['small', 'medium', 'large']);
   });
 
   it('resolves to Small when nothing is requested', () => {
@@ -16,21 +16,27 @@ describe('pilot size selection', () => {
     expect(selection.profile.id).toBe('small');
   });
 
-  it('refuses a requested Medium or Large with 422 SIZE_PROFILE_NOT_ALLOWED', () => {
+  it('resolves a requested Medium or Large', () => {
     for (const tier of ['medium', 'large'] as const) {
-      try {
-        resolveSizeSelection({ defaultSizeProfile: 'small', minimumSizeProfile: 'small' }, tier);
-        expect.unreachable();
-      } catch (error) {
-        expect(error).toBeInstanceOf(ApiError);
-        expect(error).toMatchObject({ statusCode: 422, code: 'SIZE_PROFILE_NOT_ALLOWED' });
-      }
+      const selection = resolveSizeSelection({ defaultSizeProfile: 'small', minimumSizeProfile: 'small' }, tier);
+      expect(selection.tier).toBe(tier);
+      expect(selection.profile.id).toBe(tier);
     }
   });
 
-  it('resolves a stored Medium or Large application setting to Small', () => {
+  it('refuses a size below the minimum with 422 SIZE_PROFILE_NOT_ALLOWED', () => {
+    try {
+      resolveSizeSelection({ defaultSizeProfile: 'medium', minimumSizeProfile: 'medium' }, 'small');
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({ statusCode: 422, code: 'SIZE_PROFILE_NOT_ALLOWED' });
+    }
+  });
+
+  it('keeps a stored Medium or Large application setting', () => {
     const application = { defaultSizeProfile: 'large', minimumSizeProfile: 'medium' } as const;
-    expect(sizingBounds(application)).toEqual({ recommended: 'small', minimum: 'small' });
-    expect(resolveSizeSelection(application, undefined).tier).toBe('small');
+    expect(sizingBounds(application)).toEqual({ recommended: 'large', minimum: 'medium' });
+    expect(resolveSizeSelection(application, undefined).tier).toBe('large');
   });
 });

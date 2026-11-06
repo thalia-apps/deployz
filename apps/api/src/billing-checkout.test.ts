@@ -6,15 +6,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
-import { SELECTABLE_SIZE_TIERS } from '@deployz/contracts';
 
 import { createAuth, type Auth } from './auth.js';
 import { completePendingCheckoutIntent } from './billing-checkout.js';
 import { createPaddle, type PaddleBilling } from './paddle.js';
 import { buildServer } from './server.js';
-
-// These tests cover the size rules of every tier. The pilot offers Small only.
-SELECTABLE_SIZE_TIERS.splice(0, SELECTABLE_SIZE_TIERS.length, 'small', 'medium', 'large');
 
 // Paddle migration Phase 8 — first production activation. A vendor without a
 // subscription asks for a customer deployment: nothing is provisioned and no
