@@ -116,6 +116,14 @@ describe('auth (Better Auth over PGlite)', () => {
     expect(cookie?.split('=')[0]).toContain('better-auth.session_token');
   });
 
+  it('rejects a sign-up password shorter than 12 characters', async () => {
+    await expect(
+      auth.api.signUpEmail({
+        body: { email: 'short@example.com', password: 'eleven-char', name: 'Short' },
+      }),
+    ).rejects.toThrow();
+  });
+
   it('rejects a wrong password', async () => {
     await expect(
       auth.api.signInEmail({
