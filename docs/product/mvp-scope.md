@@ -83,14 +83,14 @@ sets a recommended size and a minimum size per application and can
 override the recommendation per link. The customer chooses any permitted
 size before installing. A size changes capacity only, never topology.
 
-**Pilot boundary.** Queues and scheduled jobs are not certified on real AWS.
-During the public pilot the analysis refuses a repository that needs one
-(see "Explicit MVP non-goals"). `ASYNC_WORKLOADS_DEPLOYABLE` in
-`packages/analysis/src/rejection.ts` is the one switch; set it to `true`
-to provision them again. Medium and Large are also not certified: new
-selections offer Small only (`SELECTABLE_SIZE_TIERS` in
-`packages/contracts/src/profile.ts`). A deployment that already froze a
-Medium or Large profile keeps it.
+**Pilot boundary.** The pilot offers all three sizes, queues and scheduled
+jobs. Real-AWS certification of each is still open. Two switches can turn
+them off: `ASYNC_WORKLOADS_DEPLOYABLE` in
+`packages/analysis/src/rejection.ts` (set it to `false` to refuse a
+repository that needs a queue or a scheduled job) and
+`SELECTABLE_SIZE_TIERS` in `packages/contracts/src/profile.ts` (remove a
+tier to stop offering it). A deployment that already froze a Medium or
+Large profile keeps it.
 
 Plan and status payloads may also name `worker`, `queue` and `schedule`
 component kinds. All three are real, provisioned components: a `queue` is
@@ -183,12 +183,6 @@ see [`user-flows.md#who-chooses-the-aws-region`](user-flows.md#who-chooses-the-a
 ## Explicit MVP non-goals
 
 Rejected at analysis time, with evidence, never silently adapted:
-
-- During the pilot: any queue or scheduled job. The analysis marks the
-  application NOT_DEPLOYABLE and the vendor sees "this application needs a
-  message queue / a scheduled job. Deployz does not provision queues or
-  scheduled jobs in the pilot." A vendor dispute cannot dismiss this
-  reason. The rules below still describe what is detected.
 
 - Scheduled work is provisioned only from a `render.yaml` `type: cron`
   service or a Kubernetes `CronJob` manifest. In-process cron libraries, CI-level

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { allowedSizeTiers, currentInfrastructureSizeProfile, profileKey, type InfrastructureSizeTier } from '@deployz/contracts';
+import { currentInfrastructureSizeProfile, profileKey, type InfrastructureSizeTier } from '@deployz/contracts';
 
 import { canaryTags, loadConfig, mintRunId, releaseVersionFor, requireRealAwsOptIn, validateDigest } from './config.js';
 import { ControlPlane, isTerminalJobState, waitFor } from './control-plane.js';
@@ -1048,7 +1048,7 @@ describe('journey requests', () => {
         return { status: 201, body: { id: 'inv-1', token: 'tok-1', recommendedRegion: 'us-east-1', recommendedSizeProfile: 'large' }, headers: new Headers() };
       }
       if (method === 'GET' && path === '/api/public-install/inv-1') {
-        const options = allowedSizeTiers('small').map((id) => ({
+        const options = ['small', 'medium', 'large'].map((id) => ({
           id,
           profileKey: profileKey(currentInfrastructureSizeProfile(id as InfrastructureSizeTier)),
           recommended: id === 'large',

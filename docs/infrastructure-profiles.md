@@ -16,12 +16,13 @@ the frozen spec's graph → planner → IR chain; the size profile only decides
 | `medium-v1` | Medium | 1 vCPU / 2 GiB × 1 task | `db.t3.medium`, 20 GB (autoscaling to 100 GB), gp3 | `cache.t4g.small` × 1 |
 | `large-v1` | Large | 2 vCPU / 4 GiB × 1 task | `db.t3.large`, 20 GB (autoscaling to 100 GB), gp3 | `cache.t4g.medium` × 1 |
 
-- **Pilot:** only Small is offered for new selections
-  (`SELECTABLE_SIZE_TIERS`), because Medium and Large are not certified on
-  real AWS. Published profiles do not change. A deployment that froze a
-  Medium or Large profile keeps it. An application or link setting that
-  names Medium or Large resolves to Small. A request for Medium or Large is
-  refused with `422 SIZE_PROFILE_NOT_ALLOWED`.
+- **Offered sizes:** Small, Medium and Large are offered for new selections
+  (`SELECTABLE_SIZE_TIERS`). Real-AWS certification of Medium and Large is
+  still open. To stop offering a tier, remove it from the constant. A
+  deployment that froze that profile keeps it. An application or link
+  setting that names a tier that is not offered resolves to Small. A
+  request for a tier that is not offered is refused with
+  `422 SIZE_PROFILE_NOT_ALLOWED`.
 - Each tier maps to one **current** version, which new deployments freeze:
   Small → `small-v2`, Medium → `medium-v1`, Large → `large-v1`
   (`currentInfrastructureSizeProfile`). `small-v1` is frozen for the

@@ -3,11 +3,6 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { SELECTABLE_SIZE_TIERS } from '@deployz/contracts';
-
-// These tests cover the size rules of every tier. The pilot offers Small only.
-SELECTABLE_SIZE_TIERS.splice(0, SELECTABLE_SIZE_TIERS.length, 'small', 'medium', 'large');
-
 // react-dom/client's act() checks this flag before running; without it, every
 // act() call warns even though the assertions below pass.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;

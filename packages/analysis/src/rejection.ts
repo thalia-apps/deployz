@@ -827,11 +827,10 @@ function stackComposeServices(tree: FileTree): ReturnType<typeof composeServices
 }
 
 /**
- * The pilot switch for SQS queues and EventBridge Scheduler schedules. Both
- * are not certified on real AWS, so a repository that needs one is not
- * deployable. Set it to `true` to provision them again.
+ * The switch for SQS queues and EventBridge Scheduler schedules. Set it to
+ * `false` to make a repository that needs one not deployable.
  */
-export const ASYNC_WORKLOADS_DEPLOYABLE = false;
+export const ASYNC_WORKLOADS_DEPLOYABLE = true;
 
 /** A queue or a scheduled job found in the repository while the pilot switch is off. */
 export function checkUncertifiedAsyncWorkloads(async: AsyncWorkloadsResult): RejectionFinding {

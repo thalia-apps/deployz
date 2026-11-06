@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
-import { SELECTABLE_SIZE_TIERS, REGION_LABELS, buildInstallPlan } from '@deployz/contracts';
+import { REGION_LABELS, buildInstallPlan } from '@deployz/contracts';
 
 import type { DeploymentManifest, EnvironmentSetting } from '@deployz/contracts';
 
@@ -17,9 +17,6 @@ import { installLinkToken } from './install-link-token.js';
 import { runApplicationPreflight } from './preflight.js';
 import { PUBLIC_LINK_DAILY_CONFIRM_LIMIT, publicInstallInputs } from './public-install.js';
 import { buildServer } from './server.js';
-
-// These tests cover the size rules of every tier. The pilot offers Small only.
-SELECTABLE_SIZE_TIERS.splice(0, SELECTABLE_SIZE_TIERS.length, 'small', 'medium', 'large');
 
 // Phase 3 public install links — the customer-side installation review
 // contract: the public resolve projection and the confirm flow (gates,
