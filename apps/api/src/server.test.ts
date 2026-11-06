@@ -2095,6 +2095,43 @@ describe('server — relay bearer auth, INSTALL job, and command/result/health f
     expect(updated!.state).toBe('HEALTHY');
   });
 
+  it.each([
+    ['UPDATING', 'HEALTHY'],
+    ['FAILED', 'FAILED'],
+  ] as const)('a successful RESTART from %s leaves the deployment %s', async (from, expected) => {
+    const token = `relay-restart-${from}`;
+    const application = await insertApplication(db, org.organizationId);
+    const fresh = await insertDeployment(db, org.organizationId, application.id, deployment.customerId, {
+      state: from,
+      installationId: `inst-restart-${from}`,
+      enrollmentCode: crypto.randomUUID(),
+      enrollmentUsedAt: new Date(),
+      relayTokenHash: hashRelayToken(token),
+      relayStatus: 'CONNECTED',
+    });
+    const [job] = await db
+      .insert(schema.deploymentJobs)
+      .values({
+        deploymentId: fresh.id,
+        type: 'RESTART',
+        state: 'RUNNING',
+        idempotencyKey: `${fresh.id}:RESTART`,
+        payload: {},
+      })
+      .returning();
+
+    const response = await postJson(
+      app,
+      `/api/relay/commands/${job!.id}/result`,
+      { success: true },
+      { authorization: `Bearer ${token}` },
+    );
+    expect(response.statusCode).toBe(200);
+
+    const [updated] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, fresh.id));
+    expect(updated!.state).toBe(expected);
+  });
+
   it('promoting the newest release resolves UPDATE_AVAILABLE even when created_at has microseconds', async () => {
     // Production Postgres keeps microseconds; a JS Date keeps milliseconds.
     // The newest release must not count as newer than itself.
@@ -6125,6 +6162,24 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     expect(dep!.attemptNumber).toBe(1);
     expect(dep!.installationId).toBeNull();
     expect(dep!.enrollmentCode).not.toBe(deployment.enrollmentCode);
+  });
+
+  it.each(['DELETING', 'DELETED'] as const)('relay/reset refuses a %s deployment and changes nothing', async (state) => {
+    const application = await insertApplication(db, org.organizationId, { name: `${state} Reset App` });
+    const customer = await insertCustomer(db, org.organizationId);
+    const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state,
+      installationId: `inst-${state}`,
+    });
+
+    const response = await postJson(app, `/api/deployments/${deployment.id}/relay/reset`, {}, { cookie: org.cookie });
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ error: { code: 'DEPLOYMENT_NOT_RESETTABLE' } });
+
+    const [dep] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deployment.id));
+    expect(dep!.state).toBe(state);
+    expect(dep!.installationId).toBe(`inst-${state}`);
+    expect(dep!.enrollmentCode).toBe(deployment.enrollmentCode);
   });
 
   it('relay/reset renews an expired install link so the customer can open it again', async () => {

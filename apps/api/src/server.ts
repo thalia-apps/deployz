@@ -2196,11 +2196,12 @@ async function loadCustomerAwsSummary(
  * the relay's runtime health verification reports HEALTHY (see the
  * /api/relay/health handler, which advances INSTALLING → HEALTHY), so a
  * "healthy" state always means observed-healthy, never just stack-complete.
+ * RESTART is absent too: it follows the DEPLOY_RELEASE path only when it ran
+ * from UPDATING, and from any other state (FAILED) it keeps that state.
  */
 const JOB_SUCCESS_STATE: Partial<Record<JobType, DeploymentRow['state']>> = {
   DEPLOY_RELEASE: 'HEALTHY',
   ROLLBACK: 'HEALTHY',
-  RESTART: 'HEALTHY',
   DESTROY: 'DELETED',
 };
 
@@ -7422,6 +7423,13 @@ export async function buildServer({
     deployment: DeploymentRow,
     actorId: string | null,
   ): Promise<{ installLinkId: string | null; attemptNumber: number }> {
+    if (deployment.state === 'DELETING' || deployment.state === 'DELETED') {
+      throw new ApiError(
+        409,
+        'DEPLOYMENT_NOT_RESETTABLE',
+        'This deployment is being removed or was removed. Its connection cannot be reset.',
+      );
+    }
     const enrollmentCode = mintEnrollmentCode();
     const relayCredential = mintRelayCredential();
     const [application] = await db
@@ -9607,7 +9615,10 @@ export async function buildServer({
               deployment.currentReleaseId,
             ),
           }) ?? undefined)
-        : state === 'SUCCEEDED' && (job.type === 'DEPLOY_RELEASE' || job.type === 'ROLLBACK')
+        : state === 'SUCCEEDED' &&
+            (job.type === 'DEPLOY_RELEASE' ||
+              job.type === 'ROLLBACK' ||
+              (job.type === 'RESTART' && deployment.state === 'UPDATING'))
           ? await newerReadyReleaseExists(
               db,
               deployment.applicationId,

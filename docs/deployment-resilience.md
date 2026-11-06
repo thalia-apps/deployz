@@ -589,6 +589,13 @@ still roll, and would hide a crash loop.
   queued and does not resume. So `requireDeployableState` refuses deploy,
   rollback and restart (`409 DEPLOYMENT_NOT_DEPLOYABLE`) for a `FAILED`
   deployment whose newest job is a DESTROY; the vendor disconnects again.
+- **A removed deployment cannot be reset.** `relay/reset` (vendor and admin)
+  gets `409 DEPLOYMENT_NOT_RESETTABLE` for a `DELETING` or `DELETED`
+  deployment, so a reset cannot return it to `NOT_INSTALLED`.
+- **A restart keeps the prior state unless it ran from `UPDATING`.** A
+  successful RESTART returns `UPDATING` to `UPDATE_AVAILABLE` or `HEALTHY`.
+  From any other state (for example `FAILED`) it changes nothing; the
+  heartbeat self-heal clears `FAILED`.
 - AWS-side, every relay executor reads before it writes
   (describe-before-create/delete, running-digest short-circuit), so a
   re-delivered or re-offered command converges on real AWS state instead of
