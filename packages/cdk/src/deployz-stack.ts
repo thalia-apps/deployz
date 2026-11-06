@@ -19,16 +19,17 @@ import {
   Vpc,
   type IVpc,
 } from 'aws-cdk-lib/aws-ec2';
-import { Alarm, ComparisonOperator, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch';
+import { Alarm, ComparisonOperator, Metric, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch';
 import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions';
 import { Rule } from 'aws-cdk-lib/aws-events';
+import { FilterPattern, LogGroup, MetricFilter } from 'aws-cdk-lib/aws-logs';
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { ComputeType } from 'aws-cdk-lib/aws-codebuild';
 import {
-  Credentials,
-  DatabaseInstance,
   DatabaseInstanceEngine,
+  DatabaseInstanceFromSnapshot,
   PostgresEngineVersion,
+  SnapshotCredentials,
 } from 'aws-cdk-lib/aws-rds';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Key } from 'aws-cdk-lib/aws-kms';
@@ -118,7 +119,12 @@ export class DeployzStack extends Stack {
       description: 'RDS PostgreSQL access',
     });
 
-    const dbInstance = new DatabaseInstance(this, 'Database', {
+    // Restored from an encrypted copy of the first, unencrypted database:
+    // RDS cannot encrypt an instance in place. The restore keeps the storage
+    // encrypted with the snapshot's key. The generated secret keeps its
+    // construct id, so the password stays the same.
+    const dbInstance = new DatabaseInstanceFromSnapshot(this, 'Database', {
+      snapshotIdentifier: names.databaseSnapshot,
       engine: DatabaseInstanceEngine.postgres({
         version: PostgresEngineVersion.VER_16,
       }),
@@ -126,11 +132,10 @@ export class DeployzStack extends Stack {
       vpc: vpc as unknown as IVpc,
       vpcSubnets: { subnetType: SubnetType.PRIVATE_ISOLATED },
       securityGroups: [dbSecurityGroup],
-      credentials: Credentials.fromGeneratedSecret('deployz_admin'),
-      databaseName: 'deployz',
+      credentials: SnapshotCredentials.fromGeneratedSecret('deployz_admin'),
       allocatedStorage: 20,
       maxAllocatedStorage: 100,
-      backupRetention: Duration.days(7),
+      backupRetention: Duration.days(14),
       deletionProtection: true,
       deleteAutomatedBackups: false,
     });
@@ -576,6 +581,94 @@ export class DeployzStack extends Stack {
       },
       'Database free storage under 2 GiB.',
     );
+    addAlarm(
+      'DatabaseCpuAlarm',
+      {
+        metric: dbInstance.metricCPUUtilization({ period: Duration.minutes(5), statistic: 'Average' }),
+        threshold: 80,
+        evaluationPeriods: 3,
+      },
+      'Database CPU at 80 percent or more for 15 minutes.',
+    );
+    addAlarm(
+      'JobQueueAgeAlarm',
+      {
+        metric: jobQueue.metricApproximateAgeOfOldestMessage({
+          period: Duration.minutes(5),
+          statistic: 'Maximum',
+        }),
+        threshold: 15 * 60,
+        evaluationPeriods: 2,
+      },
+      'The oldest job message waited 15 minutes or more.',
+    );
+    addAlarm(
+      'WorkerThrottlesAlarm',
+      {
+        metric: worker.function.metricThrottles({ period: Duration.minutes(5), statistic: 'Sum' }),
+        threshold: 1,
+        evaluationPeriods: 1,
+      },
+      'Worker Lambda throttled: 1 or more in 5 minutes.',
+    );
+    addAlarm(
+      'ApiThrottlesAlarm',
+      {
+        metric: apiLambda.function.metricThrottles({ period: Duration.minutes(5), statistic: 'Sum' }),
+        threshold: 1,
+        evaluationPeriods: 1,
+      },
+      'API Lambda throttled: 1 or more in 5 minutes.',
+    );
+
+    // The watchdog is the worker's scheduled invoke, so its log lines are in
+    // the worker log group. Two of them mean the sweeps cannot do their job:
+    // a stuck job that the sweep could not settle, and a fleet-wide loss of
+    // relay heartbeats. The log group is created by the function's log
+    // retention resource, so the filters wait for it.
+    const workerLogGroup = LogGroup.fromLogGroupName(
+      this,
+      'WorkerLogGroup',
+      `/aws/lambda/${worker.function.functionName}`,
+    );
+    const logRetention = worker.function.node.findChild('LogRetention');
+    for (const [filterId, event, metricName, description] of [
+      [
+        'JobSweepFailedFilter',
+        'watchdog:job-sweep-failed',
+        'WatchdogJobSweepFailed',
+        'The watchdog could not settle a stuck job.',
+      ],
+      [
+        'RelayLivenessSkippedFilter',
+        'watchdog:relay-liveness-skipped',
+        'WatchdogRelayLivenessSkipped',
+        'No relay reported a heartbeat in the liveness window.',
+      ],
+    ] as const) {
+      const filter = new MetricFilter(this, filterId, {
+        logGroup: workerLogGroup,
+        filterPattern: FilterPattern.literal(`"${event}"`),
+        metricNamespace: `${this.stackName}/Watchdog`,
+        metricName,
+        metricValue: '1',
+      });
+      filter.node.addDependency(logRetention);
+      addAlarm(
+        `${metricName}Alarm`,
+        {
+          metric: new Metric({
+            namespace: `${this.stackName}/Watchdog`,
+            metricName,
+            period: Duration.minutes(15),
+            statistic: 'Sum',
+          }),
+          threshold: 1,
+          evaluationPeriods: 1,
+        },
+        description,
+      );
+    }
 
     // ── Stack outputs ────────────────────────────────────────────────────
     this.exportValue(dbInstance.instanceEndpoint.hostname, {

@@ -1910,7 +1910,7 @@ function PurgeRetainedResources({
     setPending(true);
     setError(null);
     try {
-      await purgeDeployment(deploymentId);
+      await purgeDeployment(deploymentId, confirmText.trim());
       toast.success('Deletion requested');
       setOpen(false);
       setConfirmText('');

@@ -87,9 +87,31 @@ const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
 const cookiePrefix = process.env.COOKIE_PREFIX?.trim() || undefined;
 
 if (!process.env.BETTER_AUTH_SECRET) {
+  // Without the secret, the customer-code and install-link signatures use
+  // public default keys. A deployed function must not start in that state.
+  if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    throw new Error('BETTER_AUTH_SECRET is required on Lambda.');
+  }
   console.warn(
     '[auth] BETTER_AUTH_SECRET not set — Better Auth will use an ephemeral dev secret. Set it in .env.',
   );
+}
+// Fixture modes serve fake GitHub data, skip e-mail verification and return
+// sign-in codes in responses. The deploy never sets them (the CDK allowlist
+// leaves them out); this stops a stray value from taking effect.
+if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  const fixtureVars = [
+    'GITHUB_FIXTURE_MODE',
+    'AI_FIXTURE_MODE',
+    'DOMAIN_FIXTURE_MODE',
+    'BUILD_FIXTURE_MODE',
+    'BILLING_FIXTURE_MODE',
+    'EMAIL_VERIFICATION_FIXTURE_MODE',
+    'DEPLOYZ_DEFAULT_HTTPS_FIXTURE',
+  ].filter((name) => process.env[name] === 'true' || process.env[name] === '1');
+  if (fixtureVars.length > 0) {
+    throw new Error(`Fixture mode is not allowed on Lambda: ${fixtureVars.join(', ')}.`);
+  }
 }
 if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
   console.warn(

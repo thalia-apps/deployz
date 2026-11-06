@@ -26,7 +26,7 @@ describe('disconnect force-complete + persisted liveness', () => {
 
   async function seedDisconnectingDeployment(overrides: {
     relayStatus: 'CONNECTED' | 'DISCONNECTED' | 'UNKNOWN';
-    destroyJob: { state: 'REQUESTED' | 'RUNNING'; ageMinutes: number } | null;
+    destroyJob: { state: 'REQUESTED' | 'RUNNING'; ageMinutes: number; reconcileCount?: number } | null;
   }): Promise<string> {
     const token = 'tok-' + crypto.randomUUID();
     const installationId = 'inst-' + crypto.randomUUID();
@@ -53,9 +53,10 @@ describe('disconnect force-complete + persisted liveness', () => {
         state: overrides.destroyJob.state,
         idempotencyKey: `${deployment!.id}:DESTROY`,
         payload: {},
+        reconcileCount: overrides.destroyJob.reconcileCount ?? 0,
         createdAt: age,
         startedAt: age,
-        lastProgressAt: age,
+        lastProgressAt: overrides.relayStatus === 'CONNECTED' ? new Date() : age,
       });
     }
     return deployment!.id;
@@ -244,6 +245,70 @@ describe('disconnect force-complete + persisted liveness', () => {
     expect(response.json().error.code).toBe('RELAY_NOT_OFFLINE');
   });
 
+  it('force-completes a DESTROY wedged on a connected relay after 60 minutes and 3 re-offers', async () => {
+    const id = await seedDisconnectingDeployment({
+      relayStatus: 'CONNECTED',
+      destroyJob: { state: 'REQUESTED', ageMinutes: 90, reconcileCount: 3 },
+    });
+    const response = await forceComplete(id);
+    expect(response.statusCode, response.body).toBe(200);
+    const [job] = await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.deploymentId, id));
+    expect(job?.state).toBe('CANCELLED');
+  });
+
+  it('refuses a connected relay with fewer than 3 re-offers or less than 60 minutes', async () => {
+    const fewReoffers = await seedDisconnectingDeployment({
+      relayStatus: 'CONNECTED',
+      destroyJob: { state: 'RUNNING', ageMinutes: 90, reconcileCount: 2 },
+    });
+    expect((await forceComplete(fewReoffers)).json().error.code).toBe('RELAY_NOT_OFFLINE');
+    const tooYoung = await seedDisconnectingDeployment({
+      relayStatus: 'CONNECTED',
+      destroyJob: { state: 'RUNNING', ageMinutes: 30, reconcileCount: 3 },
+    });
+    expect((await forceComplete(tooYoung)).json().error.code).toBe('RELAY_NOT_OFFLINE');
+  });
+
+  it('authorizes data deletion on destroy only when the relay reported the install failed in AWS', async () => {
+    async function destroyPayload(install: {
+      state: 'FAILED' | 'CANCELLED';
+      result?: Record<string, unknown>;
+    }): Promise<Record<string, unknown>> {
+      const id = await seedDisconnectingDeployment({ relayStatus: 'CONNECTED', destroyJob: null });
+      await db.update(schema.deployments).set({ state: 'FAILED' }).where(eq(schema.deployments.id, id));
+      await db.insert(schema.deploymentJobs).values({
+        deploymentId: id,
+        type: 'INSTALL',
+        state: install.state,
+        idempotencyKey: `${id}:INSTALL`,
+        payload: {},
+        ...(install.result ? { result: install.result } : {}),
+      });
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/deployments/${id}/destroy`,
+        headers: { 'content-type': 'application/json', cookie },
+        payload: '{}',
+      });
+      expect(response.statusCode, response.body).toBeLessThan(300);
+      const [job] = await db
+        .select()
+        .from(schema.deploymentJobs)
+        .where(eq(schema.deploymentJobs.deploymentId, id))
+        .then((rows) => rows.filter((row) => row.type === 'DESTROY'));
+      return job!.payload as Record<string, unknown>;
+    }
+
+    expect(await destroyPayload({ state: 'FAILED', result: { error: 'ROLLBACK_COMPLETE' } })).toMatchObject({
+      dataDeletionAuthorized: true,
+    });
+    // A watchdog timeout or a cancelled job may hide an install that completed in AWS.
+    expect(await destroyPayload({ state: 'FAILED', result: { timeout: true } })).toMatchObject({
+      dataDeletionAuthorized: false,
+    });
+    expect(await destroyPayload({ state: 'CANCELLED' })).toMatchObject({ dataDeletionAuthorized: false });
+  });
+
   it('refuses when no DESTROY is pending', async () => {
     const id = await seedDisconnectingDeployment({
       relayStatus: 'DISCONNECTED',
@@ -400,14 +465,33 @@ describe('disconnect force-complete + persisted liveness', () => {
     return { id: deployment!.id, installationId, token };
   }
 
-  function purge(id: string, extraHeaders: Record<string, string> = {}) {
+  function purge(id: string, extraHeaders: Record<string, string> = {}, confirmName = 'App') {
     return app.inject({
       method: 'POST',
       url: `/api/deployments/${id}/purge`,
       headers: { 'content-type': 'application/json', cookie, ...extraHeaders },
-      payload: '{}',
+      payload: JSON.stringify({ confirmName }),
     });
   }
+
+  it('purge: refuses a missing or wrong application name and starts no job', async () => {
+    const eligible = await seedPurgeEligibleDeployment();
+    const wrong = await purge(eligible.id, {}, 'Other');
+    expect(wrong.statusCode).toBe(400);
+    expect(wrong.json().error.code).toBe('CONFIRMATION_MISMATCH');
+    const missing = await app.inject({
+      method: 'POST',
+      url: `/api/deployments/${eligible.id}/purge`,
+      headers: { 'content-type': 'application/json', cookie },
+      payload: '{}',
+    });
+    expect(missing.statusCode).toBe(400);
+    const jobs = await db
+      .select()
+      .from(schema.deploymentJobs)
+      .where(eq(schema.deploymentJobs.deploymentId, eligible.id));
+    expect(jobs).toHaveLength(0);
+  });
 
   it('purge: any disconnected deployment whose resources have not been purged is eligible', async () => {
     const eligible = await seedPurgeEligibleDeployment();

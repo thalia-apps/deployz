@@ -202,7 +202,8 @@ export function InvitationDialog({
             <DialogHeader>
               <DialogTitle>Invitation created</DialogTitle>
               <DialogDescription>
-                Send the install link to your customer. The token is shown only once.
+                Send the install link to your customer. The token is shown only once. Your customer must sign in with the
+                email address saved on the customer record.
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-4 py-4">

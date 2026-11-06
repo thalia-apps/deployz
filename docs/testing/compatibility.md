@@ -322,7 +322,9 @@ x86_64 runners):
 2. CONTRADICTED claims are fewer than or equal to the rules baseline, for
    each claim type.
 3. False problems are fewer than the rules baseline.
-4. False deployable outcomes (predicted 1, actual 2 or 3) are **0**, and
+4. False deployable outcomes (predicted 1, actual 2 or 3) are **0** in the
+   tuning set and the holdout set (this does not hold for blind
+   repositories; see `docs/ai-analysis.md`), and
    false not deployable outcomes (predicted 3, actual 1 or 2) are fewer than
    the rules baseline.
 5. All fixtures pass.

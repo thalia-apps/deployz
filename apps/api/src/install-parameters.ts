@@ -15,7 +15,7 @@ import { ApiError } from './errors.js';
 
 export { DESIRED_COUNT_PARAMETER };
 
-function generateSecret(): string {
+export function generateSecret(): string {
   return randomBytes(32).toString('base64url');
 }
 

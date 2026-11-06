@@ -4,13 +4,14 @@ import { AccountInvitations } from '@/components/account-invitations';
 import { DeleteAccount } from '@/components/delete-account';
 import { PasswordForm } from '@/components/password-form';
 import { ProfileForm } from '@/components/profile-form';
+import { TwoFactorSettings } from '@/components/two-factor-settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { VerifyEmailPrompt } from '@/components/verify-email-prompt';
 import { fetchMe, fetchMyInvitations } from '@/lib/me';
 
 // Account screen: display name (editable), sign-in email (read-only),
-// password change, pending invitations addressed to this user, and account
-// deletion. The dashboard layout already gates this route, but this page
+// password change, two-factor sign-in, pending invitations addressed to this
+// user, and account deletion. The dashboard layout already gates this route, but this page
 // still needs `me` narrowed to non-null to read the user fields.
 export default async function ProfilePage() {
   const me = await fetchMe();
@@ -47,6 +48,18 @@ export default async function ProfilePage() {
         </CardHeader>
         <CardContent>
           <PasswordForm />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Two-factor sign-in</CardTitle>
+          <CardDescription>
+            Ask for a code from your email each time you sign in with your password.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TwoFactorSettings enabled={me.user.twoFactorEnabled} />
         </CardContent>
       </Card>
 

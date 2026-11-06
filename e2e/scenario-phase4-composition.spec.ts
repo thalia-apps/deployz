@@ -22,6 +22,7 @@ import { getScenario } from './simulation/scenarios/index.js';
 import { API_URL, buildApi, expectPlanMatchesInventory, waitForInstallAutoDeploy } from './simulation/fixtures.js';
 import { installLinkHeaders } from './install-link.js';
 import { fixtureSha } from './fixture-sha.js';
+import { purgeDeployment } from './purge.js';
 
 interface DeploymentResponse {
   state: string;
@@ -318,7 +319,7 @@ test.describe('phase4-composition', () => {
       expect(retainedKinds['cache']).toBe('removed');
 
       // ── PURGE: the generic sweep deletes the retained MySQL instance. ──────
-      const purge = await request.post(`${API_URL}/api/deployments/${deploymentId}/purge`, { data: {} });
+      const purge = await purgeDeployment(request, deploymentId);
       expect(purge.status()).toBe(202);
       await expect
         .poll(async () => (await getDeployment(request, deploymentId)).cleanupState, {

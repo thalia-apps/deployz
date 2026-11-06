@@ -17,6 +17,7 @@
 import type { APIRequestContext } from '@playwright/test';
 
 import { expect, expectPlanMatchesInventory, test } from './simulation/fixtures.js';
+import { purgeDeployment } from './purge.js';
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 const FIXTURE_ALB = 'e2e-alb.deployz-fixture.test';
@@ -395,7 +396,7 @@ test.describe('default-https-g delete and purge', () => {
     // Purge backstop: the purge route also reconciles orphans; there are
     // none for this deployment, so it completes with the records still gone
     // (never deleted twice).
-    const purge = await request.post(`${API_URL}/api/deployments/${deploymentId}/purge`, { data: {} });
+    const purge = await purgeDeployment(request, deploymentId);
     expect(purge.status()).toBe(202);
     await expect
       .poll(
@@ -449,7 +450,7 @@ test.describe('default-https-h namespace protection', () => {
     await plantDnsRecord(request, 'www.deployz-fixture.test', FIXTURE_ALB);
     await plantDnsRecord(request, 'deployz-fixture.test', FIXTURE_ALB);
 
-    const purge = await request.post(`${API_URL}/api/deployments/${deploymentId}/purge`, { data: {} });
+    const purge = await purgeDeployment(request, deploymentId);
     expect(purge.status()).toBe(202);
     await expect
       .poll(

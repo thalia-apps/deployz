@@ -80,3 +80,54 @@ test('forgot password answers the same for an unknown address and links to the r
   await page.getByRole('button', { name: 'Reset password' }).click();
   await expect(page.getByText('Invalid token')).toBeVisible();
 });
+
+// Optional two-factor sign-in. Simulated E2E runs the API with
+// EMAIL_VERIFICATION_FIXTURE_MODE, which keeps the last emailed code readable
+// at /internal/fixture/two-factor-code.
+test('two-factor sign-in: turn on with an emailed code, sign in with password and code, turn off', async ({
+  page,
+  request,
+}) => {
+  const email = `e2e-${crypto.randomUUID().slice(0, 8)}@example.com`;
+  const password = 'super-secret-1';
+  const created = await request.post(`${API_URL}/api/auth/sign-up/email`, {
+    data: { name: 'E2E User', email, password },
+  });
+  expect(created.ok()).toBeTruthy();
+  const codeUrl = `${API_URL}/internal/fixture/two-factor-code?email=${encodeURIComponent(email)}`;
+  const latestCode = async (): Promise<string | null> =>
+    ((await (await request.get(codeUrl)).json()) as { code: string | null }).code;
+
+  const signInWithPassword = async (): Promise<void> => {
+    await page.goto('/sign-in');
+    await page.getByLabel('Email').fill(email);
+    await page.getByLabel('Password').fill(password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+  };
+
+  await signInWithPassword();
+  await page.waitForURL('/dashboard');
+  await page.goto('/dashboard/settings/profile');
+  await expect(page.getByTestId('two-factor-status')).toContainText('Off');
+  await page.getByTestId('two-factor-enable').click();
+  await expect(page.getByTestId('two-factor-code')).toBeVisible();
+  const enableCode = await latestCode();
+  expect(enableCode).toMatch(/^\d{6}$/);
+  await page.getByTestId('two-factor-code').fill(enableCode!);
+  await page.getByTestId('two-factor-confirm').click();
+  await expect(page.getByTestId('two-factor-status')).toContainText('On');
+
+  await page.context().clearCookies();
+  await signInWithPassword();
+  await expect(page.getByText('Enter your sign-in code')).toBeVisible();
+  await expect.poll(latestCode).not.toBe(enableCode);
+  await page.getByLabel('Code').fill((await latestCode())!);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.waitForURL('/dashboard');
+
+  await page.goto('/dashboard/settings/profile');
+  await page.getByTestId('two-factor-disable').click();
+  await page.getByTestId('two-factor-password').fill(password);
+  await page.getByTestId('two-factor-disable-confirm').click();
+  await expect(page.getByTestId('two-factor-status')).toContainText('Off');
+});

@@ -36,6 +36,7 @@ import {
   selectedDockerfile,
   WORKER_SERVICE_NAME_REGEX,
 } from './detectors.js';
+import type { AsyncWorkloadsResult } from './async-detection.js';
 import type { RedisRequirement } from './redis.js';
 import { assessRedis } from './redis.js';
 
@@ -823,6 +824,28 @@ const RABBITMQ_ENV_REGEX = /^(?:RABBITMQ_(?:URL|HOST)|AMQP_URL|CLOUDAMQP_URL)$/;
 function stackComposeServices(tree: FileTree): ReturnType<typeof composeServices> {
   const compose = composeServices(tree);
   return compose && !isPublishedImageSample(tree, compose.file) ? compose : null;
+}
+
+/**
+ * The switch for SQS queues and EventBridge Scheduler schedules. Set it to
+ * `false` to make a repository that needs one not deployable.
+ */
+export const ASYNC_WORKLOADS_DEPLOYABLE = true;
+
+/** A queue or a scheduled job found in the repository while the pilot switch is off. */
+export function checkUncertifiedAsyncWorkloads(async: AsyncWorkloadsResult): RejectionFinding {
+  const needs = [
+    ...(async.queues.length > 0 ? ['a message queue'] : []),
+    ...(async.scheduledJobs.length > 0 ? ['a scheduled job'] : []),
+  ];
+  if (ASYNC_WORKLOADS_DEPLOYABLE || needs.length === 0) {
+    return { detected: false, dependency: 'none', reason: 'No queue or scheduled job needs provisioning' };
+  }
+  return {
+    detected: true,
+    dependency: 'async-workloads',
+    reason: `Unsupported infrastructure: this application needs ${needs.join(' and ')}. Deployz does not provision queues or scheduled jobs in the pilot.`,
+  };
 }
 
 /** Kafka: clients/consumers + Kafka/Confluent images in compose. */

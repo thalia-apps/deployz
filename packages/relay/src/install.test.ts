@@ -327,6 +327,37 @@ describe('installApplicationStack', () => {
     expect(outcome.state).toBe('succeeded');
   });
 
+  it('refuses to create a stack with a masked secret parameter', async () => {
+    const installer = scriptedInstaller([null]);
+
+    const outcome = await installApplicationStack({
+      installer,
+      installationId: 'inst-1',
+      templateUrl: 'https://example.com/app.json',
+      parameters: { paramAppApiKey: '***', paramImageReference: 'repo@sha256:abc' },
+      ...NEVER_SLEEP,
+    });
+
+    expect(outcome.state).toBe('failed');
+    expect(installer.createCalls).toHaveLength(0);
+    expect(outcome.state === 'failed' && outcome.reason).toContain('masked secret');
+  });
+
+  it('adopts an existing stack even when the re-offered parameters are masked', async () => {
+    const installer = scriptedInstaller([complete()]);
+
+    const outcome = await installApplicationStack({
+      installer,
+      installationId: 'inst-1',
+      templateUrl: 'https://example.com/app.json',
+      parameters: { paramAppApiKey: '***' },
+      ...NEVER_SLEEP,
+    });
+
+    expect(outcome.state).toBe('succeeded');
+    expect(installer.createCalls).toHaveLength(0);
+  });
+
   it('is idempotent against an already-complete stack', async () => {
     const installer = scriptedInstaller([complete({ a: 'b' })]);
 

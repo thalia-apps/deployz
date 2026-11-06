@@ -116,7 +116,7 @@ import {
 import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
-import type { Auth } from './auth.js';
+import { fixtureTwoFactorCodes, type Auth } from './auth.js';
 import { resolveExplanation, type ExplanationText } from './ai-explanation.js';
 import { createFixtureAiGateway } from './ai-fixture.js';
 import {
@@ -148,7 +148,7 @@ import { getBillingAccount, getInvoiceUrl } from './billing-account.js';
 import { createBillingPortalLinks } from './billing-portal.js';
 import { reconcileBilling } from './billing-reconcile.js';
 import { handlePaddleWebhook } from './billing-webhooks.js';
-import { redactClaimedPayload } from './claimed-payload.js';
+import { redactClaimedPayload, restoreMaskedInstallSecrets } from './claimed-payload.js';
 import { createPaddle, type PaddleBilling } from './paddle.js';
 import {
   createConfigStore,
@@ -546,12 +546,19 @@ const paginationQuerySchema = z.object({
 const GITHUB_COMMITS_RATE_LIMIT = { max: 60, timeWindow: '1 minute' } as const;
 // Disconnect and reconnect change what the whole organization can build.
 const GITHUB_CONNECTION_RATE_LIMIT = { max: 10, timeWindow: '1 minute' } as const;
+// The setup callback binds an installation id, a small public integer, so a
+// script must not be able to try ids quickly.
+const GITHUB_SETUP_RATE_LIMIT = { max: 20, timeWindow: '1 minute' } as const;
 
 // Failed-build evidence reads the build log (a few log-service calls per
 // request); the AI explanation spends model tokens. Both are on-demand
 // clicks, so these caps only bound a script, never a person.
 const BUILD_FAILURE_RATE_LIMIT = { max: 30, timeWindow: '1 minute' } as const;
 const BUILD_EXPLANATION_RATE_LIMIT = { max: 5, timeWindow: '1 minute' } as const;
+// Analysis reads the repository and may call the AI provider; fix instructions
+// always call it. Like the caps above, these bound a script, not a person.
+const APPLICATION_ANALYSE_RATE_LIMIT = { max: 30, timeWindow: '1 minute' } as const;
+const FIX_INSTRUCTIONS_RATE_LIMIT = { max: 10, timeWindow: '1 minute' } as const;
 
 // A refused relay retries registration indefinitely, so only the first
 // blocked preflight evaluation per window is recorded per deployment — the
@@ -1831,7 +1838,8 @@ const UNDEPLOYABLE_STATES = new Set<DeploymentRow['state']>([
 // An in-flight INSTALL older than this is dead: a single executor pass fits
 // well inside the relay's 5-minute timeout, so 30 minutes without a result
 // mean the invocation is never coming back (crashed Lambda, expired
-// container). Only then may retry-install supersede the job.
+// container). Only then may retry-install supersede the job, and only when
+// the relay is not live and the job shows no recent progress.
 const INSTALL_JOB_STALE_AFTER_MS = 30 * 60 * 1000;
 
 // §9.4 force-complete on a LIVE relay: how many consecutive FAILED DESTROY
@@ -1839,6 +1847,7 @@ const INSTALL_JOB_STALE_AFTER_MS = 30 * 60 * 1000;
 // still reads online. One failure is retryable by the vendor; two failures
 // on a connected relay mean the delete itself is wedged.
 const REPEATED_DESTROY_FAILURES_REQUIRED = 2;
+const DESTROY_WEDGED_REOFFERS_REQUIRED = 3;
 
 // The failure codes the diagnostics route may spend a model call on:
 // UNKNOWN plus the app-owned startup/config failures, where the §16-bounded
@@ -1929,6 +1938,24 @@ async function hasSucceededInstall(db: RuntimeDb, deploymentId: string): Promise
       ),
     );
   return installJobs.some((j) => j.state === 'SUCCEEDED' || j.state === 'SUCCESS');
+}
+
+/**
+ * Whether the newest INSTALL is known to have failed in AWS: the relay saw the
+ * stack fail and reported it. A watchdog timeout, a cancelled job or a missing
+ * install is not evidence — the stack may have completed with its result lost,
+ * so a retained database may hold customer data.
+ */
+async function newestInstallFailedInAws(db: RuntimeDb, deploymentId: string): Promise<boolean> {
+  const [latest] = await db
+    .select({ state: schema.deploymentJobs.state, result: schema.deploymentJobs.result })
+    .from(schema.deploymentJobs)
+    .where(and(eq(schema.deploymentJobs.deploymentId, deploymentId), eq(schema.deploymentJobs.type, 'INSTALL')))
+    .orderBy(desc(schema.deploymentJobs.createdAt))
+    .limit(1);
+  return (
+    latest?.state === 'FAILED' && (latest.result as { timeout?: unknown } | null)?.timeout !== true
+  );
 }
 
 // resolveAppUrl now lives in ./fleet-row.js, alongside toFleetRow.
@@ -2205,11 +2232,12 @@ async function loadCustomerAwsSummary(
  * the relay's runtime health verification reports HEALTHY (see the
  * /api/relay/health handler, which advances INSTALLING → HEALTHY), so a
  * "healthy" state always means observed-healthy, never just stack-complete.
+ * RESTART is absent too: it follows the DEPLOY_RELEASE path only when it ran
+ * from UPDATING, and from any other state (FAILED) it keeps that state.
  */
 const JOB_SUCCESS_STATE: Partial<Record<JobType, DeploymentRow['state']>> = {
   DEPLOY_RELEASE: 'HEALTHY',
   ROLLBACK: 'HEALTHY',
-  RESTART: 'HEALTHY',
   DESTROY: 'DELETED',
 };
 
@@ -4020,7 +4048,7 @@ export async function buildServer({
     );
     return reply.redirect(target.toString());
   });
-  app.get('/api/github/setup', { preHandler: redirectSignedOutToSignIn }, async (request, reply) => {
+  app.get('/api/github/setup', { preHandler: redirectSignedOutToSignIn, config: { rateLimit: GITHUB_SETUP_RATE_LIMIT } }, async (request, reply) => {
     const { installation_id: installationId, state, code } = request.query as {
       installation_id?: string | undefined;
       state?: string | undefined;
@@ -4781,7 +4809,7 @@ export async function buildServer({
   });
 
   // POST /api/applications/:id/analyse — Trigger analysis
-  app.post('/api/applications/:id/analyse', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/api/applications/:id/analyse', { preHandler: requireAuth, config: { rateLimit: APPLICATION_ANALYSE_RATE_LIMIT } }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
     await requireApplicationGithubAccess(await loadOwnedApplication(db, id, organizationId));
@@ -5011,7 +5039,7 @@ export async function buildServer({
   // analysis stays fully usable without it.
   app.post(
     '/api/applications/:id/fix-instructions',
-    { preHandler: requireAuth },
+    { preHandler: requireAuth, config: { rateLimit: FIX_INSTRUCTIONS_RATE_LIMIT } },
     async (request) => {
       const { id } = request.params as { id: string };
       const organizationId = requireSessionOrganizationId(request);
@@ -6986,12 +7014,14 @@ export async function buildServer({
       }
     }
     await requireDeploymentIdle(db, deployment.id, idempotencyKey);
-    // Data deletion during a wedged destroy is authorized ONLY for a
-    // deployment that never completed an install — its retained database is
-    // an empty artifact of a failed create, not customer data. Anything
-    // that ever ran keeps the data-preserving destroy path (the relay
-    // finishes the stack delete RETAINING what it cannot remove).
-    const neverInstalled = !(await hasSucceededInstall(db, deployment.id));
+    // Data deletion during a wedged destroy is authorized ONLY when the
+    // relay reported the newest install as failed in AWS — its retained
+    // database is an empty artifact of a failed create, not customer data.
+    // Anything that ever ran, or whose install outcome is unknown, keeps the
+    // data-preserving destroy path (the relay finishes the stack delete
+    // RETAINING what it cannot remove).
+    const neverInstalled =
+      !(await hasSucceededInstall(db, deployment.id)) && (await newestInstallFailedInAws(db, deployment.id));
     const { job, created } = await createOrReuseJob(db, {
       deploymentId: deployment.id,
       type: 'DESTROY',
@@ -7091,23 +7121,30 @@ export async function buildServer({
           'Only a disconnect that is still in progress can be completed this way.',
         );
       }
-      // Persisted liveness is the gate: the worker sweep only writes
-      // DISCONNECTED after the relay missed its check-in window, so this
-      // cannot fire on a relay that is merely between polls.
-      if (deployment.relayStatus !== 'DISCONNECTED') {
-        throw new ApiError(
-          409,
-          'RELAY_NOT_OFFLINE',
-          'The relay for this deployment is not confirmed offline.',
-        );
-      }
-      const lastSignal = job.lastProgressAt ?? job.startedAt ?? job.createdAt;
-      if (Date.now() - lastSignal.getTime() < DESTROY_PENDING_STALE_AFTER_MS) {
-        throw new ApiError(
-          409,
-          'DESTROY_NOT_STALE',
-          'The disconnect has not been pending long enough to complete it this way.',
-        );
+      // A connected relay keeps refreshing lastProgressAt, so a wedged
+      // DESTROY on it is detected by its age and its exhausted re-offers.
+      const wedgedOnLiveRelay =
+        job.reconcileCount >= DESTROY_WEDGED_REOFFERS_REQUIRED &&
+        Date.now() - (job.startedAt ?? job.createdAt).getTime() >= DESTROY_PENDING_STALE_AFTER_MS;
+      if (!wedgedOnLiveRelay) {
+        // Persisted liveness is the gate: the worker sweep only writes
+        // DISCONNECTED after the relay missed its check-in window, so this
+        // cannot fire on a relay that is merely between polls.
+        if (deployment.relayStatus !== 'DISCONNECTED') {
+          throw new ApiError(
+            409,
+            'RELAY_NOT_OFFLINE',
+            'The relay for this deployment is not confirmed offline.',
+          );
+        }
+        const lastSignal = job.lastProgressAt ?? job.startedAt ?? job.createdAt;
+        if (Date.now() - lastSignal.getTime() < DESTROY_PENDING_STALE_AFTER_MS) {
+          throw new ApiError(
+            409,
+            'DESTROY_NOT_STALE',
+            'The disconnect has not been pending long enough to complete it this way.',
+          );
+        }
       }
     } else {
       // Path 2 — repeated FAILED destroys, no job in flight.
@@ -7268,7 +7305,8 @@ export async function buildServer({
   // POST /api/deployments/:id/purge — Permanently remove retained AWS
   // resources (P2). Only a force-completed disconnect can carry leftovers:
   // a normal disconnect removed its resources via the relay. The vendor
-  // typed the deployment name in the dashboard to confirm; the relay
+  // typed the application name in the dashboard to confirm, and the API
+  // checks it against `confirmName`; the relay
   // re-verifies ownership of every resource before deleting it.
   app.post('/api/deployments/:id/purge', { preHandler: requireAuth }, async (request, reply) => {
     requireOwnerOrAdmin(request);
@@ -7288,6 +7326,17 @@ export async function buildServer({
         'NOT_PURGE_ELIGIBLE',
         'Only a disconnected deployment whose retained resources have not been purged can be purged.',
       );
+    }
+    // The purge is permanent, so the caller must send the application name,
+    // the same text the dashboard asks the vendor to type.
+    const { confirmName } = (request.body ?? {}) as { confirmName?: unknown };
+    const [application] = await db
+      .select({ name: schema.applications.name })
+      .from(schema.applications)
+      .where(eq(schema.applications.id, deployment.applicationId))
+      .limit(1);
+    if (typeof confirmName !== 'string' || confirmName.trim() !== application?.name) {
+      throw new ApiError(400, 'CONFIRMATION_MISMATCH', 'Type the application name exactly to confirm');
     }
     // One mutating operation per deployment: a purge already in flight must
     // not be joined by another.
@@ -7432,6 +7481,13 @@ export async function buildServer({
     deployment: DeploymentRow,
     actorId: string | null,
   ): Promise<{ installLinkId: string | null; attemptNumber: number }> {
+    if (deployment.state === 'DELETING' || deployment.state === 'DELETED') {
+      throw new ApiError(
+        409,
+        'DEPLOYMENT_NOT_RESETTABLE',
+        'This deployment is being removed or was removed. Its connection cannot be reset.',
+      );
+    }
     const enrollmentCode = mintEnrollmentCode();
     const relayCredential = mintRelayCredential();
     const [application] = await db
@@ -7575,9 +7631,14 @@ export async function buildServer({
       ['REQUESTED', 'QUEUED', 'RUNNING', 'WAITING'].includes(j.state),
     );
     const retryKeyPrefix = `${deployment.id}:INSTALL:RETRY`;
+    // A job is dead only when it is old and nothing shows progress. A connected
+    // relay refreshes lastProgressAt on every heartbeat, so its long install
+    // is alive; the watchdog re-offers or fails that job, not this route.
+    const staleBefore = Date.now() - INSTALL_JOB_STALE_AFTER_MS;
     const inFlightIsFresh =
       inFlight !== undefined &&
-      (inFlight.startedAt ?? inFlight.createdAt).getTime() > Date.now() - INSTALL_JOB_STALE_AFTER_MS;
+      ((inFlight.startedAt ?? inFlight.createdAt).getTime() > staleBefore ||
+        (deployment.relayStatus === 'CONNECTED' && (inFlight.lastProgressAt?.getTime() ?? 0) > staleBefore));
 
     if (inFlight !== undefined && inFlightIsFresh) {
       // A double-click on a live retry is an idempotent replay, not a new
@@ -8580,49 +8641,56 @@ export async function buildServer({
 
   // Better Auth over Fastify: construct a Fetch Request, call auth.handler,
   // forward status/headers/body. Official recipe from the docs.
-  app.route({
-    method: ['GET', 'POST'],
-    url: '/api/auth/*',
-    handler: async (request, reply) => {
-      // Resolve against the canonical API origin rather than the request's
-      // Host header. Two reasons: API Gateway terminates TLS, so the old
-      // hardcoded `http://` handed Better Auth an http origin that failed its
-      // own https origin check; and Host is client-controlled, which made this
-      // a header-injection surface on the auth endpoint. request.url is a path
-      // plus query, so this keeps both and guarantees the origin matches the
-      // baseURL Better Auth was configured with.
-      const url = new URL(request.url, env.apiUrl);
-      const headers = fromNodeHeaders(request.headers);
-      // Better Auth rate-limits on the first X-Forwarded-For entry, which the
-      // caller controls; hand it the trusted address instead.
-      headers.set('x-forwarded-for', request.ip);
-      const init: RequestInit = {
-        method: request.method,
-        headers,
-        ...(request.body ? { body: JSON.stringify(request.body) } : {}),
-      };
+  async function authHandler(request: FastifyRequest, reply: FastifyReply) {
+    // Resolve against the canonical API origin rather than the request's
+    // Host header. Two reasons: API Gateway terminates TLS, so the old
+    // hardcoded `http://` handed Better Auth an http origin that failed its
+    // own https origin check; and Host is client-controlled, which made this
+    // a header-injection surface on the auth endpoint. request.url is a path
+    // plus query, so this keeps both and guarantees the origin matches the
+    // baseURL Better Auth was configured with.
+    const url = new URL(request.url, env.apiUrl);
+    const headers = fromNodeHeaders(request.headers);
+    // Better Auth rate-limits on the first X-Forwarded-For entry, which the
+    // caller controls; hand it the trusted address instead.
+    headers.set('x-forwarded-for', request.ip);
+    const init: RequestInit = {
+      method: request.method,
+      headers,
+      ...(request.body ? { body: JSON.stringify(request.body) } : {}),
+    };
 
-      const response = await auth.handler(new Request(url.toString(), init));
+    const response = await auth.handler(new Request(url.toString(), init));
 
-      reply.status(response.status);
-      // set-cookie must survive as separate header lines (squashing breaks the
-      // browser); content-length is recomputed by Fastify.
-      response.headers.forEach((value, key) => {
-        const lower = key.toLowerCase();
-        if (lower !== 'set-cookie' && lower !== 'content-length') {
-          reply.header(key, value);
-        }
-      });
-      const setCookies =
-        typeof response.headers.getSetCookie === 'function'
-          ? response.headers.getSetCookie()
-          : [];
-      if (setCookies.length > 0) {
-        reply.header('set-cookie', setCookies);
+    reply.status(response.status);
+    // set-cookie must survive as separate header lines (squashing breaks the
+    // browser); content-length is recomputed by Fastify.
+    response.headers.forEach((value, key) => {
+      const lower = key.toLowerCase();
+      if (lower !== 'set-cookie' && lower !== 'content-length') {
+        reply.header(key, value);
       }
-      return reply.send(response.body ? await response.text() : null);
-    },
-  });
+    });
+    const setCookies =
+      typeof response.headers.getSetCookie === 'function'
+        ? response.headers.getSetCookie()
+        : [];
+    if (setCookies.length > 0) {
+      reply.header('set-cookie', setCookies);
+    }
+    return reply.send(response.body ? await response.text() : null);
+  }
+  app.route({ method: ['GET', 'POST'], url: '/api/auth/*', handler: authHandler });
+  // The two-factor code routes get the same per-IP limits as the customer
+  // sign-in code routes.
+  app.post('/api/auth/two-factor/send-otp', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, authHandler);
+  app.post('/api/auth/two-factor/verify-otp', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, authHandler);
+  if (env.emailVerificationFixtureMode) {
+    app.get('/internal/fixture/two-factor-code', async (request) => {
+      const { email } = request.query as { email?: string };
+      return { code: (email && fixtureTwoFactorCodes.get(email)) ?? null };
+    });
+  }
 
   // ── Relay endpoints (bearer-token auth, not session cookie) ─────────
   //
@@ -9300,17 +9368,36 @@ export async function buildServer({
           inArray(schema.deploymentJobs.state, ['REQUESTED', 'QUEUED', 'WAITING', 'RUNNING']),
         ),
       );
-    const mutationRunning = candidates.some(
-      (job) => job.state === 'RUNNING' && SERVICE_MUTATING_JOB_TYPES.has(job.type),
-    );
+    // A configured first start: the DEPLOY_RELEASE changes nothing until the
+    // CONFIG_UPDATE attaches the configured revision. So here the CONFIG_UPDATE
+    // goes first and a waiting DEPLOY_RELEASE does not block it. Without this
+    // the two wait on each other until the watchdog re-offers the deploy.
+    const configFirst =
+      candidates.some((job) => job.type === 'CONFIG_UPDATE') &&
+      candidates.some((job) => job.type === 'DEPLOY_RELEASE') &&
+      (await awaitsFirstStart(db, deployment.id));
+    const blockedByRunning = (type: string): boolean =>
+      candidates.some(
+        (job) =>
+          job.state === 'RUNNING' &&
+          SERVICE_MUTATING_JOB_TYPES.has(job.type) &&
+          !(configFirst && type === 'CONFIG_UPDATE' && job.type === 'DEPLOY_RELEASE'),
+      );
+    const claimOrder = (a: (typeof candidates)[number], b: (typeof candidates)[number]): number => {
+      if (configFirst && a.type !== b.type) {
+        if (a.type === 'CONFIG_UPDATE') return -1;
+        if (b.type === 'CONFIG_UPDATE') return 1;
+      }
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    };
     const claimIds: string[] = [];
     let mutationClaimed = false;
     // `claim=0`: the customer is updating the connector stack, so the relay
     // asks for the deployment facts only and claims nothing.
-    for (const job of claim === '0' ? [] : candidates.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())) {
+    for (const job of claim === '0' ? [] : candidates.sort(claimOrder)) {
       if (job.state === 'RUNNING') continue;
       if (SERVICE_MUTATING_JOB_TYPES.has(job.type)) {
-        if (mutationRunning || (job.type === 'CONFIG_UPDATE' && mutationClaimed)) continue;
+        if (blockedByRunning(job.type) || (job.type === 'CONFIG_UPDATE' && mutationClaimed)) continue;
         mutationClaimed = true;
       }
       claimIds.push(job.id);
@@ -9336,7 +9423,7 @@ export async function buildServer({
                 ),
               )
               .returning()
-          ).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+          ).sort(claimOrder);
 
     // Payload redaction rides the claim: the relay reads the value ONCE from
     // this response (built from the pre-redaction rows below); the stored row
@@ -9388,7 +9475,7 @@ export async function buildServer({
         deploymentId: deployment.id,
         type: job.type,
         idempotencyKey: job.idempotencyKey,
-        payload: job.payload,
+        payload: restoreMaskedInstallSecrets(job),
       })),
       deployment: {
         ...(requirements
@@ -9649,7 +9736,10 @@ export async function buildServer({
               deployment.currentReleaseId,
             ),
           }) ?? undefined)
-        : state === 'SUCCEEDED' && (job.type === 'DEPLOY_RELEASE' || job.type === 'ROLLBACK')
+        : state === 'SUCCEEDED' &&
+            (job.type === 'DEPLOY_RELEASE' ||
+              job.type === 'ROLLBACK' ||
+              (job.type === 'RESTART' && deployment.state === 'UPDATING'))
           ? await newerReadyReleaseExists(
               db,
               deployment.applicationId,

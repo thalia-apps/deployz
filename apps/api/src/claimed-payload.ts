@@ -1,6 +1,7 @@
 import { APP_API_KEY_PARAMETER, APP_SIGNING_SECRET_PARAMETER } from '@deployz/contracts';
 
 import { SECRET_MASK } from './config.js';
+import { generateSecret } from './install-parameters.js';
 
 /**
  * Parameters the control plane GENERATES at install time — their values are
@@ -50,4 +51,26 @@ export function redactClaimedPayload(job: {
   }
 
   return payload;
+}
+
+/**
+ * A re-offered INSTALL (the claim response was lost, or the watchdog re-offered
+ * it) carries the masked placeholder instead of the generated secrets. The
+ * relay uses these parameters only to create the stack, and it adopts a stack
+ * that already exists. So a fresh value for each masked secret is safe: it is
+ * used only when no stack was created yet. Other jobs pass through unchanged.
+ */
+export function restoreMaskedInstallSecrets(job: {
+  readonly type: string;
+  readonly payload: Record<string, unknown> | null;
+}): Record<string, unknown> | null {
+  const payload = job.payload;
+  if (job.type !== 'INSTALL' || payload === null || typeof payload['parameters'] !== 'object' || payload['parameters'] === null) {
+    return payload;
+  }
+  const parameters = { ...(payload['parameters'] as Record<string, unknown>) };
+  for (const key of INSTALL_SECRET_PARAMETER_IDS) {
+    if (parameters[key] === SECRET_MASK) parameters[key] = generateSecret();
+  }
+  return { ...payload, parameters };
 }

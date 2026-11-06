@@ -357,7 +357,8 @@ legacy shape (PostgreSQL). Use `--profile stateless` to keep the run short.
 
 **Parallel runs.** Each run has its own run id, evidence directory
 (`canary-results/<run-id>`), customer, release versions and stack names.
-Set `AWS_REGION` differently for each parallel run. Pass `--size` in every
+Set `AWS_REGION` differently for each parallel run. The workflow takes the
+customer Region as its `region` input. Pass `--size` in every
 parallel run. The canary application is shared in the vendor organization.
 The `journey` changes its default and minimum sizes while it runs. A parallel
 run that does not set `--size` can then create its deployment with the wrong

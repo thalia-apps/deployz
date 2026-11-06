@@ -7,6 +7,7 @@ import {
   INFRASTRUCTURE_SIZE_PROFILES,
   LARGE_PROFILE,
   MEDIUM_PROFILE,
+  SELECTABLE_SIZE_TIERS,
   profileKey,
   resolveInfrastructureSizeProfile,
   resolveStoredInfrastructureSizeProfile,
@@ -82,6 +83,10 @@ describe('infrastructure-size profile registry', () => {
     expect(allowedSizeTiers('small')).toEqual(['small', 'medium', 'large']);
     expect(allowedSizeTiers('medium')).toEqual(['medium', 'large']);
     expect(allowedSizeTiers('large')).toEqual(['large']);
+  });
+
+  it('offers every tier for new selections', () => {
+    expect(SELECTABLE_SIZE_TIERS).toEqual(['small', 'medium', 'large']);
   });
 
   it('defaults to small-v2 for newly created deployments', () => {

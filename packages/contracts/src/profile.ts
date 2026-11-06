@@ -148,6 +148,12 @@ export const INFRASTRUCTURE_SIZE_TIERS = ['small', 'medium', 'large'] as const;
 export const infrastructureSizeTierSchema = z.enum(INFRASTRUCTURE_SIZE_TIERS);
 export type InfrastructureSizeTier = z.infer<typeof infrastructureSizeTierSchema>;
 
+/**
+ * The tiers offered for NEW selections. Remove a tier here to stop offering it.
+ * Deployments that already froze that profile are not affected.
+ */
+export const SELECTABLE_SIZE_TIERS: InfrastructureSizeTier[] = ['small', 'medium', 'large'];
+
 /** The Deployz default tier: the last step of the selection precedence. */
 export const DEFAULT_INFRASTRUCTURE_SIZE_TIER: InfrastructureSizeTier = 'small';
 
@@ -168,9 +174,11 @@ export function sizeTierMeetsMinimum(tier: InfrastructureSizeTier, minimum: Infr
   return INFRASTRUCTURE_SIZE_TIERS.indexOf(tier) >= INFRASTRUCTURE_SIZE_TIERS.indexOf(minimum);
 }
 
-/** The tiers a selection may use when `minimum` is the smallest supported size. */
+/** The selectable tiers a selection may use when `minimum` is the smallest supported size. */
 export function allowedSizeTiers(minimum: InfrastructureSizeTier): InfrastructureSizeTier[] {
-  return INFRASTRUCTURE_SIZE_TIERS.filter((tier) => sizeTierMeetsMinimum(tier, minimum));
+  return INFRASTRUCTURE_SIZE_TIERS.filter(
+    (tier) => SELECTABLE_SIZE_TIERS.includes(tier) && sizeTierMeetsMinimum(tier, minimum),
+  );
 }
 
 const PROFILES_BY_KEY = new Map<string, InfrastructureSizeProfile>(

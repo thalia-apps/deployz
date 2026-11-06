@@ -75,6 +75,7 @@ import {
   checkDatabaseVersion,
   checkMultiImageStack,
   checkUnexplainedDeclaredServices,
+  checkUncertifiedAsyncWorkloads,
   listIgnoredDeploymentFiles,
 } from './rejection.js';
 
@@ -492,6 +493,12 @@ export function analyseRepo(tree: FileTree, overrides: ResourceOverrides = {}): 
   // NOT_COMPATIBLE. Kept as plain strings on the metadata so a deployment
   // created from STORED detected_metadata blocks exactly like one created
   // straight after analysis.
+  // Phase 5 — SQS (Standard) queues and scheduled jobs, already shaped as
+  // ManifestQueue[]/ManifestScheduledJob[]/ManifestQuestion[] so the
+  // manifest layer only validates and passes them through.
+  const asyncWorkloads = detectAsyncWorkloads(tree);
+  // Not dismissible: a vendor dispute cannot make an uncertified resource deployable.
+  rejections.push(checkUncertifiedAsyncWorkloads(asyncWorkloads));
   const detectedRejections = rejections.filter((r) => r.detected);
   metadata['unsupportedReasons'] = detectedRejections.map((r) => r.reason);
   metadata['ignoredDeploymentFiles'] = listIgnoredDeploymentFiles(tree).slice(0, 5);
@@ -506,7 +513,6 @@ export function analyseRepo(tree: FileTree, overrides: ResourceOverrides = {}): 
   // Phase 5 — SQS (Standard) queues and scheduled jobs, already shaped as
   // ManifestQueue[]/ManifestScheduledJob[]/ManifestQuestion[] so the
   // manifest layer only validates and passes them through.
-  const asyncWorkloads = detectAsyncWorkloads(tree);
   metadata['asyncQueues'] = asyncWorkloads.queues;
   metadata['asyncScheduledJobs'] = asyncWorkloads.scheduledJobs;
   metadata['asyncQuestions'] = asyncWorkloads.questions;

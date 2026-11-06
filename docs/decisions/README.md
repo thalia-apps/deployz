@@ -57,6 +57,8 @@ Three decisions with substantial detail have their own files:
 | 2026-10-27 | An app with a migration starts no task at install; a migration that fails on that first start is a failed environment (`FAILED`) | Active |
 | 2026-10-30 | A final AI judge reviews a DEPLOYABLE or DEPLOYABLE_WITH_CHANGES outcome and can only make it stricter or ask the vendor to confirm | Active |
 | 2026-10-30 | A vendor can lower the database backup retention after a database creation failure; the choice travels as a template parameter | Active |
+| 2026-11-06 | Vendor two-factor sign-in is optional and uses an emailed code from the Better Auth two-factor plugin | Active |
+| 2026-11-06 | The public pilot offers only certified shapes: Small size, no queue or scheduled job, five Regions | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1633,3 +1635,119 @@ Decision:
 
 What would change it: a setting for every new deployment (a creation-time field),
 or a free-plan check before the install starts.
+
+## Optional two-factor sign-in with an emailed code (2026-11-06)
+
+Context: a vendor account signs in with an email and a password. A leaked or
+reused password gave full access to the vendor's organization.
+
+Decision:
+
+- Each vendor user can turn on two-factor sign-in. It is off by default.
+  After a correct password, the session starts only after a 6-digit code
+  that Deployz sends to the account email.
+- Use the Better Auth `twoFactor` plugin with the emailed code only
+  (`apps/api/src/auth.ts`). Deployz does not keep its own code store.
+- A user turns it on by asking for a code and entering it. The plugin route
+  that turns it on with the password alone is off, so 2FA cannot lock out an
+  address that does not receive mail. Turning it off needs the password.
+- Authenticator apps (TOTP) and backup codes are off; their routes return 404.
+- The code is stored as a hash. It is valid for 5 minutes and allows
+  5 attempts. A new code replaces the previous one. The send and verify
+  routes have the same per-IP limits as the customer sign-in code.
+
+Limits: the password reset link and the code go to the same inbox, so this
+does not protect an account whose email is compromised. GitHub sign-in is not
+challenged; it relies on the GitHub account's own protection. A user who
+loses the mailbox needs operator help, as for a lost password.
+
+Not done (post-MVP): authenticator apps, backup codes, a "trust this device"
+option, and an organization rule that makes 2FA mandatory.
+
+What would change it: a customer or compliance need for mandatory 2FA or a
+factor that does not depend on the email inbox.
+
+## Control-plane database: single-AZ with 14-day backups (2026-11-06)
+
+Context: the launch-readiness audit flagged that the control-plane database
+is single-AZ and has no documented restore.
+
+Decision:
+
+- Keep one `db.t4g.micro` instance in one AZ. Keep deletion protection.
+  Raise automated-backup retention from 7 to 14 days. Backup storage up to
+  the database size is free, so the cost change is small.
+- Recovery from a lost instance or AZ is a point-in-time restore to a new
+  instance (`docs/operations/control-plane.md`, *Database restore*).
+- Do not enable Multi-AZ for the MVP. It doubles the instance cost, and the
+  pilot accepts a restore time of tens of minutes.
+
+What would change it: a customer recovery-time promise, or a restore drill
+that takes longer than that promise. The owner runs the drill on real AWS.
+
+Also in this change: migrations are expand-only, and a destructive change
+takes two releases, so that a rollback can run the old API on the new schema.
+The HTTP API (v2) cannot take a WAF web ACL, so a WAF is deferred (post-MVP:
+it needs a REST API or CloudFront in front).
+
+## The public pilot offers only certified shapes (2026-11-06)
+
+Context: the launch-readiness audit found three shapes that no real-AWS run
+has certified: the Medium and Large sizes, SQS queues, and EventBridge
+Scheduler schedules. The same audit found that only five Regions have
+evidence.
+
+Decision:
+
+- New selections offer Small only. `SELECTABLE_SIZE_TIERS` in
+  `packages/contracts/src/profile.ts` is the switch. No published profile
+  changes. A deployment that froze `medium-v1` or `large-v1` keeps it.
+  An application setting that names Medium or Large resolves to Small.
+- The analysis refuses a repository that needs a queue or a scheduled job.
+  `ASYNC_WORKLOADS_DEPLOYABLE` in `packages/analysis/src/rejection.ts` is
+  the switch. A vendor dispute cannot dismiss the reason, because the
+  limit is a Deployz limit and not a wrong finding.
+- Production offers `us-east-1`, `us-east-2`, `us-west-2`, `eu-west-1` and
+  `eu-central-1`. This is the `DEPLOYABLE_AWS_REGIONS` repository variable;
+  the code default stays `us-east-1` so a missing variable fails closed.
+- The cost estimate adds the public IPv4 addresses, secrets, alarms and
+  logs to the ALB and NAT ranges.
+
+What would change it: a passing real-AWS certification of each shape
+([`../testing/aws-e2e.md`](../testing/aws-e2e.md)). Then turn on the
+switch for that shape.
+
+## The pilot offers Medium, Large, queues and scheduled jobs again (2026-11-06)
+
+Context: the entry above limited the pilot to Small, with no queues and no
+scheduled jobs, because no real-AWS run had certified the other shapes.
+
+Decision: the owner turned both switches back on for the pilot.
+`SELECTABLE_SIZE_TIERS` offers Small, Medium and Large.
+`ASYNC_WORKLOADS_DEPLOYABLE` is `true`. Both switches stay in the code, so
+each shape can be turned off again. `ANALYSIS_VERSION` is 84, so stored v83
+rows that call a queue or schedule repository not deployable are analysed
+again.
+
+Still open: real-AWS certification of each size and shape
+([`../testing/aws-e2e.md`](../testing/aws-e2e.md#size-profiles)). The Region
+limit and the cost ranges in the entry above do not change.
+## The control-plane database is encrypted at rest (2026-11-06)
+
+Context: the launch audit found that the control-plane database storage was
+not encrypted. RDS cannot encrypt an instance in place. The application is
+not public yet, so a short outage is acceptable.
+
+Decision: restore each stage from an encrypted copy of a snapshot
+(`DatabaseInstanceFromSnapshot`, AWS managed key `alias/aws/rds`). The
+procedure and the snapshot names are in
+[`../operations/control-plane.md`](../operations/control-plane.md#database-encryption).
+The AWS managed key costs nothing and needs no key policy. A customer
+managed key is a post-MVP item.
+
+## On-call, support mailbox and administrators (2026-11-06)
+
+Decision: production alarms go at once by email to `help@deployz.dev`, which
+is also the support mailbox. `tejas@deployz.dev` and
+`sumit@thaliatechnologies.com` are the second administrators. A hosted
+status page is a later item.

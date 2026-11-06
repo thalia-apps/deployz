@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { twoFactor } from 'better-auth/plugins';
 import { eq } from 'drizzle-orm';
 
 import type { RuntimeDb } from '@deployz/db';
@@ -8,6 +9,22 @@ import * as schema from '@deployz/db/schema';
 import { createEmailSender, sendQuietly, type EmailSender } from './email.js';
 import { env } from './env.js';
 import { organizationSlug, seedFixtureBillingSubscription } from './organizations.js';
+
+/** Simulated E2E only: the last two-factor sign-in code sent to each email,
+ *  read by GET /internal/fixture/two-factor-code. */
+export const fixtureTwoFactorCodes = new Map<string, string>();
+
+// Deployz uses only the emailed code. These two-factor plugin routes serve
+// authenticator apps and backup codes, or turn 2FA on without proof that the
+// code reaches the inbox, so they are off.
+const DISABLED_TWO_FACTOR_PATHS = [
+  '/two-factor/enable',
+  '/two-factor/get-totp-uri',
+  '/two-factor/verify-totp',
+  '/two-factor/generate-backup-codes',
+  '/two-factor/verify-backup-code',
+  '/two-factor/view-backup-codes',
+];
 
 // Better Auth instance for the control plane: email/password + GitHub OAuth
 // (env-driven). Better Auth owns identity ONLY — user, session, account and
@@ -24,6 +41,7 @@ export function createAuth(
   opts: {
     billingFixtureMode?: boolean;
     cookiePrefix?: string;
+    cookieDomain?: string;
     // Marks every new user's e-mail as verified (simulated E2E and unit tests
     // only — see env.emailVerificationFixtureMode).
     emailVerificationFixtureMode?: boolean;
@@ -35,6 +53,7 @@ export function createAuth(
     opts.emailVerificationFixtureMode ?? env.emailVerificationFixtureMode;
   const emailSender = opts.emailSender ?? createEmailSender();
   const cookiePrefix = opts.cookiePrefix ?? env.cookiePrefix;
+  const cookieDomain = opts.cookieDomain ?? env.cookieDomain;
   return betterAuth({
     appName: 'Deployz',
     baseURL: env.apiUrl,
@@ -53,12 +72,12 @@ export function createAuth(
     // COOKIE_PREFIX renames the session cookie, so staging and production can
     // share the cookie domain without one reading or overwriting the other's
     // session.
-    ...(env.cookieDomain || cookiePrefix
+    ...(cookieDomain || cookiePrefix
       ? {
           advanced: {
-            ...(env.cookieDomain
+            ...(cookieDomain
               ? {
-                  crossSubDomainCookies: { enabled: true, domain: env.cookieDomain },
+                  crossSubDomainCookies: { enabled: true, domain: cookieDomain },
                   defaultCookieAttributes: { secure: true, sameSite: 'lax' as const },
                 }
               : {}),
@@ -67,6 +86,58 @@ export function createAuth(
         }
       : {}),
     database: drizzleAdapter(db, { provider: 'pg', schema }),
+    // Count requests in the database, not in container memory, so the limits
+    // hold across all Lambda containers.
+    rateLimit: { storage: 'database' },
+    disabledPaths: DISABLED_TWO_FACTOR_PATHS,
+    // Optional two-factor sign-in: after a correct password, a user with
+    // twoFactorEnabled gets no session until they enter a 6-digit code sent
+    // to their email. A signed-in user turns it on by asking for a code and
+    // entering it (POST /two-factor/send-otp, then /two-factor/verify-otp),
+    // so the code must reach the inbox first. Turning it off needs the
+    // password. GitHub sign-in is not challenged; it relies on GitHub.
+    plugins: [
+      twoFactor({
+        totpOptions: { disable: true },
+        // Failed codes count per account across resends. After 10 failures the
+        // account cannot sign in with a code for 15 minutes. The plugin keeps
+        // the count in the two_factor row, which sendOTP creates below.
+        accountLockout: { enabled: true, maxFailedAttempts: 10, durationSeconds: 15 * 60 },
+        otpOptions: {
+          period: 5,
+          allowedAttempts: 5,
+          storeOTP: 'hashed',
+          sendOTP: async ({ user, otp }) => {
+            if (user.twoFactorEnabled) {
+              const existing = await db
+                .select({ id: schema.twoFactor.id })
+                .from(schema.twoFactor)
+                .where(eq(schema.twoFactor.userId, user.id))
+                .limit(1);
+              if (existing.length === 0) {
+                await db.insert(schema.twoFactor).values({
+                  id: crypto.randomUUID(),
+                  userId: user.id,
+                  secret: '',
+                  backupCodes: '',
+                  verified: false,
+                });
+              }
+            }
+            if (emailVerificationFixtureMode) fixtureTwoFactorCodes.set(user.email, otp);
+            await sendQuietly(emailSender, {
+              to: user.email,
+              subject: 'Your Deployz sign-in code',
+              body: [
+                `Your Deployz sign-in code is ${otp}. The code is valid for 5 minutes.`,
+                '',
+                'If you did not ask for this code, change your Deployz password now.',
+              ].join('\n'),
+            });
+          },
+        },
+      }),
+    ],
     emailAndPassword: {
       enabled: true,
       // The e-mail links straight to the web app's reset page with the token;
@@ -87,6 +158,11 @@ export function createAuth(
         });
       },
       revokeSessionsOnPasswordReset: true,
+      // NIST SP 800-63B: a minimum length, no character rules. Sign-in does
+      // not check the minimum, so an older shorter password keeps working
+      // until the user changes it.
+      minPasswordLength: 12,
+      maxPasswordLength: 128,
     },
     // Sign-in stays open to unverified accounts; organization invitations
     // (the only way to join another tenant) require a verified e-mail.

@@ -10,6 +10,7 @@ describe('stageNames', () => {
       kmsAlias: 'alias/deployz-config-secrets',
       ecrRepositoryName: 'deployz-images',
       templateBucketPrefix: 'deployz-templates',
+      databaseSnapshot: 'deployz-encrypted-20261106',
     });
   });
 
@@ -19,6 +20,7 @@ describe('stageNames', () => {
       kmsAlias: 'alias/deployz-staging-config-secrets',
       ecrRepositoryName: 'deployz-staging-images',
       templateBucketPrefix: 'deployz-staging-templates',
+      databaseSnapshot: 'deployzstaging-encrypted-20261106',
     });
   });
 

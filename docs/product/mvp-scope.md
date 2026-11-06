@@ -83,6 +83,15 @@ sets a recommended size and a minimum size per application and can
 override the recommendation per link. The customer chooses any permitted
 size before installing. A size changes capacity only, never topology.
 
+**Pilot boundary.** The pilot offers all three sizes, queues and scheduled
+jobs. Real-AWS certification of each is still open. Two switches can turn
+them off: `ASYNC_WORKLOADS_DEPLOYABLE` in
+`packages/analysis/src/rejection.ts` (set it to `false` to refuse a
+repository that needs a queue or a scheduled job) and
+`SELECTABLE_SIZE_TIERS` in `packages/contracts/src/profile.ts` (remove a
+tier to stop offering it). A deployment that already froze a Medium or
+Large profile keeps it.
+
 Plan and status payloads may also name `worker`, `queue` and `schedule`
 component kinds. All three are real, provisioned components: a `queue` is
 an SQS Standard queue, and a `schedule` is an EventBridge Scheduler
@@ -260,7 +269,7 @@ Deliberate trade-offs that are documented rather than hidden:
 - **A failed first install can leave empty credential secrets** in the
   customer account; they hold no customer data.
 - **Per-deployment isolation is expensive.** A dedicated VPC with NAT and a
-  dedicated ALB dominates the per-deployment AWS cost (roughly $77–114 per
+  dedicated ALB dominates the per-deployment AWS cost (roughly $87–124 per
   month before the application's own usage).
 - **The shared control-plane ECR repository** is protected by unguessable
   UUID-namespaced tags, not per-application repositories.
@@ -281,6 +290,9 @@ Deliberate trade-offs that are documented rather than hidden:
 
 Recorded so they are not mistaken for gaps:
 
+- Authenticator-app (TOTP) two-factor sign-in, backup codes, and an
+  organization rule that makes two-factor sign-in mandatory. Two-factor
+  sign-in with an emailed code is optional for each vendor user.
 - FIFO SQS queues and scheduled-job execution history/monitoring (see
   "Explicit MVP non-goals" above).
 - A topology-changing `minimal` size profile; it needs a new

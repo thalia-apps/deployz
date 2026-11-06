@@ -944,7 +944,7 @@ function InvitationLinkCard({
         </div>
         <CardDescription>
           Send this link to your customer. It includes the one-time token, which is shown only
-          once and cannot be retrieved again.
+          once and cannot be retrieved again. Your customer must sign in with the email address saved for this customer.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">

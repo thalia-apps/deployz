@@ -53,6 +53,32 @@ describe('redactSecrets', () => {
     expect(redactSecrets('PORT=3000')).toBe('PORT=3000');
   });
 
+  it('redacts secret-looking keys in any case and in JSON', () => {
+    expect(redactSecrets('db_password=hunter2')).toBe('db_password=[REDACTED]');
+    expect(redactSecrets('apiKey: abc123')).toBe('apiKey: [REDACTED]');
+    expect(redactSecrets('{"client_secret": "s3 cret", "port": 3000}')).toBe(
+      '{"client_secret": [REDACTED], "port": 3000}',
+    );
+    const once = redactSecrets('{"password": "x y"}');
+    expect(redactSecrets(once)).toBe(once);
+  });
+
+  it.each([
+    'sk-' + 'a'.repeat(32),
+    'sk-ant-' + 'b'.repeat(40),
+    'xoxb-1234567890-abcdefghij',
+    'AIza' + 'c'.repeat(35),
+    'sk_live_' + 'd'.repeat(24),
+    'pk_live_' + 'd'.repeat(24),
+    'rk_live_' + 'd'.repeat(24),
+    'glpat-' + 'e'.repeat(20),
+    'github_pat_' + 'f'.repeat(30),
+  ])('redacts the vendor key %s', (key) => {
+    const text = redactSecrets(`value ${key} end`);
+    expect(text).not.toContain(key);
+    expect(text).toMatch(/\[REDACTED_[A-Z_]+\]/);
+  });
+
   it('redacts a PEM private key block', () => {
     const pem =
       '-----BEGIN RSA PRIVATE KEY-----\nMIIBOgIBAAJBAK...\n-----END RSA PRIVATE KEY-----';
