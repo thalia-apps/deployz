@@ -132,7 +132,7 @@ const DB_SUBNET_CIDRS = [
 const DB_AZ_SLOT_COUNT = 8;
 
 // ── Compiler version / capability registry identity ─────────────────────────
-export const COMPILER_VERSION = 'dynamic-compiler-v2-7' as const;
+export const COMPILER_VERSION = 'dynamic-compiler-v2-8' as const;
 
 /** Seconds ECS ignores ALB health checks after a web task starts. */
 export const WEB_HEALTH_CHECK_GRACE_SECONDS = 300;
@@ -486,7 +486,7 @@ function compileRds(dbResource: IrResource, profile: InfrastructureSizeProfile, 
     cfnType: 'AWS::RDS::DBInstance', stateful: true, retention: 'retain', purgeStrategy: 'require_manual', verificationCheck: 'database',
     properties: {
       AllocatedStorage: String(profile.database.storageGb),
-      BackupRetentionPeriod: 7,
+      BackupRetentionPeriod: ref('paramBackupRetentionPeriod'),
       CopyTagsToSnapshot: true,
       DBInstanceClass: profile.database.instanceClass,
       DBName: DB_NAME,
@@ -1446,6 +1446,7 @@ function compileParameters(): ResolvedParameter[] {
   return [
     { id: 'paramTaskFamilySuffix', type: 'String', noEcho: false, allowedPattern: '^[a-z0-9]+$', description: 'Installation-unique suffix of every task-definition family this stack creates. No default: a stack can never fall back to a family another installation shares.' },
     { id: 'paramDesiredCount', type: 'Number', noEcho: false, defaultValue: '1', description: 'Number of application tasks the service starts with. 0 defers the first start to the configured deploy that follows the install.' },
+    { id: 'paramBackupRetentionPeriod', type: 'Number', noEcho: false, defaultValue: '7', description: 'Days of automated database backups RDS keeps (1-35). The control plane passes the vendor\'s choice; the default is 7.' },
     { id: 'paramImageReference', type: 'String', noEcho: false, defaultValue: `${DEFAULT_IMAGE_REPOSITORY}@${DEFAULT_IMAGE_DIGEST}`, description: 'Container image reference (repository@sha256:...) the application task definitions run.' },
     { id: 'paramContainerPort', type: 'Number', noEcho: true, defaultValue: String(APP_PORT), description: 'TCP port the application container listens on.' },
     { id: 'paramHealthCheckPath', type: 'String', noEcho: true, defaultValue: HEALTH_CHECK_PATH, description: 'Path the ALB target group and container health checks probe.' },

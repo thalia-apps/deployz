@@ -125,6 +125,34 @@ const SHARED_TASK_FAMILY_COMPILER_VERSIONS: ReadonlySet<string> = new Set([
   'dynamic-compiler-v2-2',
 ]);
 
+/**
+ * CFN logical id of the compiled template's database backup-retention
+ * parameter. The template default is the 7 days Deployz has always used; the
+ * control plane passes the vendor's choice at INSTALL only for a spec whose
+ * template declares the parameter (CloudFormation rejects an undeclared one).
+ */
+export const BACKUP_RETENTION_PARAMETER = 'paramBackupRetentionPeriod';
+
+/** Days of RDS automated backups a template keeps when the vendor chose nothing. */
+export const DEFAULT_BACKUP_RETENTION_DAYS = 7;
+
+/** The RDS range for automated backup retention, in days. */
+export const MIN_BACKUP_RETENTION_DAYS = 1;
+export const MAX_BACKUP_RETENTION_DAYS = 35;
+
+/** First compiler version whose template declares `BACKUP_RETENTION_PARAMETER`. */
+const BACKUP_RETENTION_COMPILER_VERSION = 8;
+
+/**
+ * Whether a deployment's frozen template declares the backup-retention
+ * parameter. An older artifact keeps its fixed 7 days and is never changed in
+ * place; an uncompiled spec has no template at all.
+ */
+export function specSupportsBackupRetention(spec: DeploymentSpecV2): boolean {
+  const match = /^dynamic-compiler-v2-(\d+)$/.exec(spec.compilerVersion ?? '');
+  return match !== null && Number(match[1]) >= BACKUP_RETENTION_COMPILER_VERSION;
+}
+
 /** An installation's task-family suffix: its id's letters and digits, lower-cased. */
 export function taskFamilySuffix(installationId: string): string {
   return installationId.toLowerCase().replace(/[^a-z0-9]/g, '');

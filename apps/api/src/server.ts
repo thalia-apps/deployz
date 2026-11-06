@@ -78,6 +78,9 @@ import {
   resolveBootstrapTemplate,
   profileKey,
   resolveStoredInfrastructureSizeProfile,
+  specSupportsBackupRetention,
+  MAX_BACKUP_RETENTION_DAYS,
+  MIN_BACKUP_RETENTION_DAYS,
   summarizeApplicationGraph,
   summarizeInfrastructureStatus,
   topologyDriftFor,
@@ -237,7 +240,13 @@ import {
 import { buildFailureContext, toStructuredEvent } from './failure-context.js';
 import { createDrizzlePendingSecretStore, createSecretCipherFromEnv } from './pending-secrets.js';
 import { retryEligibilityFor } from './retry-eligibility.js';
-import { buildInstallPayload, buildRelayConfigEntries, queuePostInstallConfig, requireTaskFamilySuffix } from './install-config.js';
+import {
+  backupRetentionView,
+  buildInstallPayload,
+  buildRelayConfigEntries,
+  queuePostInstallConfig,
+  requireTaskFamilySuffix,
+} from './install-config.js';
 import { installLinkToken } from './install-link-token.js';
 import { requirePreflightReady, runApplicationPreflight, runDeploymentPreflight } from './preflight.js';
 import {
@@ -6140,6 +6149,7 @@ export async function buildServer({
       defaultUrl,
       // The size frozen at creation; null only for an unresolvable stored reference.
       size: sizeProfile ? { id: sizeProfile.id, label: sizeProfile.label, profileKey: profileKey(sizeProfile) } : null,
+      backupRetention: backupRetentionView(rows[0]!.deployment),
       deploymentStatus: {
         ...toVendorDeploymentStatus(derived),
         ...(specComponents ? { specComponents } : {}),
@@ -7754,6 +7764,45 @@ export async function buildServer({
       return reply.code(200).send({ jobId: result.job.id, state: result.job.state });
     }
     return reply.code(result.created ? 202 : 200).send({ jobId: result.job.id, state: result.job.state });
+  });
+
+  // POST /api/deployments/:id/backup-retention — the vendor's backup-retention
+  // choice for a first install that failed creating the database (an AWS free
+  // plan accepts fewer days than the 7 the template defaults to). It only
+  // stores the choice; the next retry-install carries it as a template
+  // parameter. A database that already exists is never changed.
+  const backupRetentionBodySchema = z.object({
+    days: z.number().int().min(MIN_BACKUP_RETENTION_DAYS).max(MAX_BACKUP_RETENTION_DAYS),
+  });
+  app.post('/api/deployments/:id/backup-retention', { preHandler: requireAuth }, async (request) => {
+    const { id } = request.params as { id: string };
+    const organizationId = requireSessionOrganizationId(request);
+    const deployment = await loadOwnedDeployment(db, id, organizationId);
+    const body = backupRetentionBodySchema.parse(request.body);
+    const spec = readStoredDeploymentSpec(deployment.specV2);
+    if (!spec || !specSupportsBackupRetention(spec)) {
+      throw new ApiError(
+        409,
+        'BACKUP_RETENTION_NOT_SUPPORTED',
+        'This deployment was created before the backup retention setting existed. Create a new deployment to choose it.',
+      );
+    }
+    const installJobs = await db
+      .select({ state: schema.deploymentJobs.state })
+      .from(schema.deploymentJobs)
+      .where(and(eq(schema.deploymentJobs.deploymentId, deployment.id), eq(schema.deploymentJobs.type, 'INSTALL')));
+    if (deployment.state !== 'FAILED' || installJobs.some((job) => job.state === 'SUCCEEDED' || job.state === 'SUCCESS')) {
+      throw new ApiError(
+        409,
+        'BACKUP_RETENTION_NOT_CHANGEABLE',
+        'Backup retention can only be changed after a first install failed.',
+      );
+    }
+    await db
+      .update(schema.deployments)
+      .set({ backupRetentionDays: body.days, updatedBy: request.user?.id ?? null })
+      .where(eq(schema.deployments.id, deployment.id));
+    return { days: body.days };
   });
 
   // ── Custom domain (custom-domains MVP) ────────────────────────────────

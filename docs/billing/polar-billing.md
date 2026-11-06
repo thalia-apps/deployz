@@ -56,7 +56,7 @@ Four tables (`packages/db/src/schema/billing.ts`), two columns on
   serve the customer now. Test deployments never bill from any state
   (matrix §1).
 - `billing_subscriptions` — one row per organization. `provider` is `POLAR`
-  (`PADDLE` rows are history, CANCELED by migration 0059). No row means
+  (`PADDLE` rows are history, CANCELED by migration 0060). No row means
   evaluation. Status ∈ ACTIVE / PAST_DUE / PAUSED / CANCELED.
 - `billing_provider_events` — every webhook delivery, keyed by the
   `webhook-id` header in `provider_event_id` (unique, so redelivery dedupes

@@ -88,5 +88,13 @@ retained RDS instance. The customer updates the stack with the new
 `RelayCredential` and `EnrollmentCode`; registration then creates the INSTALL
 with `recovery`. A retry with no registered connector gets a fresh stack.
 
+The relay's stack read is scoped to the installation tag, so a stack that has
+been deleted answers `AccessDenied`, not "does not exist". The recreate step
+therefore treats that answer as "gone" in recovery mode, at the first read and
+after it has watched the old stack delete (2026-11-02, staging: the install
+failed with `AWS_PERMISSION_DENIED` and never created the stack). The
+authorization check before the create is unchanged, and CloudFormation still
+refuses a create for a name that exists.
+
 A retried install that defers (stack still building) is finished by the
 resumer on later polls without re-running recovery.

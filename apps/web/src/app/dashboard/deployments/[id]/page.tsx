@@ -106,6 +106,8 @@ import {
   resetRelay,
   restartDeployment,
   retryInstall,
+  setBackupRetention,
+  type BackupRetention,
   rollbackDeployment,
   type ActivityEvent,
   type FleetDeploymentDetail,
@@ -1025,6 +1027,13 @@ function DeploymentActions({
   // on that screen; for any other failure a changed value would not help.
   const failureCode = detail.deploymentStatus.failure?.code;
   const showConfiguration = !failureCode || isConfigurationFailure(failureCode);
+  const offeredRetention =
+    failureCode === 'DATABASE_CREATE_FAILED' && detail.backupRetention?.supported === true
+      ? detail.backupRetention
+      : null;
+  const savedRetentionDays = offeredRetention ? (offeredRetention.days ?? offeredRetention.defaultDays) : null;
+  const [chosenRetentionDays, setChosenRetentionDays] = useState<number | null>(null);
+  const retentionDays = chosenRetentionDays ?? savedRetentionDays;
   const previousIsCurrent =
     detail.previousReleaseId !== null && detail.previousReleaseId === detail.currentReleaseId;
   const hasPreviousRelease = detail.previousReleaseId !== null && !previousIsCurrent;
@@ -1041,6 +1050,13 @@ function DeploymentActions({
       <h2 id="actions" className="sr-only">
         Actions
       </h2>
+      {offeredRetention && retentionDays !== null ? (
+        <BackupRetentionField
+          retention={offeredRetention}
+          days={retentionDays}
+          onChange={setChosenRetentionDays}
+        />
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         {retryCtaKind === 'retry' || retryCtaKind === 'legacy' ? (
           <Button size="sm" onClick={() => setOpen(open === 'retryInstall' ? null : 'retryInstall')}>
@@ -1185,6 +1201,8 @@ function DeploymentActions({
         deploymentId={detail.id}
         applicationName={detail.applicationName}
         needsNewInstallLink={needsNewInstallLink}
+        backupRetentionDays={retentionDays}
+        savedBackupRetentionDays={savedRetentionDays}
         onDone={() => {
           setOpen(null);
           onChanged();
@@ -1534,11 +1552,47 @@ function RestartDialog({
   );
 }
 
+function BackupRetentionField({
+  retention,
+  days,
+  onChange,
+}: {
+  retention: BackupRetention;
+  days: number;
+  onChange: (days: number) => void;
+}) {
+  return (
+    <div className="flex max-w-sm flex-col gap-2" data-testid="backup-retention-field">
+      <Label htmlFor="backup-retention-days">Backup retention period</Label>
+      <Select value={String(days)} onValueChange={(value) => onChange(Number(value))}>
+        <SelectTrigger id="backup-retention-days" className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Array.from({ length: retention.max - retention.min + 1 }, (_, index) => retention.min + index).map(
+            (value) => (
+              <SelectItem key={value} value={String(value)}>
+                {value} {value === 1 ? 'day' : 'days'}
+              </SelectItem>
+            ),
+          )}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">
+        How long the database keeps automated backups. An AWS free plan accepts fewer days than the default of{' '}
+        {retention.defaultDays}; choose a lower number, then select Retry deployment, or upgrade the AWS plan.
+      </p>
+    </div>
+  );
+}
+
 function RetryInstallDialog({
   open,
   deploymentId,
   applicationName,
   needsNewInstallLink,
+  backupRetentionDays,
+  savedBackupRetentionDays,
   onDone,
   onCancel,
 }: {
@@ -1547,6 +1601,9 @@ function RetryInstallDialog({
   applicationName: string;
   /** The connector is disconnected or not registered: lead with the new link. */
   needsNewInstallLink: boolean;
+  /** The days chosen on the page, set only after a database creation failure on a deployment that can take the choice. */
+  backupRetentionDays: number | null;
+  savedBackupRetentionDays: number | null;
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -1560,6 +1617,9 @@ function RetryInstallDialog({
     setError(null);
     setRelayRefused(false);
     try {
+      if (backupRetentionDays !== null && backupRetentionDays !== savedBackupRetentionDays) {
+        await setBackupRetention(deploymentId, backupRetentionDays);
+      }
       await retryInstall(deploymentId);
       toast.success('Retry requested');
       onDone();
