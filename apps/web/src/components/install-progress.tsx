@@ -437,9 +437,9 @@ const CLEANUP_COPY: Record<NonNullable<CustomerDeploymentStatus['cleanup']>, str
 };
 
 /** The default customer next step after a failed install: the vendor owns
- *  the retry, and the customer is explicitly told no action is needed. */
+ *  the retry, and the customer asks the vendor for it. */
 const DEFAULT_NEXT_STEPS =
-  'No action is required. Contact your software provider and ask them to retry the deployment.';
+  'Contact your software provider and ask them to retry the deployment.';
 
 /**
  * The customer's failure in the one recovery pattern (ux-guidelines §6):
