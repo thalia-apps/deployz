@@ -87,6 +87,11 @@ export function createAuth(
         });
       },
       revokeSessionsOnPasswordReset: true,
+      // NIST SP 800-63B: a minimum length, no character rules. Sign-in does
+      // not check the minimum, so an older shorter password keeps working
+      // until the user changes it.
+      minPasswordLength: 12,
+      maxPasswordLength: 128,
     },
     // Sign-in stays open to unverified accounts; organization invitations
     // (the only way to join another tenant) require a verified e-mail.

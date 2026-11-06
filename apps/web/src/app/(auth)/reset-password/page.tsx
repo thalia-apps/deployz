@@ -75,9 +75,9 @@ function ResetPasswordForm() {
                 type="password"
                 autoComplete="new-password"
                 required
-                minLength={8}
+                minLength={12}
               />
-              <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+              <p className="text-xs text-muted-foreground">At least 12 characters.</p>
             </div>
             <Button type="submit" className="w-full" loading={pending} loadingText="Saving…">
               Reset password

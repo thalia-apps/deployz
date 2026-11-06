@@ -27,8 +27,8 @@ export function PasswordForm() {
       setError('The new passwords do not match.');
       return;
     }
-    if (newPassword.length < 8) {
-      setError('The new password must be at least 8 characters.');
+    if (newPassword.length < 12) {
+      setError('The new password must be at least 12 characters.');
       return;
     }
 
@@ -70,12 +70,12 @@ export function PasswordForm() {
           data-testid="password-new"
           type="password"
           autoComplete="new-password"
-          minLength={8}
+          minLength={12}
           value={newPassword}
           onChange={(event) => setNewPassword(event.target.value)}
           required
         />
-        <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+        <p className="text-xs text-muted-foreground">At least 12 characters.</p>
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="confirmPassword">Confirm new password</Label>
