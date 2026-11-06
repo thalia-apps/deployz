@@ -35,7 +35,8 @@ not here.
 | Sizing and cost | [`infrastructure-profiles.md`](infrastructure-profiles.md) | The immutable profile registry, footprint, cost estimate, parity |
 | Customer entry points | [`installation-invitations.md`](installation-invitations.md), [`deploy-links.md`](deploy-links.md) | Public links and invitations; the legacy deploy link |
 | Customer page and access | [`customer-access.md`](customer-access.md) | Email-code sign-in, the deployment owner, sessions, who may see what, the customer page sections |
-| Operating the control plane | [`operations/control-plane.md`](operations/control-plane.md) | CI-only deploys, promotion and the production approval, rollback, configuration keys, migrations, publishing templates, enabling a Region, release builds, local development |
+| Operating the control plane | [`operations/control-plane.md`](operations/control-plane.md) | CI-only deploys, promotion and the production approval, rollback, configuration keys, migrations, database restore, publishing templates, enabling a Region, release builds, alarms, secret rotation, local development |
+| Incident response | [`operations/incident-response.md`](operations/incident-response.md) | Severity levels, who acts, status updates, customer and vendor messages, the post-incident note |
 | Troubleshooting | [`operations/troubleshooting.md`](operations/troubleshooting.md) | Where to look, failure codes and recoverability, stuck operations, common situations, test-account hygiene |
 | Docker Hub credentials | [`docker-hub-credentials.md`](docker-hub-credentials.md) | Authenticated base-image pulls for release builds |
 | Testing | [`testing/README.md`](testing/README.md) | The testing strategy, the coverage matrix, and every testing document |

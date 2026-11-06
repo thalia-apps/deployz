@@ -108,7 +108,14 @@ the default URL transits Deployz's Cloudflare account; a custom domain does
 not. The zone's SSL/TLS mode must be **Full (strict)** for the second hop to
 be encrypted and validated; in Flexible mode Cloudflare would connect to the
 origin over plain HTTP. The zone mode is an out-of-band operator setting that
-nothing in this repository verifies. The HTTPS probe treats any completed
+nothing in this repository verifies; an operator checks it in the Cloudflare
+dashboard (SSL/TLS, Overview) before launch and after any zone change.
+
+Cloudflare limits apply to the proxied default URL. A request that the origin
+does not answer in 100 seconds fails with a 524. A request body is limited by
+the Cloudflare plan (100 MB on the Free and Pro plans); a larger upload fails
+at the edge. A custom domain does not pass through Cloudflare, so these
+limits do not apply to it. The HTTPS probe treats any completed
 HTTPS response as success, so `ACTIVE` proves reachability, not origin TLS.
 
 ### Production configuration

@@ -89,6 +89,17 @@ describe('DeployzStack', () => {
     });
   });
 
+  it('keeps database backups for 14 days', () => {
+    baseline.hasResourceProperties('AWS::RDS::DBInstance', { BackupRetentionPeriod: 14 });
+  });
+
+  it('keeps control-plane Lambda logs for 30 days', () => {
+    const retentions = Object.values(baseline.findResources('Custom::LogRetention')).map(
+      (resource) => resource.Properties.RetentionInDays,
+    );
+    expect(retentions).toEqual([30, 30]);
+  });
+
   it('creates a Lambda function for the API', () => {
     const app = new App();
     const stack = new DeployzStack(app, 'DeployzTest');
@@ -741,9 +752,9 @@ describe('DeployzStack', () => {
       TreatMissingData: 'notBreaching',
     };
 
-    it('creates one alarm topic and six alarms that notify it', () => {
+    it('creates one alarm topic and twelve alarms that notify it', () => {
       baseline.resourceCountIs('AWS::SNS::Topic', 1);
-      baseline.resourceCountIs('AWS::CloudWatch::Alarm', 6);
+      baseline.resourceCountIs('AWS::CloudWatch::Alarm', 12);
       baseline.allResourcesProperties('AWS::CloudWatch::Alarm', notifies);
     });
 
@@ -764,6 +775,31 @@ describe('DeployzStack', () => {
 
     it('alarms on HTTP API 5xx: 10 in 5 minutes', () => {
       expect(alarmFor('5xx', 'AWS/ApiGateway')).toMatchObject({ Threshold: 10, Period: 300, Statistic: 'Sum' });
+    });
+
+    it('alarms on database CPU, job age and Lambda throttles', () => {
+      expect(alarmFor('CPUUtilization', 'AWS/RDS')).toMatchObject({ Threshold: 80, EvaluationPeriods: 3 });
+      expect(alarmFor('ApproximateAgeOfOldestMessage', 'AWS/SQS')).toMatchObject({
+        Threshold: 900,
+        Statistic: 'Maximum',
+      });
+      const throttles = Object.values(baseline.findResources('AWS::CloudWatch::Alarm')).filter(
+        (alarm) => alarm.Properties.MetricName === 'Throttles' && alarm.Properties.Namespace === 'AWS/Lambda',
+      );
+      expect(throttles).toHaveLength(2);
+    });
+
+    it('alarms on watchdog log lines for failed sweeps and lost relays', () => {
+      baseline.resourceCountIs('AWS::Logs::MetricFilter', 2);
+      baseline.hasResourceProperties('AWS::Logs::MetricFilter', {
+        FilterPattern: '"watchdog:job-sweep-failed"',
+      });
+      baseline.hasResourceProperties('AWS::Logs::MetricFilter', {
+        FilterPattern: '"watchdog:relay-liveness-skipped"',
+      });
+      for (const metricName of ['WatchdogJobSweepFailed', 'WatchdogRelayLivenessSkipped']) {
+        expect(alarmFor(metricName, 'DeployzTest/Watchdog', 900)).toMatchObject({ Threshold: 1 });
+      }
     });
 
     it('alarms on low database memory and storage', () => {
