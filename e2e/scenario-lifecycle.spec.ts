@@ -19,6 +19,7 @@ import type { APIRequestContext } from '@playwright/test';
 import { API_URL, buildApi, expect, expectPlanMatchesInventory, test, waitForInstallAutoDeploy } from './simulation/fixtures.js';
 import { installLinkHeaders } from './install-link.js';
 import { fixtureSha } from './fixture-sha.js';
+import { purgeDeployment } from './purge.js';
 
 interface DeploymentResponse {
   state: string;
@@ -468,7 +469,7 @@ test.describe('purge-failure', () => {
     // e2e/simulation/scenarios/purge-failure.ts), plus the deterministic
     // orphan the PURGE-sweep finds and cannot delete (see
     // e2e/simulation/relay-harness.ts's `purgeClientsFor`).
-    const purgeResponse = await request.post(`${API_URL}/api/deployments/${deploymentId}/purge`, { data: {} });
+    const purgeResponse = await purgeDeployment(request, deploymentId);
     expect(purgeResponse.status()).toBe(202);
 
     // The honest signal this scenario pins: the purge sweep found an orphan
@@ -497,7 +498,7 @@ test.describe('purge-failure', () => {
     expect(failedEvent?.payload?.error).toContain('BucketNotEmpty');
 
     // PURGE_FAILED keeps the purge retryable (docs/deployment-resilience.md).
-    const retry = await request.post(`${API_URL}/api/deployments/${deploymentId}/purge`, { data: {} });
+    const retry = await purgeDeployment(request, deploymentId);
     expect(retry.status()).toBe(202);
   });
 });
@@ -573,7 +574,7 @@ test.describe('retained-delete-recovery', () => {
 
     // PURGE: the relay sweep removes the retained resources and the
     // deployment's cleanup completes.
-    const purgeResponse = await request.post(`${API_URL}/api/deployments/${deploymentId}/purge`, { data: {} });
+    const purgeResponse = await purgeDeployment(request, deploymentId);
     expect(purgeResponse.status()).toBe(202);
 
     await expect

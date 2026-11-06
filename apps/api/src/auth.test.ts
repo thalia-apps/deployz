@@ -340,6 +340,26 @@ describe('two-factor sign-in with an emailed code (Better Auth over PGlite)', ()
     expect((await verifyCode(cookie, code)).status).toBe(400);
   });
 
+  it('locks the account after 10 wrong codes across resends', async () => {
+    await db.update(schema.twoFactor).set({ failedVerificationCount: 0, lockedUntil: null });
+    const { cookie } = await passwordStep();
+    let code = await sendCode(cookie);
+    for (let resend = 0; resend < 2; resend += 1) {
+      const wrong = code === '000000' ? '111111' : '000000';
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        expect((await verifyCode(cookie, wrong)).status).toBe(401);
+      }
+      code = await sendCode(cookie);
+    }
+    expect((await verifyCode(cookie, code)).status).toBe(429);
+    const { cookie: otherCookie } = await passwordStep();
+    expect((await verifyCode(otherCookie, await sendCode(otherCookie))).status).toBe(429);
+
+    await db.update(schema.twoFactor).set({ lockedUntil: new Date(Date.now() - 1000) });
+    const { cookie: laterCookie } = await passwordStep();
+    expect((await verifyCode(laterCookie, await sendCode(laterCookie))).status).toBe(200);
+  });
+
   it('refuses an expired code', async () => {
     const { cookie } = await passwordStep();
     const code = await sendCode(cookie);
@@ -362,4 +382,19 @@ describe('two-factor sign-in with an emailed code (Better Auth over PGlite)', ()
     const { body } = await passwordStep();
     expect(body.twoFactorRedirect).toBeUndefined();
   });
+});
+
+describe('auth rate limits (Better Auth over PGlite)', () => {
+  it('keep the request count in the rate_limit table, so every container shares it', async () => {
+    const client = new PGlite();
+    try {
+      await applyMigrations(client);
+      const db = createDb(client);
+      const auth = createAuth(db);
+      expect(auth.options.rateLimit?.storage).toBe('database');
+      expect(await db.select().from(schema.rateLimit)).toEqual([]);
+    } finally {
+      await client.close();
+    }
+  }, 60_000);
 });

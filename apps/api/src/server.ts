@@ -537,12 +537,19 @@ const paginationQuerySchema = z.object({
 const GITHUB_COMMITS_RATE_LIMIT = { max: 60, timeWindow: '1 minute' } as const;
 // Disconnect and reconnect change what the whole organization can build.
 const GITHUB_CONNECTION_RATE_LIMIT = { max: 10, timeWindow: '1 minute' } as const;
+// The setup callback binds an installation id, a small public integer, so a
+// script must not be able to try ids quickly.
+const GITHUB_SETUP_RATE_LIMIT = { max: 20, timeWindow: '1 minute' } as const;
 
 // Failed-build evidence reads the build log (a few log-service calls per
 // request); the AI explanation spends model tokens. Both are on-demand
 // clicks, so these caps only bound a script, never a person.
 const BUILD_FAILURE_RATE_LIMIT = { max: 30, timeWindow: '1 minute' } as const;
 const BUILD_EXPLANATION_RATE_LIMIT = { max: 5, timeWindow: '1 minute' } as const;
+// Analysis reads the repository and may call the AI provider; fix instructions
+// always call it. Like the caps above, these bound a script, not a person.
+const APPLICATION_ANALYSE_RATE_LIMIT = { max: 30, timeWindow: '1 minute' } as const;
+const FIX_INSTRUCTIONS_RATE_LIMIT = { max: 10, timeWindow: '1 minute' } as const;
 
 // A refused relay retries registration indefinitely, so only the first
 // blocked preflight evaluation per window is recorded per deployment — the
@@ -4032,7 +4039,7 @@ export async function buildServer({
     );
     return reply.redirect(target.toString());
   });
-  app.get('/api/github/setup', { preHandler: redirectSignedOutToSignIn }, async (request, reply) => {
+  app.get('/api/github/setup', { preHandler: redirectSignedOutToSignIn, config: { rateLimit: GITHUB_SETUP_RATE_LIMIT } }, async (request, reply) => {
     const { installation_id: installationId, state, code } = request.query as {
       installation_id?: string | undefined;
       state?: string | undefined;
@@ -4793,7 +4800,7 @@ export async function buildServer({
   });
 
   // POST /api/applications/:id/analyse — Trigger analysis
-  app.post('/api/applications/:id/analyse', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/api/applications/:id/analyse', { preHandler: requireAuth, config: { rateLimit: APPLICATION_ANALYSE_RATE_LIMIT } }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
     await requireApplicationGithubAccess(await loadOwnedApplication(db, id, organizationId));
@@ -5023,7 +5030,7 @@ export async function buildServer({
   // analysis stays fully usable without it.
   app.post(
     '/api/applications/:id/fix-instructions',
-    { preHandler: requireAuth },
+    { preHandler: requireAuth, config: { rateLimit: FIX_INSTRUCTIONS_RATE_LIMIT } },
     async (request) => {
       const { id } = request.params as { id: string };
       const organizationId = requireSessionOrganizationId(request);
@@ -7288,7 +7295,8 @@ export async function buildServer({
   // POST /api/deployments/:id/purge — Permanently remove retained AWS
   // resources (P2). Only a force-completed disconnect can carry leftovers:
   // a normal disconnect removed its resources via the relay. The vendor
-  // typed the deployment name in the dashboard to confirm; the relay
+  // typed the application name in the dashboard to confirm, and the API
+  // checks it against `confirmName`; the relay
   // re-verifies ownership of every resource before deleting it.
   app.post('/api/deployments/:id/purge', { preHandler: requireAuth }, async (request, reply) => {
     requireOwnerOrAdmin(request);
@@ -7308,6 +7316,17 @@ export async function buildServer({
         'NOT_PURGE_ELIGIBLE',
         'Only a disconnected deployment whose retained resources have not been purged can be purged.',
       );
+    }
+    // The purge is permanent, so the caller must send the application name,
+    // the same text the dashboard asks the vendor to type.
+    const { confirmName } = (request.body ?? {}) as { confirmName?: unknown };
+    const [application] = await db
+      .select({ name: schema.applications.name })
+      .from(schema.applications)
+      .where(eq(schema.applications.id, deployment.applicationId))
+      .limit(1);
+    if (typeof confirmName !== 'string' || confirmName.trim() !== application?.name) {
+      throw new ApiError(400, 'CONFIRMATION_MISMATCH', 'Type the application name exactly to confirm');
     }
     // One mutating operation per deployment: a purge already in flight must
     // not be joined by another.

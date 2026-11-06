@@ -465,14 +465,33 @@ describe('disconnect force-complete + persisted liveness', () => {
     return { id: deployment!.id, installationId, token };
   }
 
-  function purge(id: string, extraHeaders: Record<string, string> = {}) {
+  function purge(id: string, extraHeaders: Record<string, string> = {}, confirmName = 'App') {
     return app.inject({
       method: 'POST',
       url: `/api/deployments/${id}/purge`,
       headers: { 'content-type': 'application/json', cookie, ...extraHeaders },
-      payload: '{}',
+      payload: JSON.stringify({ confirmName }),
     });
   }
+
+  it('purge: refuses a missing or wrong application name and starts no job', async () => {
+    const eligible = await seedPurgeEligibleDeployment();
+    const wrong = await purge(eligible.id, {}, 'Other');
+    expect(wrong.statusCode).toBe(400);
+    expect(wrong.json().error.code).toBe('CONFIRMATION_MISMATCH');
+    const missing = await app.inject({
+      method: 'POST',
+      url: `/api/deployments/${eligible.id}/purge`,
+      headers: { 'content-type': 'application/json', cookie },
+      payload: '{}',
+    });
+    expect(missing.statusCode).toBe(400);
+    const jobs = await db
+      .select()
+      .from(schema.deploymentJobs)
+      .where(eq(schema.deploymentJobs.deploymentId, eligible.id));
+    expect(jobs).toHaveLength(0);
+  });
 
   it('purge: any disconnected deployment whose resources have not been purged is eligible', async () => {
     const eligible = await seedPurgeEligibleDeployment();

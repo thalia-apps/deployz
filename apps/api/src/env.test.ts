@@ -603,3 +603,50 @@ describe('SES credentials', () => {
     expect(env.sesSecretAccessKey).toBeUndefined();
   });
 });
+
+describe('Lambda startup guards', () => {
+  let tempDir: string;
+  const KEYS = ['AWS_LAMBDA_FUNCTION_NAME', 'BETTER_AUTH_SECRET', 'GITHUB_FIXTURE_MODE', 'EMAIL_VERIFICATION_FIXTURE_MODE'];
+  const saved: Record<string, string | undefined> = {};
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'deployz-env-lambda-'));
+    vi.spyOn(process, 'cwd').mockReturnValue(tempDir);
+    for (const key of KEYS) {
+      saved[key] = process.env[key];
+      delete process.env[key];
+    }
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    for (const key of KEYS) {
+      if (saved[key] === undefined) delete process.env[key];
+      else process.env[key] = saved[key];
+    }
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('refuses to start on Lambda without BETTER_AUTH_SECRET', async () => {
+    process.env.AWS_LAMBDA_FUNCTION_NAME = 'deployz-api';
+    await expect(import('./env.js')).rejects.toThrow('BETTER_AUTH_SECRET');
+  });
+
+  it('refuses to start on Lambda with a fixture mode on', async () => {
+    process.env.AWS_LAMBDA_FUNCTION_NAME = 'deployz-api';
+    process.env.BETTER_AUTH_SECRET = 'a-real-secret';
+    process.env.EMAIL_VERIFICATION_FIXTURE_MODE = 'true';
+    await expect(import('./env.js')).rejects.toThrow('EMAIL_VERIFICATION_FIXTURE_MODE');
+  });
+
+  it('starts on Lambda with the secret and no fixture mode, and starts off Lambda without a secret', async () => {
+    process.env.AWS_LAMBDA_FUNCTION_NAME = 'deployz-api';
+    process.env.BETTER_AUTH_SECRET = 'a-real-secret';
+    await expect(import('./env.js')).resolves.toBeDefined();
+    delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+    delete process.env.BETTER_AUTH_SECRET;
+    vi.resetModules();
+    await expect(import('./env.js')).resolves.toBeDefined();
+  });
+});

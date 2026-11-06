@@ -603,7 +603,7 @@ export async function fetchInstallationLiveState(
 //    be one that user can see; or
 //  - without a `code`, the installation must be brand new, so only the install
 //    that just sent the browser here can be claimed.
-export const FRESH_INSTALLATION_WINDOW_MS = 15 * 60 * 1000;
+export const FRESH_INSTALLATION_WINDOW_MS = 60 * 1000;
 
 export function isFreshInstallation(createdAt: string | null, nowMs: number): boolean {
   const created = createdAt === null ? Number.NaN : Date.parse(createdAt);

@@ -452,10 +452,11 @@ describe('github — installation live state and repository access', () => {
     });
   });
 
-  it('treats only an installation created in the last 15 minutes as fresh', () => {
+  it('treats only an installation created in the last minute as fresh', () => {
     const now = Date.parse('2026-10-29T12:00:00Z');
-    expect(isFreshInstallation('2026-10-29T11:50:00Z', now)).toBe(true);
-    expect(isFreshInstallation('2026-10-29T11:40:00Z', now)).toBe(false);
+    expect(isFreshInstallation('2026-10-29T11:59:30Z', now)).toBe(true);
+    expect(isFreshInstallation('2026-10-29T11:58:30Z', now)).toBe(false);
+    expect(isFreshInstallation('2026-10-29T11:50:00Z', now)).toBe(false);
     expect(isFreshInstallation('2026-10-29T13:00:00Z', now)).toBe(false);
     expect(isFreshInstallation(null, now)).toBe(false);
   });

@@ -4412,6 +4412,19 @@ describe('server — GitHub installation binding', () => {
     expect(rows.map((row) => row.id)).not.toContain('9999');
   });
 
+  it('rate limits the setup callback', async () => {
+    const statuses: number[] = [];
+    for (let attempt = 0; attempt < 25; attempt += 1) {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/github/setup?installation_id=${5000 + attempt}`,
+        headers: { cookie: org.cookie },
+      });
+      statuses.push(response.statusCode);
+    }
+    expect(statuses).toContain(429);
+  });
+
   it('lists the bound installation for its own organization only', async () => {
     const mine = await app.inject({
       method: 'GET',
@@ -7724,7 +7737,7 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     const purge = await postJson(
       app,
       `/api/deployments/${deployment.id}/purge`,
-      {},
+      { confirmName: application.name },
       { cookie: org.cookie },
     );
     expect(purge.statusCode).toBe(202);

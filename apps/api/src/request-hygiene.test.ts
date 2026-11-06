@@ -104,6 +104,25 @@ describe('request hygiene', () => {
     }, 120_000);
   });
 
+  describe('AI-backed routes', () => {
+    it.each([
+      ['analyse', 30],
+      ['fix-instructions', 10],
+    ])('rate limits /api/applications/:id/%s', async (route, max) => {
+      let last = 0;
+      for (let i = 0; i < max + 1; i += 1) {
+        const response = await app.inject({
+          method: 'POST',
+          url: `/api/applications/${crypto.randomUUID()}/${route}`,
+          headers: { cookie, origin: trustedOrigin, 'x-forwarded-for': `198.51.100.${max}` },
+          payload: {},
+        });
+        last = response.statusCode;
+      }
+      expect(last).toBe(429);
+    });
+  });
+
   describe('error envelope', () => {
     it('answers malformed JSON with 400 in the standard envelope', async () => {
       const response = await app.inject({
