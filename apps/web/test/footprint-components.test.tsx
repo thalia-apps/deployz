@@ -155,7 +155,7 @@ describe('FootprintCost', () => {
 
   it('shows the rounded price range for a complete estimate', () => {
     const container = render(<FootprintCost estimate={estimateFootprintCost(footprintFor(STATELESS))} />);
-    expect(container.querySelector('[data-testid="footprint-cost-range"]')!.textContent).toBe('~$50–80/month');
+    expect(container.querySelector('[data-testid="footprint-cost-range"]')!.textContent).toBe('~$65–95/month');
     expect(container.textContent).toContain('AWS bills your account directly.');
     expect(container.querySelector('[data-testid="footprint-cost-incomplete"]')).toBeNull();
   });

@@ -240,7 +240,7 @@ describe('Customer deployment progress — normal vs delayed messaging', () => {
     const text = container!.textContent ?? '';
     expect(text).toContain('Deployment failed');
     expect(text).toContain('Deployz could not finish setting up your infrastructure.');
-    expect(text).toContain('No action is required.');
+    expect(text).toContain('Contact your software provider and ask them to retry the deployment.');
   });
 });
 

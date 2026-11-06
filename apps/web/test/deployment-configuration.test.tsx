@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { buildInstallPlan, type DeploymentPlan } from '@deployz/contracts';
+import { SELECTABLE_SIZE_TIERS, buildInstallPlan, type DeploymentPlan } from '@deployz/contracts';
 
 import type { Application } from '../src/lib/applications';
 import type {
@@ -13,6 +13,9 @@ import type {
   FactSource,
   ReadinessFinding,
 } from '../src/lib/readiness';
+
+// These tests cover the size rules of every tier. The pilot offers Small only.
+SELECTABLE_SIZE_TIERS.splice(0, SELECTABLE_SIZE_TIERS.length, 'small', 'medium', 'large');
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 // jsdom implements neither pointer capture nor scrollIntoView; Radix Select
