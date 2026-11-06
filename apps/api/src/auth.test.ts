@@ -107,6 +107,19 @@ describe('auth (Better Auth over PGlite)', () => {
     expect(cookie?.split('=')[0]).toContain('deployz-staging.session_token');
   });
 
+  // The cookie domain must stay below the customer hostnames, which are
+  // d-<id>.deployz.dev. A cookie for .app.deployz.dev never reaches them.
+  it('scopes the session cookie to the configured cookie domain', async () => {
+    const scoped = createAuth(db, { cookieDomain: '.app.deployz.dev' });
+    const response = await scoped.api.signInEmail({
+      body: { email: 'ada@example.com', password: 'super-secret-1' },
+      asResponse: true,
+    });
+    const cookie = response.headers.get('set-cookie');
+    expect(cookie).toContain('Domain=.app.deployz.dev');
+    expect(cookie).not.toMatch(/Domain=\.?deployz\.dev/);
+  });
+
   it('keeps the default session-cookie name without a prefix', async () => {
     const response = await auth.api.signInEmail({
       body: { email: 'ada@example.com', password: 'super-secret-1' },

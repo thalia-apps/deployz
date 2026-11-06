@@ -41,6 +41,7 @@ export function createAuth(
   opts: {
     billingFixtureMode?: boolean;
     cookiePrefix?: string;
+    cookieDomain?: string;
     // Marks every new user's e-mail as verified (simulated E2E and unit tests
     // only — see env.emailVerificationFixtureMode).
     emailVerificationFixtureMode?: boolean;
@@ -52,6 +53,7 @@ export function createAuth(
     opts.emailVerificationFixtureMode ?? env.emailVerificationFixtureMode;
   const emailSender = opts.emailSender ?? createEmailSender();
   const cookiePrefix = opts.cookiePrefix ?? env.cookiePrefix;
+  const cookieDomain = opts.cookieDomain ?? env.cookieDomain;
   return betterAuth({
     appName: 'Deployz',
     baseURL: env.apiUrl,
@@ -70,12 +72,12 @@ export function createAuth(
     // COOKIE_PREFIX renames the session cookie, so staging and production can
     // share the cookie domain without one reading or overwriting the other's
     // session.
-    ...(env.cookieDomain || cookiePrefix
+    ...(cookieDomain || cookiePrefix
       ? {
           advanced: {
-            ...(env.cookieDomain
+            ...(cookieDomain
               ? {
-                  crossSubDomainCookies: { enabled: true, domain: env.cookieDomain },
+                  crossSubDomainCookies: { enabled: true, domain: cookieDomain },
                   defaultCookieAttributes: { secure: true, sameSite: 'lax' as const },
                 }
               : {}),
