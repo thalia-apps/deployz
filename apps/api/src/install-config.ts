@@ -2,10 +2,15 @@ import { eq } from 'drizzle-orm';
 
 import { derivedS3EnvValue, derivedUrlEnvValue, mintedEnvKeys } from '@deployz/analysis';
 import {
+  BACKUP_RETENTION_PARAMETER,
+  DEFAULT_BACKUP_RETENTION_DAYS,
+  MAX_BACKUP_RETENTION_DAYS,
+  MIN_BACKUP_RETENTION_DAYS,
   TASK_FAMILY_SUFFIX_PARAMETER,
   buildDeploymentResourceTags,
   deliversConfigValue,
   requirementsFromSpec,
+  specSupportsBackupRetention,
   taskFamilySuffixForSpec,
   type DeploymentManifest,
   type DeploymentSpecV2,
@@ -246,6 +251,7 @@ export async function buildInstallPayload(
     region: string;
     desiredState: Record<string, unknown> | null;
     specV2: Record<string, unknown> | null;
+    backupRetentionDays?: number | null;
   },
   store: ConfigStore,
   installationId: string | null,
@@ -277,7 +283,14 @@ export async function buildInstallPayload(
   });
   return {
     templateUrl: spec.artifactLocation,
-    parameters: familySuffix === '' ? parameters : { ...parameters, [TASK_FAMILY_SUFFIX_PARAMETER]: familySuffix },
+    parameters: {
+      ...parameters,
+      // Only a template that declares the parameter may receive it: CloudFormation rejects an undeclared one.
+      ...(specSupportsBackupRetention(spec) && deployment.backupRetentionDays != null
+        ? { [BACKUP_RETENTION_PARAMETER]: String(deployment.backupRetentionDays) }
+        : {}),
+      ...(familySuffix === '' ? {} : { [TASK_FAMILY_SUFFIX_PARAMETER]: familySuffix }),
+    },
     databaseRequired: requirements.databaseRequired,
     redisRequired: requirements.redisRequired,
     // Control-plane-minted deployz identity tags. The relay applies them as
@@ -326,4 +339,23 @@ export async function queuePostInstallConfig(
     requestedBy: null,
   });
   return { queued: created };
+}
+
+/**
+ * What the vendor page needs to offer the backup-retention choice: whether the
+ * deployment's frozen template declares the parameter, the days saved for the
+ * next install attempt (null means the template default) and the allowed range.
+ */
+export function backupRetentionView(deployment: {
+  specV2: Record<string, unknown> | null;
+  backupRetentionDays: number | null;
+}): { supported: boolean; days: number | null; defaultDays: number; min: number; max: number } {
+  const spec = readStoredDeploymentSpec(deployment.specV2);
+  return {
+    supported: spec !== null && specSupportsBackupRetention(spec),
+    days: deployment.backupRetentionDays,
+    defaultDays: DEFAULT_BACKUP_RETENTION_DAYS,
+    min: MIN_BACKUP_RETENTION_DAYS,
+    max: MAX_BACKUP_RETENTION_DAYS,
+  };
 }

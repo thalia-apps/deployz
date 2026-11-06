@@ -869,6 +869,10 @@ ElastiCache replication-group delete — identified from the failed stack's
 own resource list, never by name); recreate; re-verify. Retained S3 buckets
 are deliberately left (inert, empty, blocked by IAM tag-condition
 semantics). The decision record is `docs/decisions/failed-install-recovery.md`.
+A retry after `DATABASE_CREATE_FAILED` can carry the vendor's backup retention
+(1–35 days) as the `paramBackupRetentionPeriod` template parameter, only for a
+frozen template that declares it (`specSupportsBackupRetention`); the frozen
+template itself never changes. See `docs/decisions/README.md`.
 A customer retry of a first install in progress reaches the same pass: it keeps
 the connector stack, and the re-enrolled connector's INSTALL carries
 `recovery.neverInstalled`. A second connector could not run it, because its IAM

@@ -28,7 +28,7 @@ the frozen spec's graph → planner → IR chain; the size profile only decides
   (`currentInfrastructureSizeProfile`). `small-v1` is frozen for the
   deployments that use it.
 - A profile changes capacity only. Every tier compiles the same resource
-  graph: two AZs, one NAT gateway, single-AZ RDS with 7-day backups, one
+  graph: two AZs, one NAT gateway, single-AZ RDS with 7-day backups (the backup retention is a template parameter, not a profile field), one
   cache node, one task per workload. Engine and version stay
   manifest-driven constants, never profile fields.
 - All classes are current-generation burstable classes that RDS (PostgreSQL

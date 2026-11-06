@@ -6507,6 +6507,79 @@ describe('server — retry-install (first-install recovery)', () => {
     expect(events[0]!.result).toBe('pending');
   });
 
+  it('saves a backup retention choice and the next retry install carries it as a template parameter', async () => {
+    const deployment = await seedFailedInstall();
+
+    const saved = await postJson(app, `/api/deployments/${deployment.id}/backup-retention`, { days: 1 }, { cookie: org.cookie });
+    expect(saved.statusCode).toBe(200);
+    expect(saved.json()).toEqual({ days: 1 });
+    const [stored] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deployment.id));
+    expect(stored!.backupRetentionDays).toBe(1);
+
+    const retry = await postJson(app, `/api/deployments/${deployment.id}/retry-install`, {}, { cookie: org.cookie });
+    expect(retry.statusCode).toBe(202);
+    const [job] = await db
+      .select()
+      .from(schema.deploymentJobs)
+      .where(eq(schema.deploymentJobs.id, (retry.json() as { jobId: string }).jobId));
+    expect((job!.payload['parameters'] as Record<string, string>)['paramBackupRetentionPeriod']).toBe('1');
+  });
+
+  it('a retry with no backup retention choice leaves the template default', async () => {
+    const deployment = await seedFailedInstall();
+
+    const retry = await postJson(app, `/api/deployments/${deployment.id}/retry-install`, {}, { cookie: org.cookie });
+    expect(retry.statusCode).toBe(202);
+    const [job] = await db
+      .select()
+      .from(schema.deploymentJobs)
+      .where(eq(schema.deploymentJobs.id, (retry.json() as { jobId: string }).jobId));
+    expect(job!.payload['parameters'] as Record<string, string>).not.toHaveProperty('paramBackupRetentionPeriod');
+  });
+
+  it('refuses backup retention days outside the RDS range of 1 to 35', async () => {
+    const deployment = await seedFailedInstall();
+
+    for (const days of [0, 36, 1.5]) {
+      const response = await postJson(app, `/api/deployments/${deployment.id}/backup-retention`, { days }, { cookie: org.cookie });
+      expect(response.statusCode, `days=${days}`).toBe(400);
+    }
+  });
+
+  it('refuses a backup retention choice for a template compiled before the parameter existed', async () => {
+    const deployment = await seedFailedInstall();
+    await db
+      .update(schema.deployments)
+      .set({ specV2: { ...(deployment.specV2 as Record<string, unknown>), compilerVersion: 'dynamic-compiler-v2-7' } })
+      .where(eq(schema.deployments.id, deployment.id));
+
+    const response = await postJson(app, `/api/deployments/${deployment.id}/backup-retention`, { days: 1 }, { cookie: org.cookie });
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ error: { code: 'BACKUP_RETENTION_NOT_SUPPORTED' } });
+  });
+
+  it('refuses a backup retention change unless the first install failed', async () => {
+    const deployment = await seedFailedInstall({ state: 'HEALTHY' });
+
+    const response = await postJson(app, `/api/deployments/${deployment.id}/backup-retention`, { days: 1 }, { cookie: org.cookie });
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ error: { code: 'BACKUP_RETENTION_NOT_CHANGEABLE' } });
+  });
+
+  it('shows the backup retention choice on the deployment detail', async () => {
+    const deployment = await seedFailedInstall({ backupRetentionDays: 3 });
+
+    const response = await app.inject({ method: 'GET', url: `/api/deployments/${deployment.id}`, headers: { cookie: org.cookie } });
+    expect(response.statusCode).toBe(200);
+    expect((response.json() as { backupRetention: unknown }).backupRetention).toEqual({
+      supported: true,
+      days: 3,
+      defaultDays: 7,
+      min: 1,
+      max: 35,
+    });
+  });
+
   it('a double-click reuses the same retry job (200, no second job)', async () => {
     const deployment = await seedFailedInstall();
 

@@ -143,6 +143,18 @@ export interface FleetDeploymentDetail extends FleetDeployment {
   defaultUrl: string | null;
   /** The size frozen at creation. Absent on payloads cached before the field existed. */
   size?: { id: string; label: string; profileKey: string } | null;
+  /** The backup-retention choice for a retry of a failed first install. Absent on older payloads. */
+  backupRetention?: BackupRetention;
+}
+
+/** `supported` is false for a deployment whose frozen template has a fixed 7-day retention. */
+export interface BackupRetention {
+  supported: boolean;
+  /** Days saved for the next install attempt; null means the default. */
+  days: number | null;
+  defaultDays: number;
+  min: number;
+  max: number;
 }
 
 // ── Infrastructure inventory (Lane 3 composed component view) ───────────────
@@ -474,6 +486,14 @@ export function retryInstall(deploymentId: string): Promise<JobResult> {
   return postJson<JobResult>(
     `/api/deployments/${encodeURIComponent(deploymentId)}/retry-install`,
     {},
+  );
+}
+
+/** Saves the backup-retention days the next retry-install uses — POST /api/deployments/:id/backup-retention. */
+export function setBackupRetention(deploymentId: string, days: number): Promise<{ days: number }> {
+  return postJson<{ days: number }>(
+    `/api/deployments/${encodeURIComponent(deploymentId)}/backup-retention`,
+    { days },
   );
 }
 

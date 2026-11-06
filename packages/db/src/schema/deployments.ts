@@ -69,6 +69,11 @@ export const deployments = pgTable(
   // apps/api/src/step-timings.ts from the relay-authenticated write paths so
   // the event_logs `deployment.step_completed` stream has a duration to cite.
   stepTimings: jsonb('step_timings').$type<Record<string, { startedAt: string; completedAt?: string }>>(),
+  // The vendor's backup-retention choice (days) for a first install that failed
+  // creating the database. Null means the template default (7). Read by
+  // INSTALL payload building and only for a spec whose template declares the
+  // parameter; it never changes a database that already exists.
+  backupRetentionDays: integer('backup_retention_days'),
   // The frozen DeploymentSpecV2 (packages/contracts deployment-spec-v2.ts):
   // graph + IR + the compiler's verification contract, ownership records,
   // footprint and the published artifact location. Written once at creation,

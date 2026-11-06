@@ -402,12 +402,14 @@ async function run(options: InstallOptions): Promise<InstallOutcome> {
     }
     const refused = await createStack();
     if (refused !== null) return refused;
-  } else if (createMode === 'fresh' && isAccessDenied(initial.errorCode)) {
+  } else if ((createMode === 'fresh' || createMode === 'recovery') && isAccessDenied(initial.errorCode)) {
     // The relay's stack-read grant is scoped to its installation tag, and a
     // stack that does not exist yet has no tags: CloudFormation answers
-    // AccessDenied, not "does not exist". A fresh install therefore creates;
-    // CloudFormation refuses CreateStack for a name that already exists, and
-    // that race is adopted as an in-flight create.
+    // AccessDenied, not "does not exist". A fresh install therefore creates,
+    // and so does a recovery, whose stack was just deleted; a recovery create
+    // is still gated by `authorizeRecoveryCreate`. CloudFormation refuses
+    // CreateStack for a name that already exists, and that race is adopted as
+    // an in-flight create.
     const refused = await createStack();
     if (refused !== null) return refused;
   } else {
@@ -452,7 +454,16 @@ async function run(options: InstallOptions): Promise<InstallOutcome> {
       continue;
     }
 
-    if (outcome.absent) {
+    // After the stack this recovery watched deleting is gone, the tag-scoped
+    // read answers AccessDenied, not "does not exist": the stack has no tags.
+    const deletedByRecovery =
+      !outcome.absent &&
+      isAccessDenied(outcome.errorCode) &&
+      last?.status === 'DELETE_IN_PROGRESS' &&
+      createMode === 'recovery' &&
+      !createdAfterDelete;
+
+    if (outcome.absent || deletedByRecovery) {
       unreadable = 0;
       // An adopted DELETE_IN_PROGRESS finishing is not a loss of access —
       // it is first-install recovery (or a concurrent destroy) clearing the
