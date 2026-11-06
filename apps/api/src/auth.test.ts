@@ -213,3 +213,132 @@ describe('password reset (Better Auth over PGlite)', () => {
   });
 });
 
+
+describe('two-factor sign-in with an emailed code (Better Auth over PGlite)', () => {
+  let client: PGlite | undefined;
+  let db: Db;
+  let auth: Auth;
+  const sent: EmailMessage[] = [];
+  const email = 'linus@example.com';
+  const password = 'two-factor-pass-1';
+
+  const cookieHeader = (response: Response): string =>
+    response.headers
+      .getSetCookie()
+      .map((cookie) => cookie.split(';')[0])
+      .join('; ');
+  const lastCode = (): string => /\b(\d{6})\b/.exec(sent.at(-1)!.body)![1]!;
+  const userRow = async () =>
+    (await db.select().from(schema.user).where(eq(schema.user.email, email)))[0]!;
+
+  async function passwordStep(): Promise<{ body: Record<string, unknown>; cookie: string }> {
+    const response = await auth.api.signInEmail({ body: { email, password }, asResponse: true });
+    return { body: (await response.json()) as Record<string, unknown>, cookie: cookieHeader(response) };
+  }
+
+  async function sendCode(cookie: string): Promise<string> {
+    await auth.api.sendTwoFactorOTP({ headers: new Headers({ cookie }), body: {} });
+    return lastCode();
+  }
+
+  async function verifyCode(cookie: string, code: string): Promise<Response> {
+    return auth.api.verifyTwoFactorOTP({
+      headers: new Headers({ cookie }),
+      body: { code },
+      asResponse: true,
+    });
+  }
+
+  beforeAll(async () => {
+    client = new PGlite();
+    await applyMigrations(client);
+    db = createDb(client);
+    auth = createAuth(db, {
+      emailSender: {
+        send: async (message) => {
+          sent.push(message);
+        },
+      },
+    });
+    await auth.api.signUpEmail({ body: { email, password, name: 'Linus' } });
+  }, 60_000);
+
+  afterAll(async () => {
+    await client?.close();
+  });
+
+  it('turns on only after the signed-in user enters the emailed code, and stores only a hash of the code', async () => {
+    const { body, cookie } = await passwordStep();
+    expect(body.twoFactorRedirect).toBeUndefined();
+
+    const code = await sendCode(cookie);
+    expect(sent.at(-1)!.to).toBe(email);
+    expect(sent.at(-1)!.subject).toBe('Your Deployz sign-in code');
+    const stored = await db.select().from(schema.verification);
+    expect(stored.some((row) => row.value.includes(code))).toBe(false);
+    expect((await userRow()).twoFactorEnabled).toBe(false);
+
+    const verified = await verifyCode(cookie, code);
+    expect(verified.status).toBe(200);
+    expect((await userRow()).twoFactorEnabled).toBe(true);
+  });
+
+  it('turns off the routes that enable 2FA without a code, authenticator apps and backup codes', async () => {
+    for (const path of ['enable', 'get-totp-uri', 'verify-totp', 'generate-backup-codes', 'verify-backup-code']) {
+      const response = await auth.handler(
+        new Request(`http://localhost:3001/api/auth/two-factor/${path}`, { method: 'POST' }),
+      );
+      expect(response.status, path).toBe(404);
+    }
+  });
+
+  it('gives no session for the password alone, then a session pinned to the tenant for the right code', async () => {
+    const sessionsBefore = await db.select().from(schema.session);
+    const { body, cookie } = await passwordStep();
+    expect(body.twoFactorRedirect).toBe(true);
+    expect(await db.select().from(schema.session)).toHaveLength(sessionsBefore.length);
+
+    const code = await sendCode(cookie);
+    expect((await verifyCode(cookie, code === '000000' ? '111111' : '000000')).status).toBe(401);
+
+    const verified = await verifyCode(cookie, code);
+    expect(verified.status).toBe(200);
+    const { token } = (await verified.json()) as { token: string };
+    const sessions = await db.select().from(schema.session).where(eq(schema.session.token, token));
+    const memberships = await db.select().from(schema.member).where(eq(schema.member.userId, sessions[0]!.userId));
+    expect(sessions[0]!.activeOrganizationId).toBe(memberships[0]!.organizationId);
+  });
+
+  it('refuses the right code after 5 wrong codes', async () => {
+    const { cookie } = await passwordStep();
+    const code = await sendCode(cookie);
+    const wrong = code === '000000' ? '111111' : '000000';
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      expect((await verifyCode(cookie, wrong)).status).toBe(401);
+    }
+    expect((await verifyCode(cookie, code)).status).toBe(400);
+  });
+
+  it('refuses an expired code', async () => {
+    const { cookie } = await passwordStep();
+    const code = await sendCode(cookie);
+    await db.update(schema.verification).set({ expiresAt: new Date(Date.now() - 1000) });
+    expect((await verifyCode(cookie, code)).status).toBe(400);
+  });
+
+  it('turns off only with the right password', async () => {
+    const { cookie: twoFactorCookie } = await passwordStep();
+    const verified = await verifyCode(twoFactorCookie, await sendCode(twoFactorCookie));
+    const headers = new Headers({ cookie: cookieHeader(verified) });
+
+    await expect(
+      auth.api.disableTwoFactor({ headers, body: { password: 'wrong-password' } }),
+    ).rejects.toThrow();
+    expect((await userRow()).twoFactorEnabled).toBe(true);
+
+    await auth.api.disableTwoFactor({ headers, body: { password } });
+    expect((await userRow()).twoFactorEnabled).toBe(false);
+    const { body } = await passwordStep();
+    expect(body.twoFactorRedirect).toBeUndefined();
+  });
+});

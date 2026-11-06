@@ -29,6 +29,8 @@ export const user = pgTable('user', {
   // admin access (see apps/api/src/admin/auth.ts); null for every ordinary
   // vendor user. No role-management UI — granted via SQL/ops tooling only.
   platformRole: text('platform_role'),
+  // Better Auth two-factor plugin: optional emailed sign-in code.
+  twoFactorEnabled: boolean('two_factor_enabled').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
@@ -102,6 +104,25 @@ export const verification = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [index('verification_identifier_idx').on(t.identifier)],
+);
+
+// Better Auth two-factor plugin table. Deployz uses only the emailed code,
+// which keeps no row here; the plugin still reads and deletes rows in this
+// table, so it must exist.
+export const twoFactor = pgTable(
+  'two_factor',
+  {
+    id: text('id').primaryKey(),
+    secret: text('secret').notNull(),
+    backupCodes: text('backup_codes').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    verified: boolean('verified').default(true),
+    failedVerificationCount: integer('failed_verification_count').default(0),
+    lockedUntil: timestamp('locked_until', { withTimezone: true }),
+  },
+  (t) => [index('two_factor_user_id_idx').on(t.userId)],
 );
 
 // Organization / member / invitation — the multi-tenant membership model.

@@ -83,6 +83,7 @@ import migration0053 from '../../../db/drizzle/0053_deployment_billing_paused.sq
 import migration0054 from '../../../db/drizzle/0054_hot_path_indexes.sql';
 import migration0055 from '../../../db/drizzle/0055_customer_access.sql';
 import migration0056 from '../../../db/drizzle/0056_github_connection_status.sql';
+import migration0057 from '../../../db/drizzle/0057_two_factor.sql';
 import journal from '../../../db/drizzle/meta/_journal.json';
 import { migrationsUpToDate, withMigrationLock } from './migration-check.js';
 
@@ -154,6 +155,7 @@ const MIGRATION_SQL: Record<string, string> = {
   '0054_hot_path_indexes': migration0054,
   '0055_customer_access': migration0055,
   '0056_github_connection_status': migration0056,
+  '0057_two_factor': migration0057,
 };
 
 interface RdsSecret {

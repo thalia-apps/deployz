@@ -56,6 +56,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-27 | The MVP boundary expands to a customer page for each deployment, behind an emailed sign-in code; connector updates stay customer-run in AWS | Active |
 | 2026-10-27 | An app with a migration starts no task at install; a migration that fails on that first start is a failed environment (`FAILED`) | Active |
 | 2026-10-30 | A final AI judge reviews a DEPLOYABLE or DEPLOYABLE_WITH_CHANGES outcome and can only make it stricter or ask the vendor to confirm | Active |
+| 2026-11-06 | Vendor two-factor sign-in is optional and uses an emailed code from the Better Auth two-factor plugin | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1608,3 +1609,34 @@ deployment, as for every dispute.
 What would change it: vendors who answer the questions wrongly often (then
 show the question without the answer action), or a "not sure" rate that
 makes the questions noise (then narrow `SOFT_FINDING_IDS`).
+
+## Optional two-factor sign-in with an emailed code (2026-11-06)
+
+Context: a vendor account signs in with an email and a password. A leaked or
+reused password gave full access to the vendor's organization.
+
+Decision:
+
+- Each vendor user can turn on two-factor sign-in. It is off by default.
+  After a correct password, the session starts only after a 6-digit code
+  that Deployz sends to the account email.
+- Use the Better Auth `twoFactor` plugin with the emailed code only
+  (`apps/api/src/auth.ts`). Deployz does not keep its own code store.
+- A user turns it on by asking for a code and entering it. The plugin route
+  that turns it on with the password alone is off, so 2FA cannot lock out an
+  address that does not receive mail. Turning it off needs the password.
+- Authenticator apps (TOTP) and backup codes are off; their routes return 404.
+- The code is stored as a hash. It is valid for 5 minutes and allows
+  5 attempts. A new code replaces the previous one. The send and verify
+  routes have the same per-IP limits as the customer sign-in code.
+
+Limits: the password reset link and the code go to the same inbox, so this
+does not protect an account whose email is compromised. GitHub sign-in is not
+challenged; it relies on the GitHub account's own protection. A user who
+loses the mailbox needs operator help, as for a lost password.
+
+Not done (post-MVP): authenticator apps, backup codes, a "trust this device"
+option, and an organization rule that makes 2FA mandatory.
+
+What would change it: a customer or compliance need for mandatory 2FA or a
+factor that does not depend on the email inbox.

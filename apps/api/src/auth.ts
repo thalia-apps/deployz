@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { twoFactor } from 'better-auth/plugins';
 import { eq } from 'drizzle-orm';
 
 import type { RuntimeDb } from '@deployz/db';
@@ -8,6 +9,22 @@ import * as schema from '@deployz/db/schema';
 import { createEmailSender, sendQuietly, type EmailSender } from './email.js';
 import { env } from './env.js';
 import { organizationSlug, seedFixtureBillingSubscription } from './organizations.js';
+
+/** Simulated E2E only: the last two-factor sign-in code sent to each email,
+ *  read by GET /internal/fixture/two-factor-code. */
+export const fixtureTwoFactorCodes = new Map<string, string>();
+
+// Deployz uses only the emailed code. These two-factor plugin routes serve
+// authenticator apps and backup codes, or turn 2FA on without proof that the
+// code reaches the inbox, so they are off.
+const DISABLED_TWO_FACTOR_PATHS = [
+  '/two-factor/enable',
+  '/two-factor/get-totp-uri',
+  '/two-factor/verify-totp',
+  '/two-factor/generate-backup-codes',
+  '/two-factor/verify-backup-code',
+  '/two-factor/view-backup-codes',
+];
 
 // Better Auth instance for the control plane: email/password + GitHub OAuth
 // (env-driven). Better Auth owns identity ONLY — user, session, account and
@@ -67,6 +84,35 @@ export function createAuth(
         }
       : {}),
     database: drizzleAdapter(db, { provider: 'pg', schema }),
+    disabledPaths: DISABLED_TWO_FACTOR_PATHS,
+    // Optional two-factor sign-in: after a correct password, a user with
+    // twoFactorEnabled gets no session until they enter a 6-digit code sent
+    // to their email. A signed-in user turns it on by asking for a code and
+    // entering it (POST /two-factor/send-otp, then /two-factor/verify-otp),
+    // so the code must reach the inbox first. Turning it off needs the
+    // password. GitHub sign-in is not challenged; it relies on GitHub.
+    plugins: [
+      twoFactor({
+        totpOptions: { disable: true },
+        otpOptions: {
+          period: 5,
+          allowedAttempts: 5,
+          storeOTP: 'hashed',
+          sendOTP: async ({ user, otp }) => {
+            if (emailVerificationFixtureMode) fixtureTwoFactorCodes.set(user.email, otp);
+            await sendQuietly(emailSender, {
+              to: user.email,
+              subject: 'Your Deployz sign-in code',
+              body: [
+                `Your Deployz sign-in code is ${otp}. The code is valid for 5 minutes.`,
+                '',
+                'If you did not ask for this code, change your Deployz password now.',
+              ].join('\n'),
+            });
+          },
+        },
+      }),
+    ],
     emailAndPassword: {
       enabled: true,
       // The e-mail links straight to the web app's reset page with the token;

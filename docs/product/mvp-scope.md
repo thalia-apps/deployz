@@ -281,6 +281,9 @@ Deliberate trade-offs that are documented rather than hidden:
 
 Recorded so they are not mistaken for gaps:
 
+- Authenticator-app (TOTP) two-factor sign-in, backup codes, and an
+  organization rule that makes two-factor sign-in mandatory. Two-factor
+  sign-in with an emailed code is optional for each vendor user.
 - FIFO SQS queues and scheduled-job execution history/monitoring (see
   "Explicit MVP non-goals" above).
 - A topology-changing `minimal` size profile; it needs a new
