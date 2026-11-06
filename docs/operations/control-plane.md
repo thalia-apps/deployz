@@ -155,6 +155,11 @@ gh workflow run deploy-api.yml --ref main -f environment=production -f sha=<comm
 The `environment` input defaults to `staging`, so a dispatch that names no
 environment deploys staging.
 
+A rollback does not undo database migrations. The old API then runs on the
+newer schema. This is safe only when every migration is expand-only (see
+*Database migrations*). Before a rollback, check that the releases since the
+target commit did not drop or rename anything the old code reads.
+
 ## Configuration keys
 
 Names only. Every environment-specific value is a variable on the GitHub
@@ -307,6 +312,56 @@ migrator runs each migration in a transaction, so `CONCURRENTLY` is not
 possible. The build blocks writes to that table while it runs. Measure the
 build time on a dataset larger than production before you merge it
 (`0054_hot_path_indexes` took about 2 seconds for 2.2 million rows).
+
+Migrations are expand-only. A migration only adds: a table, a nullable
+column, a column with a default, or an index. It never drops or renames a
+column or table, never tightens a constraint, and never changes a type in a
+way the previous release cannot read. The reason is rollback: the previous
+API must run on the new schema. A destructive change takes two releases.
+Release one stops all use of the column or table. Release two, after release
+one is stable in production, drops it.
+
+## Database restore
+
+The control-plane database (`db.t4g.micro`, PostgreSQL 16, single-AZ) keeps
+automated backups for 14 days and has deletion protection. Automated backups
+stay when the instance is deleted (`deleteAutomatedBackups: false`). A
+point-in-time restore always makes a new instance; it never overwrites the
+old one. The restore has not been drilled on real AWS (owner task, below).
+
+Restore to a new instance:
+
+1. Open an incident (see [`incident-response.md`](incident-response.md)).
+   Decide the restore time. To undo a bad change, use the last time before it.
+2. In the RDS console (`us-east-1`), select the instance, then Actions,
+   Restore to point in time. Use a new identifier, for example
+   `deployz-restore-<date>`. Use the same VPC, the isolated subnet group, the
+   `DbSecurityGroup` and the same instance class. Do not make it public.
+3. Wait until the new instance is `available`. Connect from inside the VPC
+   and check the data: the newest rows in `deployments`, `deployment_jobs`
+   and `drizzle.__drizzle_migrations`.
+4. Switch the API and worker to the new instance. Both read the database
+   host and credentials from the secret in `DB_SECRET_ARN`. Edit that
+   secret: set `host` to the new endpoint. The restored instance keeps the
+   old master password, so the other fields stay. To make running containers
+   read the secret again, deploy the API and worker again (dispatch
+   `deploy-api.yml`).
+5. Check `/health/ready`, sign in, and open one deployment page.
+6. To roll back the switch, set `host` in the secret to the old endpoint and
+   deploy again. Keep the old instance until the restore is accepted.
+7. CloudFormation still owns the old instance. Do not delete it by hand. Plan
+   the stack change that adopts the new instance before you remove the old
+   one.
+
+Jobs that were in flight at the restore time are reconciled by the watchdog
+(see [`../deployment-resilience.md`](../deployment-resilience.md)).
+
+Owner task: run this drill once on real AWS and record how long it took.
+The result sets the recovery time that you promise to customers.
+
+Multi-AZ is not enabled (MVP): it doubles the instance cost, and the
+recovery from a lost AZ is a point-in-time restore. See
+[`../decisions/README.md`](../decisions/README.md).
 
 ## Database connections
 
@@ -539,7 +594,7 @@ production), and expiry of pending secrets. Timings and rules are in
 
 ## Alarms
 
-The stack has one SNS topic and six CloudWatch alarms. Each alarm sends a
+The stack has one SNS topic and twelve CloudWatch alarms. Each alarm sends a
 message to the topic when it goes to ALARM and again when it returns to OK.
 Missing data counts as good. Set the `ALERT_EMAIL` variable on the GitHub
 Environment to subscribe an address. The first deploy after the change sends
@@ -555,8 +610,72 @@ operator can add a subscriber on the topic by hand.
 | HTTP API 5xx | 10 or more 5xx responses in 5 minutes | Check the API Lambda errors alarm and the database alarms. A 5xx without a Lambda error often means a timeout or throttling. The browser hostname and the relay hostname share this one API. |
 | Database free memory | Under 64 MiB for 15 minutes | Look for a long query or too many connections (see *Database connections*). Make the instance larger if the load is real. |
 | Database free storage | Under 2 GiB | Storage grows on its own up to 100 GB. Under 2 GiB means growth is near its limit or stalled. Find the large tables and raise `maxAllocatedStorage`. |
+| Database CPU | 80 percent or more for 15 minutes | Look for a long query or a retry loop. Check the connection count. Make the instance larger if the load is real. |
+| Job queue age | The oldest job message waited 15 minutes or more | The worker is slow, throttled or failing. Read the worker log group. Check the worker throttles alarm. |
+| Worker throttles | 1 or more in 5 minutes | The account or Region concurrency limit is reached. Check the Lambda concurrency quota. |
+| API throttles | 1 or more in 5 minutes | Same as above, for the API Lambda. |
+| Watchdog job sweep failed | 1 or more `watchdog:job-sweep-failed` log lines in 15 minutes | The watchdog could not settle a stuck job. Read the line for the job id, then open that job (see `troubleshooting.md`, *Stuck operations*). |
+| Watchdog relay liveness skipped | 1 or more `watchdog:relay-liveness-skipped` log lines in 15 minutes | No relay sent a heartbeat in the liveness window. Check the API for errors first, then the relay path. Deployments are not marked disconnected while this is true. |
+
+The two watchdog alarms use metric filters on the worker log group. Who is
+on call for these alarms is an owner decision. Until it is made, the alarm
+email address is the only route.
 
 The production stack has termination protection. A staging stack does not.
+
+## Log retention
+
+The API and worker Lambda log groups keep 30 days of logs.
+
+## Access to control-plane secrets
+
+The API and worker keep their credentials as Lambda environment variables
+(`collectEnvVars` in `packages/cdk/src/deployz-stack.ts`), except the GitHub
+App private key, which is in Secrets Manager. Anyone with
+`lambda:GetFunctionConfiguration` on the two functions can read the values.
+Limit that permission, and the console and CLI access that includes it, to
+the deploy role and the named administrators. To move all values to Secrets
+Manager is a post-MVP item: it changes every deploy and cold-start path, and
+the access limit covers the MVP risk.
+
+## Secret rotation
+
+Rotate on a schedule, and at once when a person with access leaves or a value
+leaks. Set the new value in the GitHub Environment, then deploy the API
+(`deploy-api.yml`). The deploy replaces the Lambda variables.
+
+| Secret | Procedure | Effect |
+| --- | --- | --- |
+| `BETTER_AUTH_SECRET` | Set a new random value and deploy. | All sessions end. Users sign in again. |
+| GitHub App private key | Make a new key in the GitHub App settings, set `GITHUB_APP_PRIVATE_KEY`, deploy, check a repository connection, then delete the old key in GitHub. | None, if done in this order. |
+| `GITHUB_WEBHOOK_SECRET` | Change it in the GitHub App settings and in the Environment in the same minute, then deploy. | Webhooks sent between the two changes fail. GitHub can redeliver them. |
+| `CLOUDFLARE_ZONE_EDIT_API_TOKEN` | Make a new token with the same scope, set it, deploy, then revoke the old token. | None. |
+| AI provider keys (`AI_PROVIDER_API_KEY`, `OPENROUTER_API_KEY`, `AI_GATEWAY_TOKEN`, `JEV_API_KEY`) | Make a new key at the provider, set it, deploy, then revoke the old key. | None. |
+| Config-secret KMS key | Yearly automatic rotation is on, and old key material stays. Never delete the key or change the construct id: all stored vendor secrets become unreadable. | None. |
+| Database master password | Rotate the secret in Secrets Manager, then deploy the API and worker. | Short errors while containers use the old password. |
+
+A second administrator must hold AWS access and GitHub organization admin
+access, so that one lost account does not block a rotation or a restore.
+To name that person is an owner task.
+
+## Vendor lost access to the 2FA mailbox
+
+A vendor who turned on two-factor sign-in gets the sign-in code by email. If
+the vendor can no longer read that mailbox:
+
+1. Check identity outside the product, for example a reply from the address
+   on the contract, or a call to a known number. Do not act on a request from
+   an unverified address.
+2. No admin route turns off 2FA or changes the account email. Open a
+   database session and set `two_factor_enabled` to false for that user:
+   `UPDATE "user" SET two_factor_enabled = false WHERE email = '<address>';`.
+   Then delete that user's rows from `session` so that old sessions end.
+3. The vendor signs in with the password. If the password is also lost, the
+   reset link goes to the old mailbox. In that case first change `email` in
+   the `user` table to the new verified address.
+4. Tell the vendor to turn 2FA on again.
+5. Record the action in the incident note (see
+   [`incident-response.md`](incident-response.md)).
 
 ## Local development
 

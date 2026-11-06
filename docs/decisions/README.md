@@ -1640,3 +1640,26 @@ option, and an organization rule that makes 2FA mandatory.
 
 What would change it: a customer or compliance need for mandatory 2FA or a
 factor that does not depend on the email inbox.
+
+## Control-plane database: single-AZ with 14-day backups (2026-11-06)
+
+Context: the launch-readiness audit flagged that the control-plane database
+is single-AZ and has no documented restore.
+
+Decision:
+
+- Keep one `db.t4g.micro` instance in one AZ. Keep deletion protection.
+  Raise automated-backup retention from 7 to 14 days. Backup storage up to
+  the database size is free, so the cost change is small.
+- Recovery from a lost instance or AZ is a point-in-time restore to a new
+  instance (`docs/operations/control-plane.md`, *Database restore*).
+- Do not enable Multi-AZ for the MVP. It doubles the instance cost, and the
+  pilot accepts a restore time of tens of minutes.
+
+What would change it: a customer recovery-time promise, or a restore drill
+that takes longer than that promise. The owner runs the drill on real AWS.
+
+Also in this change: migrations are expand-only, and a destructive change
+takes two releases, so that a rollback can run the old API on the new schema.
+The HTTP API (v2) cannot take a WAF web ACL, so a WAF is deferred (post-MVP:
+it needs a REST API or CloudFront in front).

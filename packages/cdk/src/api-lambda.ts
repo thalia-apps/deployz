@@ -45,7 +45,7 @@ export class ApiLambda extends Construct {
       handler: 'handler',
       timeout: Duration.seconds(30),
       memorySize: 512,
-      logRetention: RetentionDays.ONE_WEEK,
+      logRetention: RetentionDays.ONE_MONTH,
       vpc: props.vpc,
       vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
       securityGroups: [props.dbSecurityGroup],
