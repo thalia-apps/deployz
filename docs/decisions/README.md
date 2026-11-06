@@ -1775,6 +1775,16 @@ Rejected: vendor-bought installation slots with scheduled reductions. That
 model bills empty capacity and needs purchase, reduction and reservation
 flows that the automatic count does not.
 
-Still open before production: what Polar does with a prorated charge that
-is still pending when a subscription is canceled, and Polar production
-approval.
+Amended 2026-11-07: unit changes are billed at once (`invoice`), not on the
+renewal. Polar creates no orders after a cancellation, so a deferred
+difference on a subscription canceled before its renewal would never be
+collected; Paddle (`prorated_immediately`) and Stripe (`always_invoice`)
+bill such changes at once for the same reason. A declined card or a
+PAST_DUE subscription falls back to `prorate`, so the deployment stays
+billed without charging a failing card again. A subscription set to end
+refuses new customer deployments, because Polar accepts no unit change on
+it. Rejected: blocking cancellation while a difference is pending (it
+breaks "cancel the way you signed up") and collecting it with a separate
+one-off order (more moving parts for the same result).
+
+Still open before production: Polar production approval.

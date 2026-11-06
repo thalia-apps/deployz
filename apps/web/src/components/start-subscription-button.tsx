@@ -12,16 +12,20 @@ import {
   CHECKOUT_COMPLETE_PARAM,
   createCheckoutIntent,
   fetchSubscriptionStatus,
+  openInNewTab,
 } from '@/lib/billing-checkout';
 
 const ACTIVATION_POLL_MS = 2_000;
 const ACTIVATION_WAIT_MS = 30_000;
+// While the vendor pays in the checkout tab, this page checks less often and
+// for longer: paying takes minutes, not seconds.
+const PAYMENT_POLL_MS = 5_000;
+const PAYMENT_WAIT_MS = 15 * 60_000;
 
-// Starts the subscription: a subscribe-only checkout intent sends the browser
-// to the billing provider's hosted checkout, which returns to this page with
-// ?checkout=complete. The return is not the authority — the webhook is — so
-// after payment this waits until the organization reads ACTIVE, then
-// refreshes the page.
+// Starts the subscription: a subscribe-only checkout intent opens the billing
+// provider's hosted checkout in a new tab, which returns to this page with
+// ?checkout=complete when paid. Neither tab is the authority — the webhook
+// is — so both wait until the organization reads ACTIVE, then refresh.
 export function StartSubscriptionButton({
   children,
   onActivated,
@@ -31,7 +35,7 @@ export function StartSubscriptionButton({
   onActivated?: () => void;
 }) {
   const router = useRouter();
-  const [state, setState] = useState<'idle' | 'opening' | 'activating' | 'delayed'>('idle');
+  const [state, setState] = useState<'idle' | 'opening' | 'paying' | 'activating' | 'delayed'>('idle');
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
 
@@ -50,13 +54,13 @@ export function StartSubscriptionButton({
     url.searchParams.delete('customer_session_token');
     window.history.replaceState(null, '', url);
     setState('activating');
-    void waitForActivation();
+    void waitForActivation(ACTIVATION_POLL_MS, ACTIVATION_WAIT_MS);
   }, []);
 
-  async function waitForActivation(): Promise<void> {
-    const deadline = Date.now() + ACTIVATION_WAIT_MS;
+  async function waitForActivation(pollMs: number, waitMs: number): Promise<void> {
+    const deadline = Date.now() + waitMs;
     while (mounted.current && Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, ACTIVATION_POLL_MS));
+      await new Promise((resolve) => setTimeout(resolve, pollMs));
       const status = await fetchSubscriptionStatus().catch(() => null);
       if (status === 'ACTIVE') {
         onActivated?.();
@@ -71,12 +75,26 @@ export function StartSubscriptionButton({
     setError(null);
     setState('opening');
     try {
-      const intent = await createCheckoutIntent({ returnPath: window.location.pathname });
-      window.location.assign(intent.checkoutUrl);
+      const opened = await openInNewTab(
+        async () => (await createCheckoutIntent({ returnPath: window.location.pathname })).checkoutUrl,
+      );
+      if (opened === 'new-tab') {
+        setState('paying');
+        await waitForActivation(PAYMENT_POLL_MS, PAYMENT_WAIT_MS);
+      }
     } catch (caught) {
       setError(errorMessage(caught));
       setState('idle');
     }
+  }
+
+  if (state === 'paying') {
+    return (
+      <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-busy="true">
+        <Spinner aria-hidden />
+        Complete the payment in the new tab. This page updates when your subscription starts.
+      </p>
+    );
   }
 
   if (state === 'activating') {

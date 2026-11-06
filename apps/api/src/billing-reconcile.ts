@@ -4,7 +4,7 @@ import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { productionDeploymentCounts, subscriptionUnits } from './billing-domain.js';
-import type { PolarBilling } from './polar.js';
+import { PolarApiError, type PolarBilling } from './polar.js';
 
 // Reconciliation. Deployz owns exactly one billing number: how many
 // production deployments are actually live, less the organization's included
@@ -134,6 +134,27 @@ export async function reconcileBilling(
     return result;
   }
 
+  // A subscription set to end at the period end cannot change units on
+  // Polar's side (403 AlreadyCanceledSubscription), and new customer
+  // deployments are refused meanwhile (billing-entitlements.ts). Stamped, so
+  // the safety job does not retry it every pass; resuming the subscription
+  // reconciles again (the webhook path).
+  if (subscription.scheduledChangeAction === 'cancel') {
+    await db
+      .update(schema.billingSubscriptions)
+      .set({ lastReconciledAt: now() })
+      .where(eq(schema.billingSubscriptions.organizationId, organizationId));
+    return {
+      status: 'SKIPPED',
+      action: 'SKIPPED',
+      active,
+      included,
+      expected,
+      provider: null,
+      reason: 'cancellation scheduled',
+    };
+  }
+
   if (!UPDATABLE_STATUSES.has(subscription.status)) {
     const result: ReconcileResult = {
       status: 'SKIPPED',
@@ -160,13 +181,38 @@ export async function reconcileBilling(
       return { status: 'SUCCEEDED', action: 'NONE', active, included, expected, provider };
     }
 
-    // Polar owns the money math: the change applies now, and the prorated
-    // difference (a charge for a deployment that went live mid-cycle, a
-    // credit for one that stopped) lands on the next renewal invoice.
-    await polar.client.updateSubscriptionUnits(subscription.providerSubscriptionId, expected);
+    // Polar owns the money math. The prorated difference is billed NOW
+    // (`invoice`): a charge for a deployment that went live mid-period, a
+    // credit for one that stopped. Nothing is left pending, so a vendor who
+    // cancels before the renewal owes nothing that would never be collected.
+    // When the card is declined (402) the change still lands, with the
+    // difference on the renewal (`prorate`): the deployment is running and
+    // must not go unbilled. A PAST_DUE subscription goes straight to
+    // `prorate`, so a failing card is not charged again on every pass.
+    let note: string | undefined;
+    if (subscription.status === 'PAST_DUE') {
+      await polar.client.updateSubscriptionUnits(subscription.providerSubscriptionId, expected, 'prorate');
+      note = 'subscription past due; the difference is billed at renewal';
+    } else {
+      try {
+        await polar.client.updateSubscriptionUnits(subscription.providerSubscriptionId, expected, 'invoice');
+      } catch (error) {
+        if (!(error instanceof PolarApiError && error.status === 402)) throw error;
+        await polar.client.updateSubscriptionUnits(subscription.providerSubscriptionId, expected, 'prorate');
+        note = 'payment failed; the difference is billed at renewal';
+      }
+    }
 
     const action: ReconcileAction = 'QUANTITY_UPDATED';
-    const result: ReconcileResult = { status: 'SUCCEEDED', action, active, included, expected, provider };
+    const result: ReconcileResult = {
+      status: 'SUCCEEDED',
+      action,
+      active,
+      included,
+      expected,
+      provider,
+      ...(note ? { reason: note } : {}),
+    };
     await recordReconciliation(db, organizationId, result);
     await db
       .update(schema.billingSubscriptions)
@@ -174,6 +220,19 @@ export async function reconcileBilling(
       .where(eq(schema.billingSubscriptions.organizationId, organizationId));
     return result;
   } catch (error) {
+    // Polar set the subscription to end meanwhile (the webhook has not
+    // arrived yet): the same as the scheduled-cancel skip above.
+    if (error instanceof PolarApiError && error.code === 'AlreadyCanceledSubscription') {
+      return {
+        status: 'SKIPPED',
+        action: 'SKIPPED',
+        active,
+        included,
+        expected,
+        provider: null,
+        reason: 'cancellation scheduled',
+      };
+    }
     const result: ReconcileResult = {
       status: 'FAILED',
       action: 'NONE',

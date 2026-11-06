@@ -335,6 +335,39 @@ describe('billing entitlements — free evaluation (billing Phase 7)', () => {
     expect((response.json() as { billingState: string }).billingState).toBe('NOT_STARTED');
   });
 
+  it('6b. PRODUCTION with ACTIVE but set to end -> 402 naming the cancellation; resuming lifts it', async () => {
+    const endingOrg = await signUpAndGetOrg(auth, db, 'ending-subscription@example.com');
+    await setSubscription(db, endingOrg.organizationId, 'ACTIVE');
+    await db
+      .update(schema.billingSubscriptions)
+      .set({ scheduledChangeAction: 'cancel', scheduledChangeAt: new Date('2026-12-07T00:00:00.000Z') })
+      .where(eq(schema.billingSubscriptions.organizationId, endingOrg.organizationId));
+    const application = await insertApplication(db, endingOrg.organizationId);
+    const customer = await insertCustomer(db, endingOrg.organizationId);
+    const create = () =>
+      postJson(
+        app,
+        '/api/deployments',
+        { applicationId: application.id, customerId: customer.id, region: 'us-east-1', deploymentType: 'PRODUCTION' },
+        { cookie: endingOrg.cookie },
+      );
+
+    const blocked = await create();
+    expect(blocked.statusCode, blocked.body).toBe(402);
+    const body = blocked.json() as {
+      error: { code: string; message: string; details?: { subscriptionStatus: unknown; cancelAt: unknown } };
+    };
+    expect(body.error.code).toBe('SUBSCRIPTION_REQUIRED');
+    expect(body.error.message).toContain('set to end');
+    expect(body.error.details).toEqual({ subscriptionStatus: 'ACTIVE', cancelAt: '2026-12-07T00:00:00.000Z' });
+
+    await db
+      .update(schema.billingSubscriptions)
+      .set({ scheduledChangeAction: null, scheduledChangeAt: null })
+      .where(eq(schema.billingSubscriptions.organizationId, endingOrg.organizationId));
+    expect((await create()).statusCode).toBe(201);
+  });
+
   it('7. deploy-link creation without an active subscription -> 402; with ACTIVE -> success', async () => {
     const linkOrg = await signUpAndGetOrg(auth, db, 'deploy-link-entitlements@example.com');
     const application = await insertApplication(db, linkOrg.organizationId);

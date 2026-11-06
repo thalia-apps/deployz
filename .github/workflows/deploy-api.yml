@@ -274,9 +274,10 @@ jobs:
       # POLAR_TOKEN is the only Polar secret. The "Prepare Polar billing" step
       # below finds or creates the product and the webhook endpoint and adds
       # POLAR_PRODUCT_ID and POLAR_WEBHOOK_SECRET to the job environment.
-      # POLAR_ENVIRONMENT is a *variable* and defaults to sandbox.
+      # POLAR_ENVIRONMENT is a *variable*. Unset, it follows the stage:
+      # production for the production environment, sandbox for every other.
       POLAR_TOKEN: ${{ secrets.POLAR_TOKEN }}
-      POLAR_ENVIRONMENT: ${{ vars.POLAR_ENVIRONMENT || 'sandbox' }}
+      POLAR_ENVIRONMENT: ${{ vars.POLAR_ENVIRONMENT || (inputs.environment == 'production' && 'production' || 'sandbox') }}
       # Kill switch for the production-deployment subscription gate. A
       # repository *variable*, not a secret: it carries no credential and ops
       # must be able to see at a glance whether the gate is currently paused.

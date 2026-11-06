@@ -65,11 +65,11 @@ describe('createPolarClient', () => {
     expect(calls[0]!.url.startsWith('https://api.polar.sh/')).toBe(true);
   });
 
-  it('sets the absolute unit count with prorate', async () => {
+  it('sets the absolute unit count with the given proration', async () => {
     const calls = stubFetch(200, { id: 'sub_1', units: 3 });
-    await createPolarClient({ token: 'tok', environment: 'sandbox' }).updateSubscriptionUnits('sub_1', 3);
+    await createPolarClient({ token: 'tok', environment: 'sandbox' }).updateSubscriptionUnits('sub_1', 3, 'invoice');
     expect(calls[0]!.init.method).toBe('PATCH');
-    expect(JSON.parse(calls[0]!.init.body as string)).toEqual({ units: 3, proration_behavior: 'prorate' });
+    expect(JSON.parse(calls[0]!.init.body as string)).toEqual({ units: 3, proration_behavior: 'invoice' });
   });
 
   it('opens a checkout for one product with no discounts or trials', async () => {
@@ -98,7 +98,14 @@ describe('createPolarClient', () => {
     stubFetch(404, { detail: 'Not found' });
     await expect(
       createPolarClient({ token: 'tok', environment: 'sandbox' }).getSubscription('missing'),
-    ).rejects.toMatchObject({ name: 'PolarApiError', status: 404 });
+    ).rejects.toMatchObject({ name: 'PolarApiError', status: 404, code: null });
+  });
+
+  it("carries Polar's error code, e.g. PaymentFailed on a declined unit change", async () => {
+    stubFetch(402, { error: 'PaymentFailed', detail: 'card declined' });
+    await expect(
+      createPolarClient({ token: 'tok', environment: 'sandbox' }).updateSubscriptionUnits('sub_1', 2, 'invoice'),
+    ).rejects.toMatchObject({ name: 'PolarApiError', status: 402, code: 'PaymentFailed' });
   });
 
   it('asks Polar to generate a missing invoice and reports it as not ready', async () => {

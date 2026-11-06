@@ -18,6 +18,32 @@ export interface CreateCheckoutIntentInput {
   returnPath?: string;
 }
 
+/**
+ * Opens a billing provider page (checkout, portal, invoice) in a new tab, so
+ * the vendor keeps their place in Deployz. The tab is opened during the click
+ * (browsers block a window opened after an await) and pointed at the URL once
+ * the API has minted it; it is cut off from this page (`opener = null`). A
+ * browser that blocks the tab gets the page in this tab instead. A failure
+ * closes the empty tab and rethrows.
+ */
+export async function openInNewTab(mintUrl: () => Promise<string>): Promise<'new-tab' | 'same-tab'> {
+  const tab = window.open('', '_blank');
+  let url: string;
+  try {
+    url = await mintUrl();
+  } catch (error) {
+    tab?.close();
+    throw error;
+  }
+  if (!tab) {
+    window.location.assign(url);
+    return 'same-tab';
+  }
+  tab.opener = null;
+  tab.location.href = url;
+  return 'new-tab';
+}
+
 /** The query parameter Polar's success URL carries back to the page. */
 export const CHECKOUT_COMPLETE_PARAM = 'checkout';
 

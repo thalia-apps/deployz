@@ -84,23 +84,39 @@ export interface CreateCheckoutInput {
   successUrl: string;
 }
 
-/** A non-2xx answer from Polar. `status` is the HTTP status. */
+/** A non-2xx answer from Polar. `status` is the HTTP status; `code` is
+ *  Polar's `error` field when the body carries one (`PaymentFailed`,
+ *  `AlreadyCanceledSubscription`, ...). */
 export class PolarApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code: string | null = null,
   ) {
     super(message);
     this.name = 'PolarApiError';
   }
 }
 
+/** How Polar bills a unit change: `invoice` charges (or credits) the
+ *  prorated difference now; `prorate` puts it on the next renewal. */
+export type ProrationBehavior = 'invoice' | 'prorate';
+
+function errorCode(text: string): string | null {
+  try {
+    const body = JSON.parse(text) as { error?: unknown };
+    return typeof body.error === 'string' ? body.error : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The Polar calls Deployz makes. Tests replace this with a double. */
 export interface PolarClient {
   getSubscription(id: string): Promise<PolarSubscription>;
-  /** Sets the ABSOLUTE unit count. The difference is prorated onto the next
-   *  invoice (charge for an increase, credit for a decrease). */
-  updateSubscriptionUnits(id: string, units: number): Promise<PolarSubscription>;
+  /** Sets the ABSOLUTE unit count, billing the prorated difference the way
+   *  `proration` says. */
+  updateSubscriptionUnits(id: string, units: number, proration: ProrationBehavior): Promise<PolarSubscription>;
   createCheckout(input: CreateCheckoutInput): Promise<PolarCheckout>;
   getCheckout(id: string): Promise<PolarCheckout>;
   /** A short-lived, pre-authenticated customer portal URL. */
@@ -134,15 +150,19 @@ export function createPolarClient(config: Pick<PolarConfig, 'token' | 'environme
     });
     const text = await response.text();
     if (!response.ok) {
-      throw new PolarApiError(response.status, `Polar ${method} ${path} answered ${response.status}: ${text.slice(0, 500)}`);
+      throw new PolarApiError(
+        response.status,
+        `Polar ${method} ${path} answered ${response.status}: ${text.slice(0, 500)}`,
+        errorCode(text),
+      );
     }
     return (text ? JSON.parse(text) : null) as T;
   }
 
   return {
     getSubscription: (id) => request('GET', `/v1/subscriptions/${encodeURIComponent(id)}`),
-    updateSubscriptionUnits: (id, units) =>
-      request('PATCH', `/v1/subscriptions/${encodeURIComponent(id)}`, { units, proration_behavior: 'prorate' }),
+    updateSubscriptionUnits: (id, units, proration) =>
+      request('PATCH', `/v1/subscriptions/${encodeURIComponent(id)}`, { units, proration_behavior: proration }),
     createCheckout: (input) =>
       request('POST', '/v1/checkouts/', {
         products: [input.productId],

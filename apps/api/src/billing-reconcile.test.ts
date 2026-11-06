@@ -6,7 +6,7 @@ import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { reconcileBilling } from './billing-reconcile.js';
-import type { PolarBilling } from './polar.js';
+import { PolarApiError, type PolarBilling } from './polar.js';
 
 // Reconciliation pushes the ABSOLUTE unit count — live production
 // deployments beyond the allowance, with a floor of one — onto the Polar
@@ -23,7 +23,11 @@ function fakePolar(options: {
   units?: number | null;
   getError?: Error;
   updateError?: Error;
+  /** Fails only the `invoice` attempt, as a declined card does. */
+  invoiceError?: Error;
   updates?: UpdateCall[];
+  /** The proration behavior of each applied update, in order. */
+  prorations?: string[];
 }): PolarBilling {
   return {
     config: {
@@ -37,9 +41,11 @@ function fakePolar(options: {
         if (options.getError) throw options.getError;
         return { id, status: 'active', units: options.units === undefined ? 1 : options.units };
       },
-      updateSubscriptionUnits: async (subscriptionId: string, units: number) => {
+      updateSubscriptionUnits: async (subscriptionId: string, units: number, proration?: string) => {
         if (options.updateError) throw options.updateError;
+        if (options.invoiceError && proration === 'invoice') throw options.invoiceError;
         options.updates?.push({ subscriptionId, units });
+        options.prorations?.push(proration ?? '');
         return { id: subscriptionId, status: 'active', units };
       },
     } as unknown as PolarBilling['client'],
@@ -112,14 +118,130 @@ describe('reconcileBilling', () => {
     });
   }
 
-  async function addSubscription(status: 'ACTIVE' | 'PAST_DUE' | 'PAUSED' | 'CANCELED'): Promise<void> {
+  async function addSubscription(
+    status: 'ACTIVE' | 'PAST_DUE' | 'PAUSED' | 'CANCELED',
+    scheduledChangeAction: string | null = null,
+  ): Promise<void> {
     await db.insert(schema.billingSubscriptions).values({
       organizationId: ORG,
       providerCustomerId: 'ctm_test_1',
       providerSubscriptionId: 'sub_test_1',
       status,
+      scheduledChangeAction,
+      scheduledChangeAt: scheduledChangeAction ? new Date('2026-12-07T00:00:00.000Z') : null,
     });
   }
+
+  describe('proration', () => {
+    it('charges the prorated difference now (invoice) on an ACTIVE subscription', async () => {
+      await addSubscription('ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      const updates: UpdateCall[] = [];
+      const prorations: string[] = [];
+
+      const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates, prorations }) }, ORG);
+
+      expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'QUANTITY_UPDATED', expected: 2 });
+      expect(result.reason).toBeUndefined();
+      expect(updates).toEqual([{ subscriptionId: 'sub_test_1', units: 2 }]);
+      expect(prorations).toEqual(['invoice']);
+    });
+
+    it('a declined card (402) still applies the change, billed at renewal (prorate), and says so', async () => {
+      await addSubscription('ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      const updates: UpdateCall[] = [];
+      const prorations: string[] = [];
+      const declined = new PolarApiError(402, 'Polar PATCH answered 402', 'PaymentFailed');
+
+      const result = await reconcileBilling(
+        { db, polar: fakePolar({ units: 1, updates, prorations, invoiceError: declined }) },
+        ORG,
+      );
+
+      expect(result).toMatchObject({
+        status: 'SUCCEEDED',
+        action: 'QUANTITY_UPDATED',
+        expected: 2,
+        reason: 'payment failed; the difference is billed at renewal',
+      });
+      expect(updates).toEqual([{ subscriptionId: 'sub_test_1', units: 2 }]);
+      expect(prorations).toEqual(['prorate']);
+      const [row] = await reconciliationRows();
+      expect(row).toMatchObject({ status: 'SUCCEEDED', error: 'payment failed; the difference is billed at renewal' });
+    });
+
+    it('a PAST_DUE subscription is never charged again: prorate straight away', async () => {
+      await addSubscription('PAST_DUE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      const updates: UpdateCall[] = [];
+      const prorations: string[] = [];
+
+      const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates, prorations }) }, ORG);
+
+      expect(result.reason).toBe('subscription past due; the difference is billed at renewal');
+      expect(updates).toEqual([{ subscriptionId: 'sub_test_1', units: 2 }]);
+      expect(prorations).toEqual(['prorate']);
+    });
+
+    it('any other Polar error is FAILED, with no prorate retry', async () => {
+      await addSubscription('ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      const updates: UpdateCall[] = [];
+      const prorations: string[] = [];
+
+      const result = await reconcileBilling(
+        { db, polar: fakePolar({ units: 1, updates, invoiceError: new PolarApiError(500, 'Polar down') }) },
+        ORG,
+      );
+
+      expect(result).toMatchObject({ status: 'FAILED', reason: 'Polar down' });
+      expect(updates).toEqual([]);
+    });
+
+    it('a subscription set to end is SKIPPED without a Polar call, and stamped', async () => {
+      await addSubscription('ACTIVE', 'cancel');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      const updates: UpdateCall[] = [];
+      const prorations: string[] = [];
+
+      const result = await reconcileBilling(
+        { db, polar: fakePolar({ units: 1, updates, getError: new Error('must not be called') }) },
+        ORG,
+      );
+
+      expect(result).toMatchObject({ status: 'SKIPPED', reason: 'cancellation scheduled' });
+      expect(updates).toEqual([]);
+      expect(await reconciliationRows()).toHaveLength(0);
+      const [subscription] = await db.select().from(schema.billingSubscriptions);
+      expect(subscription!.lastReconciledAt).not.toBeNull();
+    });
+
+    it('Polar answering AlreadyCanceledSubscription (webhook not here yet) is SKIPPED, not FAILED', async () => {
+      await addSubscription('ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+
+      const result = await reconcileBilling(
+        {
+          db,
+          polar: fakePolar({
+            units: 1,
+            updateError: new PolarApiError(403, 'Polar PATCH answered 403', 'AlreadyCanceledSubscription'),
+          }),
+        },
+        ORG,
+      );
+
+      expect(result).toMatchObject({ status: 'SKIPPED', reason: 'cancellation scheduled' });
+      expect(await reconciliationRows()).toHaveLength(0);
+    });
+  });
 
   function reconciliationRows() {
     return db

@@ -164,11 +164,13 @@ describe('Polar deploy configuration', () => {
   const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
   const workflow = readFileSync(join(repoRoot, '.github', 'workflows', 'deploy-api.yml'), 'utf8').replace(/\r\n/g, '\n');
 
-  it('binds POLAR_TOKEN from secrets and POLAR_ENVIRONMENT from vars, defaulting to sandbox', () => {
+  it('binds POLAR_TOKEN from secrets and POLAR_ENVIRONMENT from vars, defaulting to the stage', () => {
     const envStart = workflow.indexOf('\n    env:\n');
     const envBlock = workflow.slice(envStart, workflow.indexOf('\n    steps:\n', envStart));
     expect(envBlock).toContain('POLAR_TOKEN: ${{ secrets.POLAR_TOKEN }}');
-    expect(envBlock).toContain("POLAR_ENVIRONMENT: ${{ vars.POLAR_ENVIRONMENT || 'sandbox' }}");
+    expect(envBlock).toContain(
+      "POLAR_ENVIRONMENT: ${{ vars.POLAR_ENVIRONMENT || (inputs.environment == 'production' && 'production' || 'sandbox') }}",
+    );
     expect(workflow).not.toContain('PADDLE_');
   });
 

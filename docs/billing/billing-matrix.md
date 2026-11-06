@@ -92,14 +92,18 @@ one unit ($49 + $19 = $68) (`billing-domain.test.ts`,
 Integration tests: `billing-entitlements.test.ts` (tests 4–9),
 `billing-checkout.test.ts`.
 
-| Action | Evaluation (no row) | ACTIVE | PAST_DUE | PAUSED | CANCELED |
-|---|---|---|---|---|---|
-| New customer deployment (manual / invitation) | 402 → checkout | ✅ | 402 → card form | 402 → portal | 402 → checkout |
-| Start a checkout (`POST /api/billing/checkout`) | ✅ | 409 `SUBSCRIPTION_ALREADY_ACTIVE` | 409 `SUBSCRIPTION_NEEDS_ATTENTION` | 409 `SUBSCRIPTION_NEEDS_ATTENTION` | ✅ (new subscription) |
-| Deploy / rollback / restart / config / destroy an EXISTING deployment | ✅ | ✅ | ✅ | ✅ | ✅ |
-| TEST deployment, analysis, configuration, customers, releases | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Customer portal (`POST /api/billing/portal`) | 409 `NO_SUBSCRIPTION` | ✅ | ✅ | ✅ | ✅ |
-| Billing details and invoice PDFs (`GET /api/billing/account`, `/api/billing/invoices/:id`) | 409 `NO_SUBSCRIPTION` | ✅ | ✅ | ✅ | ✅ |
+| Action | Evaluation (no row) | ACTIVE | ACTIVE, set to end | PAST_DUE | PAUSED | CANCELED |
+|---|---|---|---|---|---|---|
+| New customer deployment (manual / invitation) | 402 → checkout | ✅ | 402 → resume on portal | 402 → card form | 402 → portal | 402 → checkout |
+| Start a checkout (`POST /api/billing/checkout`) | ✅ | 409 `SUBSCRIPTION_ALREADY_ACTIVE` | 409 `SUBSCRIPTION_ALREADY_ACTIVE` | 409 `SUBSCRIPTION_NEEDS_ATTENTION` | 409 `SUBSCRIPTION_NEEDS_ATTENTION` | ✅ (new subscription) |
+| Deploy / rollback / restart / config / destroy an EXISTING deployment | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| TEST deployment, analysis, configuration, customers, releases | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Customer portal (`POST /api/billing/portal`) | 409 `NO_SUBSCRIPTION` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Billing details and invoice PDFs (`GET /api/billing/account`, `/api/billing/invoices/:id`) | 409 `NO_SUBSCRIPTION` | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+"Set to end" is an ACTIVE subscription the vendor canceled on the portal
+(`scheduledChangeAction = cancel`, test 6b): Polar accepts no unit change on
+it, so a new deployment would run unbilled.
 
 Checkout, portal, billing details and invoices need an owner or admin (403
 for a member; `billing-account.test.ts`, `billing-github-roles.test.ts`).
@@ -116,9 +120,12 @@ Payment state never touches running customer infrastructure.
 | No subscription, nothing billable | SKIPPED | SKIPPED | no |
 | No subscription, a live deployment beyond the allowance | SKIPPED | SKIPPED | yes — anomaly |
 | PAUSED / CANCELED, a live deployment beyond the allowance | SKIPPED | SKIPPED | yes — anomaly |
+| ACTIVE, set to end (or Polar answers 403 `AlreadyCanceledSubscription`) | SKIPPED | SKIPPED, "cancellation scheduled" | no — `lastReconciledAt` only |
 | ACTIVE / PAST_DUE, Polar units already match | SUCCEEDED | NONE | no — `lastReconciledAt` only |
-| units differ | SUCCEEDED | QUANTITY_UPDATED (`prorate`) | yes |
-| Polar refused | FAILED | NONE | yes, with reason |
+| ACTIVE, units differ | SUCCEEDED | QUANTITY_UPDATED, billed now (`invoice`) | yes |
+| ACTIVE, units differ, card declined (402 `PaymentFailed`) | SUCCEEDED | QUANTITY_UPDATED, retried with `prorate`; note "payment failed; the difference is billed at renewal" | yes, with the note |
+| PAST_DUE, units differ | SUCCEEDED | QUANTITY_UPDATED with `prorate`; note "subscription past due; ..." | yes, with the note |
+| Polar refused otherwise | FAILED | NONE | yes, with reason |
 
 `ITEM_ADDED` and `ITEM_REMOVED` belong to the Paddle period and are no
 longer produced: the unit price never leaves the subscription.

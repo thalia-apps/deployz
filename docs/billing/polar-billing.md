@@ -128,13 +128,54 @@ Otherwise the event is IGNORED (`organization not found`).
 (`markDeploymentLive`, from the relay write paths). That write returning
 `true` triggers `reconcileBilling`, which reads the live count and the
 organization's included allowance and sets the subscription's `units` to
-`max(live − included, 1)` with `proration_behavior: prorate`. Never a delta:
-running it twice yields the same subscription as once. The first live
-deployment changes nothing: the checkout already bought one unit.
+`max(live − included, 1)`. Never a delta: running it twice yields the same
+subscription as once. The first live deployment changes nothing: the
+checkout already bought one unit.
 
-With `prorate`, the change applies at once and the prorated difference —
-a charge for a deployment that went live mid-period, a credit for one that
-stopped — lands on the next renewal invoice.
+#### Proration: billed now, never left pending
+
+A unit change is billed at once (`proration_behavior: invoice`): a
+deployment that goes live mid-period is charged for the rest of the
+period on a new order, and one that stops is credited the same way. This
+is what Paddle did (`prorated_immediately`) and what Stripe recommends for
+quantity changes that must be collected (`always_invoice`).
+
+The reason is cancellation. Polar puts a deferred (`prorate`) difference on
+the next renewal invoice, but a subscription canceled before its renewal
+has no next invoice: Polar creates no further orders after cancellation,
+so a deferred charge would never be collected. Charging at once leaves
+nothing pending.
+
+Two exceptions keep a running deployment billed without hammering a card:
+
+- **Card declined (402 `PaymentFailed`):** Polar refuses an `invoice`
+  change whose payment fails. Reconcile then applies the same change with
+  `prorate`, so the difference is billed at renewal, and records
+  "payment failed; the difference is billed at renewal" on the ledger row.
+- **PAST_DUE subscription:** reconcile uses `prorate` straight away, so the
+  failing card is not charged again on every safety-job pass; Polar's own
+  dunning collects the renewal.
+
+Only these two paths can leave a difference pending. If such a subscription
+is then canceled before its renewal, that difference is not collected — an
+accepted, bounded loss (at most one period of the affected units).
+
+#### A subscription set to end
+
+When the vendor cancels on the portal, the subscription stays ACTIVE until
+the period ends (`scheduledChangeAction = cancel`). Polar refuses any unit
+change on it (403 `AlreadyCanceledSubscription`), so:
+
+- new customer deployments are refused (402 `SUBSCRIPTION_REQUIRED`,
+  "Your subscription is set to end. Resume it in the billing portal...",
+  with `cancelAt` in `details`) — otherwise they would run unbilled;
+- reconcile skips the subscription (SKIPPED, "cancellation scheduled", no
+  Polar call, `lastReconciledAt` stamped so the safety job does not retry
+  it every pass);
+- existing deployments keep running and stay operable, as always.
+
+Resuming on the portal (`subscription.uncanceled`) clears the schedule; the
+webhook reconciles at once and bills any change since, as above.
 
 ### 4. Not serving → billing pauses; serving again → it resumes
 
@@ -196,6 +237,12 @@ reconciles any ACTIVE/PAST_DUE subscription not checked for an hour.
 - Polar's portal has one entry page with the card form, the invoices and the
   cancel action, so every portal button opens it through a short-lived
   customer session for the organization's own Polar customer id.
+- Every Polar page — checkout, portal, invoice PDF — opens in a new tab, so
+  the vendor keeps their place in Deployz. The tab opens during the click
+  and is pointed at the URL once the API has minted it, without an opener; a
+  browser that blocks it gets the page in the same tab. While the vendor
+  pays in the checkout tab, the billing page waits up to 15 minutes for the
+  subscription to read ACTIVE and then refreshes.
 - For an owner or admin, the subscribed page also shows what Polar holds,
   read live and never stored: the next renewal (date and recurring amount
   before tax; prorated adjustments and tax are added by Polar on the
@@ -309,13 +356,13 @@ more.
 
 Four values reach the API and worker Lambdas (`apps/api/src/env.ts`, the CDK
 allowlist): `POLAR_TOKEN`, `POLAR_WEBHOOK_SECRET`, `POLAR_PRODUCT_ID` and
-`POLAR_ENVIRONMENT` (`sandbox` by default, or `production`). Only one is set
-by hand:
+`POLAR_ENVIRONMENT` (`sandbox` or `production`). Only one is set by hand:
 
 - `POLAR_TOKEN` — a Polar organization access token, a secret on the GitHub
   **environment** (`staging`, `production`), never on the repository.
-- `POLAR_ENVIRONMENT` — a variable on the GitHub environment. Unset means
-  sandbox.
+- `POLAR_ENVIRONMENT` — optional variable on the GitHub environment. Unset,
+  it follows the stage: `production` for the `production` environment,
+  `sandbox` for every other.
 
 The deploy step "Prepare Polar billing" (`.github/workflows/deploy-api.yml`)
 runs `scripts/billing/polar-setup.mjs` when `POLAR_TOKEN` is set. It finds
@@ -359,13 +406,8 @@ TEST deployments are never gated.
 ## Verification status and open items
 
 Verified on the Polar **sandbox** through staging; the PR that made the
-change carries the run log. Production Polar is not configured.
+change carries the run log. `POLAR_TOKEN` is set on `production`; the
+production product and webhook endpoint are created by the first production
+deploy after this change, which then records their ids in `polar-catalog.md`.
 
-Open before production:
-
-- What Polar does with a prorated charge still pending when a subscription
-  is canceled before renewal. Polar documents both the deferred charge and
-  that a canceled subscription creates no further orders; the combination
-  is not verified.
-- Polar production account approval and the production product (created by
-  the same deploy step once `POLAR_TOKEN` is set on `production`).
+Open before production: Polar production account approval.
