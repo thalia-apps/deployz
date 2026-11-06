@@ -61,13 +61,13 @@ function connectorUpdateLine(connector: InstallOverview['connector']): {
       return {
         label: 'Update failed',
         badge: 'destructive',
-        detail: 'The connector stack is in a failed state in AWS. Contact the publisher.',
+        detail: 'The connector stack is in a failed state in AWS. Contact your software provider.',
       };
     default:
       break;
   }
   if (connector.upgradeRequired) {
-    return { label: 'Update required', badge: 'warning', detail: 'The publisher cannot verify updates until you update the connector.' };
+    return { label: 'Update required', badge: 'warning', detail: 'Your software provider cannot verify updates until you update the connector.' };
   }
   if (connector.updateAvailable) return { label: 'Update available', badge: 'warning', detail: null };
   return { label: 'Up to date', badge: 'success', detail: null };
