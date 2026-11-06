@@ -103,7 +103,7 @@ export function ConnectorUpdateDialog({
           {templateUrl ? <li>Enter the Amazon S3 URL below.</li> : null}
           <li>Keep every parameter at its existing value. Do not change RelayCredential or EnrollmentCode.</li>
           <li>
-            Review the changes before you submit. Stop and contact the publisher if a resource shows
+            Review the changes before you submit. Stop and contact your software provider if a resource shows
             Replacement: True, or if a secret is replaced.
           </li>
           <li>Submit the update. This page shows the result when the connector reports the new version.</li>

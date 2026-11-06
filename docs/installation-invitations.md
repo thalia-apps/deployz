@@ -56,6 +56,8 @@ whose Region the vendor fixed before this model existed.
 2. `POST /api/customers/:customerId/invitations` creates the invitation —
    **no deployment row**.
 3. The response reveals the link URL and the one-time token exactly once.
+   The dialog tells the vendor that the customer must sign in with the
+   email address saved on the customer record.
 4. Customer opens the link. The API requires the one-time token in the
    `x-deployz-token` header for a targeted invitation (a missing or wrong
    token is the same 404 as an unknown id). The web transport captures the
@@ -85,7 +87,7 @@ whose Region the vendor fixed before this model existed.
 
 Invitations are not deployments and never touch billing counts.
 
-The dashboard's primary "Create installation" path creates an invitation
+The dashboard's primary "Invite customer" path creates an invitation
 (customer + application + optional recommended Region); the customer opens
 the link, chooses the final Region, and confirms — only that confirmation
 creates the deployment. A `?test=true` deployment stays the vendor's own

@@ -38,6 +38,13 @@ behind the AI boundary are in `docs/decisions/README.md`.
   vendor-set migration or start command that is blank, longer than 4096
   characters or holds a NUL character (the limits the relay applies). A
   vendor confirmation step for auto-filled commands is a post-MVP item.
+- **The verdict is a prediction.** Deployz does not guarantee it. The
+  release criterion of zero false deployable outcomes
+  (`docs/testing/compatibility.md#release-gate`) applies to the tuning and
+  holdout sets only. On blind repositories the outcome was correct for about
+  70% to 83% of repositories, and about 7% to 10% got an outcome that was
+  too lenient. A test deployment is the proof. The application page tells
+  vendors this next to the verdict.
 
 ## The flow
 

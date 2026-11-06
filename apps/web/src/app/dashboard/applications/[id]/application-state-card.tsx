@@ -253,10 +253,15 @@ function DeployabilityOutcomeLine({
   renderAction: (item: ApplicationAction, variant: 'default' | 'outline') => ReactNode;
 }) {
   return (
-    <div data-testid="deployability-outcome" className="flex flex-wrap items-center gap-2 text-sm">
-      <Badge variant={OUTCOME_BADGE[outcome.outcome]}>{outcome.label}</Badge>
-      {outcome.detail ? <span className="text-muted-foreground">{outcome.detail}</span> : null}
-      {outcome.action ? renderAction(outcome.action, 'outline') : null}
+    <div className="flex flex-col gap-1">
+      <div data-testid="deployability-outcome" className="flex flex-wrap items-center gap-2 text-sm">
+        <Badge variant={OUTCOME_BADGE[outcome.outcome]}>{outcome.label}</Badge>
+        {outcome.detail ? <span className="text-muted-foreground">{outcome.detail}</span> : null}
+        {outcome.action ? renderAction(outcome.action, 'outline') : null}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        This result is a prediction. A test deployment confirms it.
+      </p>
     </div>
   );
 }

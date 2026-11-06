@@ -199,7 +199,7 @@ Content and actions depend on the role:
 | | Vendor | Customer |
 | --- | --- | --- |
 | Actions | Retry, fix, Re-analyse, copy prompt for coding agent, copy report for Deployz support | Usually none; the action only when the customer must act |
-| Who acts | Shown when the data establishes it | "{Publisher} has been notified" or the customer's own step |
+| Who acts | Shown when the data establishes it | the customer's own step, or "Contact your software provider" |
 | Technical details | Raw error, events, identifiers | Stack name, installation reference |
 
 Rules:
