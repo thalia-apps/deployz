@@ -330,7 +330,8 @@ The control-plane database (`db.t4g.micro`, PostgreSQL 16, single-AZ) keeps
 automated backups for 14 days and has deletion protection. Automated backups
 stay when the instance is deleted (`deleteAutomatedBackups: false`). A
 point-in-time restore always makes a new instance; it never overwrites the
-old one. The restore has not been drilled on real AWS (owner task, below).
+old one. The storage is encrypted (see *Database encryption*), so a
+restore is encrypted too.
 
 Restore to a new instance:
 
@@ -359,12 +360,49 @@ Restore to a new instance:
 Jobs that were in flight at the restore time are reconciled by the watchdog
 (see [`../deployment-resilience.md`](../deployment-resilience.md)).
 
-Owner task: run this drill once on real AWS and record how long it took.
-The result sets the recovery time that you promise to customers.
+Drill on 2026-11-06 (staging): the point-in-time restore was `available`
+after 20 minutes. Steps 3 to 6 were not drilled.
 
 Multi-AZ is not enabled (MVP): it doubles the instance cost, and the
 recovery from a lost AZ is a point-in-time restore. See
 [`../decisions/README.md`](../decisions/README.md).
+
+## Database encryption
+
+The control-plane databases are encrypted at rest with the AWS managed key
+`alias/aws/rds`. RDS cannot encrypt an instance in place, so on 2026-11-06
+each stage was moved to a restore of an encrypted snapshot copy:
+
+| Stage | Unencrypted snapshot | Encrypted copy (`databaseSnapshot` in `stage.ts`) |
+| --- | --- | --- |
+| production | `deployz-pre-encryption-20261106` | `deployz-encrypted-20261106` |
+| staging | `deployzstaging-pre-encryption-20261106` | `deployzstaging-encrypted-20261106` |
+
+- The `Database` construct is `DatabaseInstanceFromSnapshot`. Do not change
+  or remove `databaseSnapshot`: a new value replaces the database with a new
+  restore of that snapshot, and the data written since is lost.
+- Do not delete the encrypted copies. CloudFormation keeps their names in
+  the instance properties.
+- The database secret keeps its construct id, so the master password did
+  not change.
+
+How the switch was done, for one stage:
+
+1. Take a manual snapshot of the old instance. Copy it with
+   `--kms-key-id alias/aws/rds` to the name in `databaseSnapshot`.
+2. Deploy the stack change. CloudFormation makes a new encrypted instance
+   from the copy and points the database secret at it. Deletion protection
+   stops the delete of the old instance, so the stack ends with a
+   `DELETE_FAILED` event for it. That is expected.
+3. Start new API and worker containers: change and restore the function
+   description of both Lambdas. Warm containers keep the old connection
+   until then.
+4. Check `/health/ready`, sign in, and open one deployment page.
+5. Stop the old instance. Delete it, with a final snapshot, when the new
+   instance is accepted.
+
+Writes to the old instance after the snapshot in step 1 are not in the new
+instance.
 
 ## Database connections
 
@@ -629,9 +667,9 @@ operator can add a subscriber on the topic by hand.
 | Watchdog job sweep failed | 1 or more `watchdog:job-sweep-failed` log lines in 15 minutes | The watchdog could not settle a stuck job. Read the line for the job id, then open that job (see `troubleshooting.md`, *Stuck operations*). |
 | Watchdog relay liveness skipped | 1 or more `watchdog:relay-liveness-skipped` log lines in 15 minutes | No relay sent a heartbeat in the liveness window. Check the API for errors first, then the relay path. Deployments are not marked disconnected while this is true. |
 
-The two watchdog alarms use metric filters on the worker log group. Who is
-on call for these alarms is an owner decision. Until it is made, the alarm
-email address is the only route.
+The two watchdog alarms use metric filters on the worker log group. In
+production `ALERT_EMAIL` is `help@deployz.dev`, the on-call route: each alarm
+sends an email at once (see [`incident-response.md`](incident-response.md)).
 
 The production stack has termination protection. A staging stack does not.
 

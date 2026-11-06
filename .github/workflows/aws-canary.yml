@@ -29,6 +29,11 @@ on:
         type: choice
         default: ''
         options: ['', small, medium, large]
+      region:
+        description: AWS Region of the customer install (the control plane stays in us-east-1)
+        type: choice
+        default: us-east-1
+        options: [us-east-1, us-east-2, us-west-2, eu-west-1, eu-central-1]
       run_id:
         description: Run id (optional — minted when empty)
         type: string
@@ -64,7 +69,8 @@ jobs:
     # Purge can take about 95 minutes).
     timeout-minutes: 300
     env:
-      AWS_REGION: us-east-1
+      AWS_REGION: ${{ inputs.region || 'us-east-1' }}
+      DEPLOYZ_CONTROL_PLANE_REGION: us-east-1
       DEPLOYZ_E2E_ALLOW_REAL_AWS: '1'
       GH_TOKEN: ${{ github.token }}
       # The persistent canary vendor and its own GitHub installation

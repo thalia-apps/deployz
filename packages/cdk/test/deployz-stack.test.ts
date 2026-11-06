@@ -89,6 +89,15 @@ describe('DeployzStack', () => {
     });
   });
 
+  it('restores each stage database from its encrypted snapshot', () => {
+    baseline.hasResourceProperties('AWS::RDS::DBInstance', {
+      DBSnapshotIdentifier: 'deployz-encrypted-20261106',
+    });
+    staging.hasResourceProperties('AWS::RDS::DBInstance', {
+      DBSnapshotIdentifier: 'deployzstaging-encrypted-20261106',
+    });
+  });
+
   it('keeps database backups for 14 days', () => {
     baseline.hasResourceProperties('AWS::RDS::DBInstance', { BackupRetentionPeriod: 14 });
   });

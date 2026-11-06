@@ -26,10 +26,10 @@ import { FilterPattern, LogGroup, MetricFilter } from 'aws-cdk-lib/aws-logs';
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { ComputeType } from 'aws-cdk-lib/aws-codebuild';
 import {
-  Credentials,
-  DatabaseInstance,
   DatabaseInstanceEngine,
+  DatabaseInstanceFromSnapshot,
   PostgresEngineVersion,
+  SnapshotCredentials,
 } from 'aws-cdk-lib/aws-rds';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Key } from 'aws-cdk-lib/aws-kms';
@@ -119,7 +119,12 @@ export class DeployzStack extends Stack {
       description: 'RDS PostgreSQL access',
     });
 
-    const dbInstance = new DatabaseInstance(this, 'Database', {
+    // Restored from an encrypted copy of the first, unencrypted database:
+    // RDS cannot encrypt an instance in place. The restore keeps the storage
+    // encrypted with the snapshot's key. The generated secret keeps its
+    // construct id, so the password stays the same.
+    const dbInstance = new DatabaseInstanceFromSnapshot(this, 'Database', {
+      snapshotIdentifier: names.databaseSnapshot,
       engine: DatabaseInstanceEngine.postgres({
         version: PostgresEngineVersion.VER_16,
       }),
@@ -127,8 +132,7 @@ export class DeployzStack extends Stack {
       vpc: vpc as unknown as IVpc,
       vpcSubnets: { subnetType: SubnetType.PRIVATE_ISOLATED },
       securityGroups: [dbSecurityGroup],
-      credentials: Credentials.fromGeneratedSecret('deployz_admin'),
-      databaseName: 'deployz',
+      credentials: SnapshotCredentials.fromGeneratedSecret('deployz_admin'),
       allocatedStorage: 20,
       maxAllocatedStorage: 100,
       backupRetention: Duration.days(14),

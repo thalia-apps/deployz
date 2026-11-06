@@ -22,8 +22,11 @@ When unsure, use the higher level. Change the level when facts change.
 - The lead finds the cause, decides the fix, and posts the updates.
 - A second administrator helps and reviews risky actions (a restore, a
   rollback, a secret rotation).
-- Who is on call is an owner decision. Until it is made, the alarm email
-  address is the route for alarms.
+- On call: every production alarm goes at once by email to
+  `help@deployz.dev` (`ALERT_EMAIL`). Whoever reads that mailbox first is
+  the lead.
+- Administrators with AWS and GitHub access: the owner,
+  `tejas@deployz.dev` and `sumit@thaliatechnologies.com`.
 
 ## Steps
 
@@ -37,7 +40,7 @@ When unsure, use the higher level. Change the level when facts change.
    start. State what customers see, not the cause. Update at least every
    hour. Close it when the fix is checked.
 4. **Tell the customers and vendors** who are affected:
-   - Send from the team support mailbox.
+   - Send from the support mailbox, `help@deployz.dev`.
    - Say what happened, what is affected, what they must do (often
      nothing), and when the next update comes.
    - For a data or secret exposure, say what data, since when, and what you
@@ -66,5 +69,3 @@ Do not name people as the cause. Name the missing check or the missing guard.
 These do not exist yet and are needed before a public launch:
 
 - A hosted status page.
-- A support mailbox.
-- The on-call rota.
