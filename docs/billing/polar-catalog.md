@@ -33,10 +33,13 @@ subscription migration.
 
 ## Sandbox (staging)
 
+Created 2026-11-07 by the first staging deploy with `POLAR_TOKEN` set, in
+the sandbox organization "Deployz Staging".
+
 | Entity | Id |
 |---|---|
-| Product | Recorded after the first staging deploy with `POLAR_TOKEN` set. |
-| Webhook endpoint | Recorded after the first staging deploy with `POLAR_TOKEN` set. |
+| Product `Deployz` (`deployz_monthly_v1`) | `018a1c78-f981-418d-8d6a-1d56ac571f8c` |
+| Webhook endpoint — `https://api.staging.deployz.dev/api/billing/webhook` | `fd681d8c-7fb3-414a-a326-9767c1b3a8db` |
 
 The deploy log prints both ids. The signing secret is masked and never
 recorded.
