@@ -72,7 +72,7 @@ describe('createPolarClient', () => {
     expect(JSON.parse(calls[0]!.init.body as string)).toEqual({ units: 3, proration_behavior: 'invoice' });
   });
 
-  it('opens a checkout for one product with no discounts or trials', async () => {
+  it('opens a checkout for one product that accepts discount codes and no trials', async () => {
     const calls = stubFetch(201, { id: 'chk_1', url: 'https://sandbox.polar.sh/checkout/x', status: 'open' });
     await createPolarClient({ token: 'tok', environment: 'sandbox' }).createCheckout({
       productId: 'prod_1',
@@ -89,7 +89,7 @@ describe('createPolarClient', () => {
       customer_email: 'owner@example.com',
       metadata: { organizationId: 'org_1', checkoutIntentId: 'intent_1' },
       success_url: 'https://app.example.com/dashboard/settings/billing',
-      allow_discount_codes: false,
+      allow_discount_codes: true,
       allow_trial: false,
     });
   });

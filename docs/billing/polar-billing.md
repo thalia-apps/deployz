@@ -84,8 +84,8 @@ subscription answers **402 `SUBSCRIPTION_REQUIRED`** with the status in
    request that would never have worked.
 3. Parks the request as a `billing_checkout_intents` row and creates ONE
    Polar checkout for the product (`POLAR_PRODUCT_ID`) at **one unit**
-   ($68), with the organization id as the external customer id, discounts
-   and trials off. The success URL is the dashboard page that started it
+   ($68), with the organization id as the external customer id, trials
+   off and discount codes accepted (see "Discount codes"). The success URL is the dashboard page that started it
    (`returnPath`, a `/dashboard/...` path on `WEB_URL`) with
    `?checkout=complete`.
 4. Returns the checkout URL. The web app sends the browser there; no card
@@ -426,11 +426,22 @@ belongs to, so every refund is on file (`billing_provider_events`), and
 IGNORED when no subscription on file matches. The billing page reads the
 refunded amount live from the order (`refunded_amount`).
 
+## Discount codes
+
+The checkout accepts a Polar discount code (`allow_discount_codes`). Only
+codes that Deployz staff create in the Polar dashboard exist; Deployz has
+no discount logic and stores nothing about them. Polar applies the discount
+to the checkout order and, for its duration, to later orders, unit changes
+included. Restrict each code to the Deployz product and give it a
+redemption limit. Use: free production test runs with a real card (a 100%
+`forever` code, one redemption) and the Polar production review.
+
 ## What was deliberately not built
 
-- No trials, discounts, annual prices, tiers, seats, meters or slot
-  purchasing. The one commercial override is the included production
-  deployment allowance above — an integer per organization, never a price.
+- No trials, annual prices, tiers, seats, meters or slot purchasing. The
+  commercial overrides are the included production deployment allowance
+  above — an integer per organization, never a price — and the Polar
+  discount codes below.
 - No billing forms of Deployz's own: cards, addresses and cancellation are
   changed only on Polar's portal. The billing page reads and links; it never
   writes.
@@ -444,9 +455,9 @@ refunded amount live from the order (`refunded_amount`).
 ## Verification status and open items
 
 Verified on the Polar **sandbox** through staging; the PR that made the
-change carries the run log. `POLAR_TOKEN` is set on `production`; the
-production product and webhook endpoint are created by the first production
-deploy after this change, which then records their ids in `polar-catalog.md`.
+change carries the run log. The production product and webhook
+endpoint were created by the first production deploy (2026-11-07);
+`polar-catalog.md` records their ids.
 
 Not reproducible on the sandbox, so covered by unit tests only: a PAST_DUE
 subscription (Polar marks it past due only at a failed renewal).

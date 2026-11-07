@@ -8,8 +8,9 @@ once and finds them again on every later deploy.
 
 ## Pricing model
 
-One monthly recurring USD product, tax-exclusive. No trials, no discounts,
-no annual prices.
+One monthly recurring USD product, tax-exclusive. No trials, no annual
+prices. The checkout accepts discount codes that staff create in the Polar
+dashboard (`polar-billing.md`, "Discount codes").
 
 | Price | Amount | Quantity | What it bills |
 |---|---|---|---|
@@ -46,7 +47,10 @@ recorded.
 
 ## Production
 
-Not configured. To switch it on: set `POLAR_TOKEN` (a production
-organization access token) as a secret and `POLAR_ENVIRONMENT=production`
-as a variable on the `production` GitHub environment, deploy, and record the
-ids the deploy log prints in a section of their own here.
+Created 2026-11-07 by the first production deploy with `POLAR_TOKEN` set
+(release of `7521380e`).
+
+| Entity | Id |
+|---|---|
+| Product `Deployz` (`deployz_monthly_v1`) | `512fd419-f323-46d7-89ea-f920d7ac8fda` |
+| Webhook endpoint — `https://api.deployz.dev/api/billing/webhook` | `d6da5078-3fb0-419c-ae8f-91c55708b9c9` |
