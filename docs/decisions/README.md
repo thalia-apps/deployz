@@ -1788,3 +1788,10 @@ breaks "cancel the way you signed up") and collecting it with a separate
 one-off order (more moving parts for the same result).
 
 Still open before production: Polar production approval.
+
+Amended 2026-11-07: the checkout accepts Polar discount codes. Polar's
+production review tests a live checkout, and a 100% code lets Deployz test
+production with a real card without a charge. Codes exist only when staff
+create them in Polar, so Deployz adds no discount logic. Rejected: paying
+and refunding each test (it charges the card), and a staff-only discount id
+in configuration (more code for the same result).

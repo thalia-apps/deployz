@@ -172,7 +172,7 @@ export function createPolarClient(config: Pick<PolarConfig, 'token' | 'environme
         ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
         metadata: input.metadata,
         success_url: input.successUrl,
-        allow_discount_codes: false,
+        allow_discount_codes: true,
         allow_trial: false,
       }),
     getCheckout: (id) => request('GET', `/v1/checkouts/${encodeURIComponent(id)}`),
