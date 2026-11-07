@@ -26,7 +26,7 @@ The checkout buys one unit ($68). Reconciliation sets the unit count to
 |---|---|---|
 | Product | metadata `deployz_config = deployz_monthly_v1` | name `Deployz`, visibility `private`, the two prices above, unit label "customer deployment(s)" |
 | Webhook endpoint | its URL, `https://<API_DOMAIN_NAME>/api/billing/webhook` | format `raw`, API version `2026-10`, the nine `subscription.*` events `apps/api/src/billing-webhooks.ts` handles |
-| Portal settings | the product's organization | subscription `update_units`, `update_plan` and `pause` off (best effort) |
+| Organization settings | the product's organization | portal subscription `update_units`, `update_plan` and `pause` off; `allow_multiple_subscriptions` on (best effort) |
 
 More than one match stops the deploy. The script never edits a product's
 prices: a new price shape is a new key (`deployz_monthly_v2`) and a
