@@ -239,6 +239,13 @@ describe('migrations', () => {
        VALUES ($1, $2, $3, 'us-east-1', 'PADDLE', 'txn_test_0060', 'PENDING')`,
       [ids.organization_id, ids.application_id, ids.customer_id],
     );
+    // A Paddle intent whose Paddle call failed has no checkout id: it expires too.
+    await client!.query(
+      `INSERT INTO organization (id, name, slug, created_at) VALUES ('org_0060_null', 'No checkout', 'no-checkout', now())`,
+    );
+    await client!.query(
+      `INSERT INTO billing_checkout_intents (organization_id, provider, status) VALUES ('org_0060_null', 'PADDLE', 'PENDING')`,
+    );
     await client!.query(
       `INSERT INTO organization (id, name, slug, created_at) VALUES ('org_0060_polar', 'Polar first', 'polar-first', now())`,
     );
@@ -272,6 +279,11 @@ describe('migrations', () => {
     expect(intents).toHaveLength(1);
     expect(intents[0]?.status).toBe('EXPIRED');
     expect(intents[0]?.resolved_at).not.toBeNull();
+
+    const { rows: nullIntents } = await client!.query<{ status: string }>(
+      `SELECT status FROM billing_checkout_intents WHERE organization_id = 'org_0060_null'`,
+    );
+    expect(nullIntents).toEqual([{ status: 'EXPIRED' }]);
 
     const { rows: polarIntents } = await client!.query<{ status: string }>(
       `SELECT status FROM billing_checkout_intents WHERE organization_id = 'org_0060_polar'`,

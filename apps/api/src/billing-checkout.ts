@@ -305,7 +305,11 @@ export async function completePendingCheckoutIntent(
             ...(checkoutIntentId ? [eq(schema.billingCheckoutIntents.id, checkoutIntentId)] : []),
           ),
         )
-        .limit(1);
+        .limit(1)
+        // Polar sends several ACTIVE events at checkout, and two can be
+        // processed at once: the lock makes the second wait, then find the
+        // intent no longer PENDING, so one payment creates one deployment.
+        .for('update');
       // An ACTIVE subscription with nothing parked on it — a resubscribe, or
       // an intent another delivery already completed.
       if (!intent) return null;
@@ -390,7 +394,12 @@ export async function completePendingCheckoutIntent(
     await db
       .update(schema.billingCheckoutIntents)
       .set({ status: 'FAILED', error: message, resolvedAt: now() })
-      .where(eq(schema.billingCheckoutIntents.id, intentId));
+      .where(
+        and(
+          eq(schema.billingCheckoutIntents.id, intentId),
+          eq(schema.billingCheckoutIntents.status, 'PENDING'),
+        ),
+      );
     return { checkoutIntentId: intentId, status: 'FAILED', error: message };
   }
 }

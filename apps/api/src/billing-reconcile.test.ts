@@ -28,6 +28,11 @@ function fakePolar(options: {
   updates?: UpdateCall[];
   /** The proration behavior of each applied update, in order. */
   prorations?: string[];
+  /** Polar's live status and scheduled cancellation (default: active, none). */
+  status?: string;
+  cancelAtPeriodEnd?: boolean;
+  /** Runs after each applied update, before reconcile re-counts. */
+  afterUpdate?: () => Promise<void>;
 }): PolarBilling {
   return {
     config: {
@@ -39,13 +44,24 @@ function fakePolar(options: {
     client: {
       getSubscription: async (id: string) => {
         if (options.getError) throw options.getError;
-        return { id, status: 'active', units: options.units === undefined ? 1 : options.units };
+        return {
+          id,
+          status: options.status ?? 'active',
+          units: options.units === undefined ? 1 : options.units,
+          cancel_at_period_end: options.cancelAtPeriodEnd ?? false,
+          ends_at: options.cancelAtPeriodEnd ? '2026-02-01T00:00:00Z' : null,
+          current_period_start: '2026-01-01T00:00:00Z',
+          current_period_end: '2026-02-01T00:00:00Z',
+          customer_id: 'cus_test_1',
+          modified_at: '2026-01-15T00:00:00Z',
+        };
       },
       updateSubscriptionUnits: async (subscriptionId: string, units: number, proration?: string) => {
         if (options.updateError) throw options.updateError;
         if (options.invoiceError && proration === 'invoice') throw options.invoiceError;
         options.updates?.push({ subscriptionId, units });
         options.prorations?.push(proration ?? '');
+        await options.afterUpdate?.();
         return { id: subscriptionId, status: 'active', units };
       },
     } as unknown as PolarBilling['client'],
@@ -180,7 +196,10 @@ describe('reconcileBilling', () => {
       const updates: UpdateCall[] = [];
       const prorations: string[] = [];
 
-      const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates, prorations }) }, ORG);
+      const result = await reconcileBilling(
+        { db, polar: fakePolar({ units: 1, updates, prorations, status: 'past_due' }) },
+        ORG,
+      );
 
       expect(result.reason).toBe('subscription past due; the difference is billed at renewal');
       expect(updates).toEqual([{ subscriptionId: 'sub_test_1', units: 2 }]);
@@ -204,7 +223,7 @@ describe('reconcileBilling', () => {
       expect(prorations).toEqual([]);
     });
 
-    it('a subscription set to end is SKIPPED without a Polar call, and stamped', async () => {
+    it('a subscription set to end is SKIPPED without a unit change, and stamped', async () => {
       await addSubscription('ACTIVE', 'cancel');
       await addDeployment('PRODUCTION', 'ACTIVE');
       await addDeployment('PRODUCTION', 'ACTIVE');
@@ -212,7 +231,7 @@ describe('reconcileBilling', () => {
       const prorations: string[] = [];
 
       const result = await reconcileBilling(
-        { db, polar: fakePolar({ units: 1, updates, prorations, getError: new Error('must not be called') }) },
+        { db, polar: fakePolar({ units: 1, updates, prorations, cancelAtPeriodEnd: true }) },
         ORG,
       );
 
@@ -242,6 +261,83 @@ describe('reconcileBilling', () => {
 
       expect(result).toMatchObject({ status: 'SKIPPED', reason: 'cancellation scheduled' });
       expect(await reconciliationRows()).toHaveLength(0);
+    });
+
+    it('repairs a lost cancellation webhook from Polar: set to end locally, SKIPPED, no unit change', async () => {
+      await addSubscription('ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      const updates: UpdateCall[] = [];
+
+      const result = await reconcileBilling(
+        { db, polar: fakePolar({ units: 1, updates, cancelAtPeriodEnd: true }) },
+        ORG,
+      );
+
+      expect(result).toMatchObject({ status: 'SKIPPED', reason: 'cancellation scheduled' });
+      expect(updates).toEqual([]);
+      const [subscription] = await db.select().from(schema.billingSubscriptions);
+      expect(subscription).toMatchObject({ status: 'ACTIVE', scheduledChangeAction: 'cancel' });
+      expect(subscription!.scheduledChangeAt?.toISOString()).toBe('2026-02-01T00:00:00.000Z');
+    });
+
+    it('repairs a lost uncancel webhook from Polar: clears the cancellation and reconciles', async () => {
+      await addSubscription('ACTIVE', 'cancel');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      const updates: UpdateCall[] = [];
+
+      const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates }) }, ORG);
+
+      expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'QUANTITY_UPDATED', expected: 2 });
+      expect(updates).toEqual([{ subscriptionId: 'sub_test_1', units: 2 }]);
+      const [subscription] = await db.select().from(schema.billingSubscriptions);
+      expect(subscription!.scheduledChangeAction).toBeNull();
+    });
+
+    it('repairs a lost revoke webhook from Polar: CANCELED locally, no unit change, anomaly recorded', async () => {
+      await addSubscription('ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      const updates: UpdateCall[] = [];
+
+      const result = await reconcileBilling({ db, polar: fakePolar({ units: 2, updates, status: 'canceled' }) }, ORG);
+
+      expect(result).toMatchObject({ status: 'SKIPPED', reason: 'subscription is CANCELED' });
+      expect(updates).toEqual([]);
+      const [subscription] = await db.select().from(schema.billingSubscriptions);
+      expect(subscription!.status).toBe('CANCELED');
+      expect(await reconciliationRows()).toHaveLength(1);
+    });
+
+    it('a deployment going live during the update is pushed too: the pass re-counts after its own update', async () => {
+      await addSubscription('ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      const updates: UpdateCall[] = [];
+      let raced = false;
+
+      const result = await reconcileBilling(
+        {
+          db,
+          polar: fakePolar({
+            units: 1,
+            updates,
+            afterUpdate: async () => {
+              if (raced) return;
+              raced = true;
+              await addDeployment('PRODUCTION', 'ACTIVE');
+            },
+          }),
+        },
+        ORG,
+      );
+
+      expect(updates).toEqual([
+        { subscriptionId: 'sub_test_1', units: 2 },
+        { subscriptionId: 'sub_test_1', units: 3 },
+      ]);
+      expect(result).toMatchObject({ status: 'SUCCEEDED', action: 'QUANTITY_UPDATED', provider: 1, expected: 3 });
     });
 
     it('a locked subscription (409, Polar is charging it) is FAILED and left unstamped for the next sweep', async () => {
@@ -481,7 +577,7 @@ describe('reconcileBilling', () => {
     await addDeployment('PRODUCTION', 'ACTIVE');
     const updates: UpdateCall[] = [];
 
-    const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates }) }, ORG);
+    const result = await reconcileBilling({ db, polar: fakePolar({ units: 1, updates, status: 'past_due' }) }, ORG);
 
     expect(result.status).toBe('SUCCEEDED');
     expect(updates).toEqual([{ subscriptionId: 'sub_test_1', units: 2 }]);

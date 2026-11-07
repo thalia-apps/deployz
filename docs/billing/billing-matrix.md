@@ -120,7 +120,8 @@ Payment state never touches running customer infrastructure.
 | No subscription, nothing billable | SKIPPED | SKIPPED | no |
 | No subscription, a live deployment beyond the allowance | SKIPPED | SKIPPED | yes — anomaly |
 | PAUSED / CANCELED, a live deployment beyond the allowance | SKIPPED | SKIPPED | yes — anomaly |
-| ACTIVE, set to end (or Polar answers 403 `AlreadyCanceledSubscription`) | SKIPPED | SKIPPED, "cancellation scheduled" | no — `lastReconciledAt` only |
+| ACTIVE, set to end on Polar (or Polar answers 403 `AlreadyCanceledSubscription`) | SKIPPED | SKIPPED, "cancellation scheduled" | no — `lastReconciledAt` only |
+| Local status or schedule differs from Polar's live subscription (a lost or overtaken webhook) | — | the row is repaired from Polar first, then the row above or below applies | as below |
 | ACTIVE / PAST_DUE, Polar units already match | SUCCEEDED | NONE | no — `lastReconciledAt` only |
 | ACTIVE, units differ | SUCCEEDED | QUANTITY_UPDATED, billed now (`invoice`) | yes |
 | ACTIVE, units differ, card declined (402 `PaymentFailed`) | SUCCEEDED | QUANTITY_UPDATED, retried with `prorate`; note "payment failed; the difference is billed at renewal" | yes, with the note |
@@ -129,6 +130,10 @@ Payment state never touches running customer infrastructure.
 
 `ITEM_ADDED` and `ITEM_REMOVED` belong to the Paddle period and are no
 longer produced: the unit price never leaves the subscription.
+
+Each pass reads Polar first (`getSubscription`) and re-counts after its own
+update, pushing again (at most 3 times) when the count moved meanwhile, so
+two passes running at once end at the current count.
 
 Always the ABSOLUTE unit count (`max(active − included, 1)`), never a
 delta: two runs produce the same subscription as one. The result also carries `active` and `included` so the admin
@@ -158,6 +163,7 @@ view and the audit trail can show the three numbers behind `expected`.
 |---|---|---|
 | Missing `webhook-*` headers, invalid signature, or a timestamp more than 5 min off | 401 (Polar retries) | nothing written |
 | Same `webhook-id` again, earlier attempt PROCESSED | 200 | DUPLICATE |
+| Same `webhook-id` again, earlier attempt still RECEIVED | 409 `WEBHOOK_IN_PROGRESS` (Polar retries) | unchanged |
 | Same `webhook-id` again, earlier attempt FAILED or IGNORED | processed again | RECEIVED → … |
 | `order.refunded` for the subscription on file | 200 | PROCESSED, against its organization; no subscription change |
 | `order.refunded` for no subscription on file | 200 | IGNORED (organization not found) |

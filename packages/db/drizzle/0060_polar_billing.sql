@@ -23,4 +23,4 @@ ALTER TABLE "billing_checkout_intents" ALTER COLUMN "provider" TYPE "public"."bi
 ALTER TABLE "billing_checkout_intents" ALTER COLUMN "provider" SET DEFAULT 'POLAR';--> statement-breakpoint
 DROP TYPE "public"."billing_provider_old";--> statement-breakpoint
 UPDATE "billing_subscriptions" SET "status" = 'CANCELED', "scheduled_change_action" = NULL, "scheduled_change_at" = NULL WHERE "provider" = 'PADDLE' AND "status" <> 'CANCELED';--> statement-breakpoint
-UPDATE "billing_checkout_intents" SET "status" = 'EXPIRED', "resolved_at" = now() WHERE "status" = 'PENDING' AND "provider_transaction_id" LIKE 'txn\_%';
+UPDATE "billing_checkout_intents" SET "status" = 'EXPIRED', "resolved_at" = now() WHERE "status" = 'PENDING' AND ("provider_transaction_id" IS NULL OR "provider_transaction_id" LIKE 'txn\_%');

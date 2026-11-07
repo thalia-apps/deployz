@@ -54,10 +54,12 @@ export function StartSubscriptionButton({
     url.searchParams.delete('customer_session_token');
     window.history.replaceState(null, '', url);
     setState('activating');
-    void waitForActivation(ACTIVATION_POLL_MS, ACTIVATION_WAIT_MS);
+    void waitForActivation(ACTIVATION_POLL_MS, ACTIVATION_WAIT_MS).then((activated) => {
+      if (!activated && mounted.current) setState('delayed');
+    });
   }, []);
 
-  async function waitForActivation(pollMs: number, waitMs: number): Promise<void> {
+  async function waitForActivation(pollMs: number, waitMs: number): Promise<boolean> {
     const deadline = Date.now() + waitMs;
     while (mounted.current && Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, pollMs));
@@ -65,10 +67,10 @@ export function StartSubscriptionButton({
       if (status === 'ACTIVE') {
         onActivated?.();
         router.refresh();
-        return;
+        return true;
       }
     }
-    if (mounted.current) setState('delayed');
+    return false;
   }
 
   async function onClick(): Promise<void> {
@@ -80,7 +82,9 @@ export function StartSubscriptionButton({
       );
       if (opened === 'new-tab') {
         setState('paying');
-        await waitForActivation(PAYMENT_POLL_MS, PAYMENT_WAIT_MS);
+        // No payment arrived in the wait: offer the button again, never a
+        // "payment received" the vendor did not make.
+        if (!(await waitForActivation(PAYMENT_POLL_MS, PAYMENT_WAIT_MS)) && mounted.current) setState('idle');
       }
     } catch (caught) {
       setError(errorMessage(caught));

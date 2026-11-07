@@ -156,8 +156,12 @@ type SubscriptionSnapshotResult =
  *   accepted when the stored subscription is CANCELED (a resubscribe creates
  *   a new subscription); otherwise it is rejected, which is what stops a
  *   second active subscription from overwriting the first.
+ *
+ * The row is read FOR UPDATE, so two deliveries processed at once apply in
+ * turn and the regression guard sees the other's write. Reconciliation also
+ * calls this to repair the row from Polar's live subscription.
  */
-async function applySubscriptionSnapshot(
+export async function applySubscriptionSnapshot(
   tx: RuntimeDb,
   organizationId: string,
   data: PolarSubscription,
@@ -172,7 +176,8 @@ async function applySubscriptionSnapshot(
     .select()
     .from(schema.billingSubscriptions)
     .where(eq(schema.billingSubscriptions.organizationId, organizationId))
-    .limit(1);
+    .limit(1)
+    .for('update');
 
   if (existing) {
     if (existing.lastProviderEventAt && existing.lastProviderEventAt > occurredAt) {
@@ -285,6 +290,12 @@ export async function handlePolarWebhook(
       .from(schema.billingProviderEvents)
       .where(eq(schema.billingProviderEvents.providerEventId, providerEventId))
       .limit(1);
+    // Still RECEIVED: another attempt is processing it, or crashed mid-way.
+    // Not a 2xx, so Polar retries; the safety job releases a crashed attempt
+    // as FAILED after 10 minutes, and a later retry processes it.
+    if (existing?.processingStatus === 'RECEIVED') {
+      throw new ApiError(409, 'WEBHOOK_IN_PROGRESS', 'This delivery is still being processed');
+    }
     if (!existing || (existing.processingStatus !== 'FAILED' && existing.processingStatus !== 'IGNORED')) {
       return { outcome: 'DUPLICATE' };
     }

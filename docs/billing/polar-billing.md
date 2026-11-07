@@ -174,12 +174,22 @@ change on it (403 `AlreadyCanceledSubscription`), so:
   "Your subscription is set to end. Resume it in the billing portal...",
   with `cancelAt` in `details`) — otherwise they would run unbilled;
 - reconcile skips the subscription (SKIPPED, "cancellation scheduled", no
-  Polar call, `lastReconciledAt` stamped so the safety job does not retry
+  unit change, `lastReconciledAt` stamped so the safety job does not retry
   it every pass);
-- existing deployments keep running and stay operable, as always.
+- existing deployments keep running and stay operable, as always. One that
+  resumes from PAUSED in this window runs unbilled until the period ends:
+  an accepted, bounded loss.
 
 Resuming on the portal (`subscription.uncanceled`) clears the schedule; the
 webhook reconciles at once and bills any change since, as above.
+
+Polar is the source of truth for the status and the schedule. Every
+reconcile reads the live subscription first and, when the local row
+disagrees (a webhook was lost, or an older delivery overtook a newer one),
+writes what Polar says through the webhook's own snapshot code. So the
+hourly safety pass repairs a missed cancel, uncancel or revoke. Webhook
+deliveries for one organization apply one at a time (row lock), and so do
+the activations that turn a paid checkout into its parked deployment.
 
 ### 4. Not serving → billing pauses; serving again → it resumes
 

@@ -745,6 +745,27 @@ describe('POST /api/billing/webhook (Polar)', () => {
     expect(rows).toHaveLength(0);
   });
 
+  it('answers 409 (Polar retries) while an earlier attempt of the delivery is still RECEIVED', async () => {
+    await db.insert(schema.billingProviderEvents).values({
+      provider: 'POLAR',
+      providerEventId: 'msg_test_in_progress',
+      eventType: 'subscription.updated',
+      occurredAt: new Date(),
+      processingStatus: 'RECEIVED',
+    });
+    const signed = signedWebhook(
+      WEBHOOK_SECRET,
+      'msg_test_in_progress',
+      subscriptionEvent({ type: 'subscription.updated', timestamp: new Date().toISOString(), status: 'active' }),
+    );
+
+    const response = await post(signed.headers, signed.body);
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ error: { code: 'WEBHOOK_IN_PROGRESS' } });
+    expect((await getEventRow(db, 'msg_test_in_progress'))?.processingStatus).toBe('RECEIVED');
+  });
+
   describe('order.refunded', () => {
     function refundEvent(subscriptionId: string | null): Record<string, unknown> {
       return {
