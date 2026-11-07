@@ -1235,7 +1235,11 @@ export interface BillingSweepResult {
  *  3. Re-checks subscriptions whose quantity has not been reconciled for an
  *     hour. This is what lets the request path skip reconciling on every
  *     harmless transition: drift is bounded by this pass, not by hoping no
- *     call was ever missed.
+ *     call was ever missed. A subscription whose last reconcile FAILED (for
+ *     example Polar's 409 SubscriptionLocked while it charges the card) is
+ *     re-checked on the next pass: a failed pass never stamps
+ *     `lastReconciledAt`, so a FAILED ledger row newer than it is a pending
+ *     retry.
  *
  * Never throws for one organization's sake: each reconcile is independent and
  * records its own outcome.
@@ -1319,6 +1323,10 @@ export async function sweepBilling(
             schema.billingSubscriptions.lastReconciledAt,
             new Date(now.getTime() - RECONCILE_STALE_AFTER_MS),
           ),
+          sql`exists (select 1 from ${schema.billingReconciliationEvents} e
+            where e.organization_id = ${schema.billingSubscriptions.organizationId}
+              and e.status = 'FAILED'
+              and e.created_at > ${schema.billingSubscriptions.lastReconciledAt})`,
         ),
       ),
     );

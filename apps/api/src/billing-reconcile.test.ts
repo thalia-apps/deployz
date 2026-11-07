@@ -243,6 +243,49 @@ describe('reconcileBilling', () => {
       expect(result).toMatchObject({ status: 'SKIPPED', reason: 'cancellation scheduled' });
       expect(await reconciliationRows()).toHaveLength(0);
     });
+
+    it('a locked subscription (409, Polar is charging it) is FAILED and left unstamped for the next sweep', async () => {
+      await addSubscription('ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      const updates: UpdateCall[] = [];
+      const prorations: string[] = [];
+      const locked = new PolarApiError(409, 'Polar PATCH answered 409', 'SubscriptionLocked');
+
+      const result = await reconcileBilling(
+        { db, polar: fakePolar({ units: 1, updates, prorations, invoiceError: locked }) },
+        ORG,
+      );
+
+      expect(result).toMatchObject({ status: 'FAILED', action: 'NONE', expected: 2, reason: 'Polar PATCH answered 409' });
+      expect(updates).toEqual([]);
+      expect(prorations).toEqual([]);
+      const [row] = await reconciliationRows();
+      expect(row).toMatchObject({ status: 'FAILED', error: 'Polar PATCH answered 409' });
+      const [subscription] = await db.select().from(schema.billingSubscriptions);
+      expect(subscription!.lastReconciledAt).toBeNull();
+    });
+
+    it('a declined card whose prorate retry also fails is FAILED and left unstamped', async () => {
+      await addSubscription('ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+      await addDeployment('PRODUCTION', 'ACTIVE');
+
+      const result = await reconcileBilling(
+        {
+          db,
+          polar: fakePolar({
+            units: 1,
+            updateError: new PolarApiError(402, 'Polar PATCH answered 402', 'PaymentFailed'),
+          }),
+        },
+        ORG,
+      );
+
+      expect(result).toMatchObject({ status: 'FAILED', reason: 'Polar PATCH answered 402' });
+      const [subscription] = await db.select().from(schema.billingSubscriptions);
+      expect(subscription!.lastReconciledAt).toBeNull();
+    });
   });
 
   function reconciliationRows() {

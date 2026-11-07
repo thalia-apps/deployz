@@ -6,6 +6,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
+import { PolarApiError } from '@deployz/api/polar';
+
 import { sweepBilling, sweepRelayLiveness } from '../src/lambda/worker.js';
 
 // The billing safety net. Every billing write in the request path is
@@ -197,6 +199,27 @@ describe('sweepBilling', () => {
   it('leaves a freshly reconciled subscription alone', async () => {
     const result = await sweepBilling(db, fakePolar());
     expect(result.reconciled).toBe(0);
+  });
+
+  it('retries a reconcile that failed (Polar 409 SubscriptionLocked) on the next pass, not an hour later', async () => {
+    const polarState = { units: 3 };
+    const locked = fakePolar([], polarState);
+    (locked.client as { updateSubscriptionUnits: unknown }).updateSubscriptionUnits = async () => {
+      throw new PolarApiError(409, 'Polar PATCH answered 409', 'SubscriptionLocked');
+    };
+    const inTwoHours = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+    const failed = await sweepBilling(db, locked, inTwoHours);
+    expect(failed.reconciled).toBe(1);
+    expect(polarState.units).toBe(3);
+
+    const updates: number[] = [];
+    const retried = await sweepBilling(db, fakePolar(updates, polarState));
+    expect(retried.reconciled).toBe(1);
+    expect(updates).toEqual([1]);
+
+    const settled = await sweepBilling(db, fakePolar());
+    expect(settled.reconciled).toBe(0);
   });
 });
 
