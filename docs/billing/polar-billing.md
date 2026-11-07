@@ -84,7 +84,7 @@ subscription answers **402 `SUBSCRIPTION_REQUIRED`** with the status in
    request that would never have worked.
 3. Parks the request as a `billing_checkout_intents` row and creates ONE
    Polar checkout for the product (`POLAR_PRODUCT_ID`) at **one unit**
-   ($68), with the organization id as the external customer id, trials
+   ($68, locked with `min_units` = `max_units`, so the buyer cannot change it), with the organization id as the external customer id, trials
    off and discount codes accepted (see "Discount codes"). The success URL is the dashboard page that started it
    (`returnPath`, a `/dashboard/...` path on `WEB_URL`) with
    `?checkout=complete`.
