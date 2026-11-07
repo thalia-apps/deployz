@@ -248,7 +248,7 @@ function SubscribeCard({
   canManage: boolean;
   billingEnabled: boolean;
 }) {
-  const included = billing.productionDeployments.included;
+  const { included, units } = billing.productionDeployments;
   return (
     <Card data-testid="billing-plan">
       <CardHeader>
@@ -294,13 +294,22 @@ function SubscribeCard({
             </div>
           ) : null}
           <Separator />
-          <p className="text-muted-foreground">
-            You pay {formatDollars(billing.base + billing.deploymentPrice)} today, then monthly. It
-            includes your first customer deployment.{' '}
-            {included > 0
-              ? `Each live customer deployment beyond the ${included} included, and beyond the first, adds ${formatDollars(billing.deploymentPrice)}/month.`
-              : `Each further customer deployment adds ${formatDollars(billing.deploymentPrice)}/month only while it is live.`}
-          </p>
+          {units > 1 ? (
+            // A restart with deployments still live bills all of them from today.
+            <p className="text-muted-foreground">
+              You pay {formatDollars(billing.base + units * billing.deploymentPrice)} today for your{' '}
+              {units} billed customer deployments, then monthly. Each customer deployment adds{' '}
+              {formatDollars(billing.deploymentPrice)}/month only while it is live.
+            </p>
+          ) : (
+            <p className="text-muted-foreground">
+              You pay {formatDollars(billing.base + billing.deploymentPrice)} today, then monthly. It
+              includes your first customer deployment.{' '}
+              {included > 0
+                ? `Each live customer deployment beyond the ${included} included, and beyond the first, adds ${formatDollars(billing.deploymentPrice)}/month.`
+                : `Each further customer deployment adds ${formatDollars(billing.deploymentPrice)}/month only while it is live.`}
+            </p>
+          )}
         </div>
       </CardContent>
       <CardFooter>

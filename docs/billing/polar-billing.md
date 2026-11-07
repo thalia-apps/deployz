@@ -140,11 +140,14 @@ period on a new order, and one that stops is credited the same way. This
 is what Paddle did (`prorated_immediately`) and what Stripe recommends for
 quantity changes that must be collected (`always_invoice`).
 
-The reason is cancellation. Polar puts a deferred (`prorate`) difference on
-the next renewal invoice, but a subscription canceled before its renewal
-has no next invoice: Polar creates no further orders after cancellation,
-so a deferred charge would never be collected. Charging at once leaves
-nothing pending.
+The reason is that a deferred (`prorate`) difference waits for a later
+order. Polar puts it on the next renewal invoice, nets it into the next
+unit change's order, or, for a subscription canceled at the end of its
+period, takes it as a final charge when the period ends (seen on the
+sandbox, 2026-11-07). A subscription that staff cancel immediately (Polar
+dashboard, "Immediately") gets no final order, so a difference still
+pending then is dropped. Charging at once leaves nothing pending and gives
+the vendor one order for each change.
 
 Two exceptions keep a running deployment billed without hammering a card:
 
@@ -156,9 +159,10 @@ Two exceptions keep a running deployment billed without hammering a card:
   failing card is not charged again on every safety-job pass; Polar's own
   dunning collects the renewal.
 
-Only these two paths can leave a difference pending. If such a subscription
-is then canceled before its renewal, that difference is not collected — an
-accepted, bounded loss (at most one period of the affected units).
+Only these two paths can leave a difference pending. Polar collects it at
+the next order: a renewal, a later unit change, or the final charge of a
+period-end cancellation. Only an immediate cancellation by staff drops it,
+an accepted, bounded loss (at most one period of the affected units).
 
 #### A subscription set to end
 
@@ -433,5 +437,8 @@ Verified on the Polar **sandbox** through staging; the PR that made the
 change carries the run log. `POLAR_TOKEN` is set on `production`; the
 production product and webhook endpoint are created by the first production
 deploy after this change, which then records their ids in `polar-catalog.md`.
+
+Not reproducible on the sandbox, so covered by unit tests only: a PAST_DUE
+subscription (Polar marks it past due only at a failed renewal).
 
 Open before production: Polar production account approval.

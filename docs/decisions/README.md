@@ -1776,9 +1776,9 @@ model bills empty capacity and needs purchase, reduction and reservation
 flows that the automatic count does not.
 
 Amended 2026-11-07: unit changes are billed at once (`invoice`), not on the
-renewal. Polar creates no orders after a cancellation, so a deferred
-difference on a subscription canceled before its renewal would never be
-collected; Paddle (`prorated_immediately`) and Stripe (`always_invoice`)
+renewal. A deferred difference waits for a later order (the renewal, the
+next unit change, or the final charge of a period-end cancellation) and is
+dropped when staff cancel a subscription immediately; Paddle (`prorated_immediately`) and Stripe (`always_invoice`)
 bill such changes at once for the same reason. A declined card or a
 PAST_DUE subscription falls back to `prorate`, so the deployment stays
 billed without charging a failing card again. A subscription set to end
