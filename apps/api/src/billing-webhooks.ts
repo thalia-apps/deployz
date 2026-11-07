@@ -5,7 +5,13 @@ import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { ApiError } from './errors.js';
-import { verifyPolarWebhook, type PolarBilling, type PolarSubscription, type WebhookHeaders } from './polar.js';
+import {
+  verifyPolarWebhook,
+  type PolarBilling,
+  type PolarOrder,
+  type PolarSubscription,
+  type WebhookHeaders,
+} from './polar.js';
 
 // Webhook verification, dedupe, ordering and subscription-state projection
 // (docs/billing/polar-billing.md). Reuses the raw-body carve-out in server.ts
@@ -33,8 +39,9 @@ export type WebhookOutcome =
   | { outcome: 'IGNORED' };
 
 // Every subscription event carries the full subscription. The endpoint is
-// subscribed to these only (scripts/billing/polar-setup.mjs); anything else
-// that arrives is recorded IGNORED.
+// subscribed to these and to REFUND_EVENT only
+// (scripts/billing/polar-setup.mjs); anything else that arrives is recorded
+// IGNORED.
 const SUBSCRIPTION_EVENTS: ReadonlySet<string> = new Set([
   'subscription.created',
   'subscription.active',
@@ -47,10 +54,30 @@ const SUBSCRIPTION_EVENTS: ReadonlySet<string> = new Set([
   'subscription.revoked',
 ]);
 
+// A refund (full or partial) of one order. It changes no subscription state:
+// the subscription keeps running, and ending it is a separate cancellation in
+// Polar, which arrives as subscription events. The delivery is recorded
+// against the organization, so every refund is on file.
+const REFUND_EVENT = 'order.refunded';
+
 interface PolarEvent {
   type: string;
   timestamp: string;
-  data: PolarSubscription;
+  data: PolarSubscription | PolarOrder;
+}
+
+/** The organization whose subscription on file is `subscriptionId`. */
+async function organizationForSubscription(
+  tx: RuntimeDb,
+  subscriptionId: string | null,
+): Promise<string | undefined> {
+  if (!subscriptionId) return undefined;
+  const [row] = await tx
+    .select({ organizationId: schema.billingSubscriptions.organizationId })
+    .from(schema.billingSubscriptions)
+    .where(eq(schema.billingSubscriptions.providerSubscriptionId, subscriptionId))
+    .limit(1);
+  return row?.organizationId;
 }
 
 /** The checkout intent whose Polar checkout created this subscription. */
@@ -88,12 +115,8 @@ async function resolveOrganizationId(
   productId: string,
   intent: { organizationId: string } | undefined,
 ): Promise<string | undefined> {
-  const [existing] = await tx
-    .select({ organizationId: schema.billingSubscriptions.organizationId })
-    .from(schema.billingSubscriptions)
-    .where(eq(schema.billingSubscriptions.providerSubscriptionId, data.id))
-    .limit(1);
-  if (existing) return existing.organizationId;
+  const existing = await organizationForSubscription(tx, data.id);
+  if (existing) return existing;
   if (intent && data.product_id === productId) return intent.organizationId;
   return undefined;
 }
@@ -283,19 +306,30 @@ export async function handlePolarWebhook(
 
   try {
     const outcome = await db.transaction(async (tx) => {
+      if (event.type === REFUND_EVENT) {
+        const order = event.data as PolarOrder;
+        const organizationId = await organizationForSubscription(tx, order.subscription_id);
+        if (!organizationId) {
+          await markEvent(tx, eventRowId, 'IGNORED', now(), undefined, 'organization not found');
+          return { outcome: 'IGNORED' } as const;
+        }
+        await markEvent(tx, eventRowId, 'PROCESSED', now(), organizationId);
+        return { outcome: 'PROCESSED' } as const;
+      }
       if (!SUBSCRIPTION_EVENTS.has(event.type)) {
         await markEvent(tx, eventRowId, 'IGNORED', now(), undefined);
         return { outcome: 'IGNORED' } as const;
       }
 
-      const intent = await intentForCheckout(tx, event.data.checkout_id);
-      const organizationId = await resolveOrganizationId(tx, event.data, polar.config.productId, intent);
+      const data = event.data as PolarSubscription;
+      const intent = await intentForCheckout(tx, data.checkout_id);
+      const organizationId = await resolveOrganizationId(tx, data, polar.config.productId, intent);
       if (!organizationId) {
         await markEvent(tx, eventRowId, 'IGNORED', now(), undefined, 'organization not found');
         return { outcome: 'IGNORED' } as const;
       }
 
-      const result = await applySubscriptionSnapshot(tx, organizationId, event.data, occurredAt);
+      const result = await applySubscriptionSnapshot(tx, organizationId, data, occurredAt);
       await markEvent(
         tx,
         eventRowId,

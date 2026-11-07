@@ -78,6 +78,7 @@ export interface BillingAccount {
       status: 'paid' | 'pending' | 'refunded' | 'partially_refunded';
       billedAt: string | null;
       invoiceNumber: string | null;
+      refundedAmount: string;
     }
   >;
 }

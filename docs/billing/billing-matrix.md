@@ -125,7 +125,7 @@ Payment state never touches running customer infrastructure.
 | ACTIVE, units differ | SUCCEEDED | QUANTITY_UPDATED, billed now (`invoice`) | yes |
 | ACTIVE, units differ, card declined (402 `PaymentFailed`) | SUCCEEDED | QUANTITY_UPDATED, retried with `prorate`; note "payment failed; the difference is billed at renewal" | yes, with the note |
 | PAST_DUE, units differ | SUCCEEDED | QUANTITY_UPDATED with `prorate`; note "subscription past due; ..." | yes, with the note |
-| Polar refused otherwise | FAILED | NONE | yes, with reason |
+| Polar refused otherwise (409 `SubscriptionLocked` included) | FAILED | NONE | yes, with reason; `lastReconciledAt` not stamped, so the next safety-job pass retries |
 
 `ITEM_ADDED` and `ITEM_REMOVED` belong to the Paddle period and are no
 longer produced: the unit price never leaves the subscription.
@@ -159,7 +159,9 @@ view and the audit trail can show the three numbers behind `expected`.
 | Missing `webhook-*` headers, invalid signature, or a timestamp more than 5 min off | 401 (Polar retries) | nothing written |
 | Same `webhook-id` again, earlier attempt PROCESSED | 200 | DUPLICATE |
 | Same `webhook-id` again, earlier attempt FAILED or IGNORED | processed again | RECEIVED → … |
-| Not a `subscription.*` event | 200 | IGNORED |
+| `order.refunded` for the subscription on file | 200 | PROCESSED, against its organization; no subscription change |
+| `order.refunded` for no subscription on file | 200 | IGNORED (organization not found) |
+| Any other event that is not `subscription.*` | 200 | IGNORED |
 | Subscription not on file, and its `checkout_id` is no intent's checkout or its product is not `POLAR_PRODUCT_ID` | 200 | IGNORED (organization not found) |
 | Older `timestamp` than what is on file | 200 | IGNORED (stale) |
 | Different subscription id while stored one is not CANCELED | 200 | IGNORED (mismatch) |

@@ -30,6 +30,7 @@ const WEBHOOK_EVENTS = [
   'subscription.paused',
   'subscription.resumed',
   'subscription.revoked',
+  'order.refunded',
 ];
 
 function fail(message) {

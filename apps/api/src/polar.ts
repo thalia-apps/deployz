@@ -58,6 +58,7 @@ export interface PolarOrder {
   status: string;
   paid: boolean;
   total_amount: number;
+  refunded_amount: number;
   currency: string;
   invoice_number: string | null;
   is_invoice_generated: boolean;

@@ -219,7 +219,12 @@ schedule, closes the gaps that leaves: promotes a READY production deployment
 still NOT_STARTED (signal: the persisted `step_timings.READY`), pauses and
 resumes live deployments with their serving state (step 4), releases
 webhook rows abandoned in RECEIVED so Polar's redelivery is processed, and
-reconciles any ACTIVE/PAST_DUE subscription not checked for an hour.
+reconciles any ACTIVE/PAST_DUE subscription not checked for an hour. A
+subscription whose last reconcile FAILED is reconciled again on the next
+pass: a failed pass never stamps `lastReconciledAt`, so a FAILED ledger row
+newer than it is a pending retry. That covers Polar's short 409
+`SubscriptionLocked` while it charges the card, so a unit change waits at
+most 15 minutes, not an hour.
 
 ### 7. Paying, managing, lapsing
 
@@ -252,7 +257,9 @@ reconciles any ACTIVE/PAST_DUE subscription not checked for an hour.
   `apps/api/src/billing-account.ts`). Orders are scoped by the
   organization's subscription id; an order of another subscription answers
   404. A credit for a deployment that stopped mid-period is a negative
-  order and is listed as "Credit". Polar generates an invoice on request: the first download starts it
+  order and is listed as "Credit". A refunded order stays on the list as
+  "Refunded" or "Partly refunded", with the refunded amount under its
+  total, and keeps its invoice PDF. Polar generates an invoice on request: the first download starts it
   and answers 409 `INVOICE_NOT_READY`; a retry a moment later gets the PDF.
   A member sees that only an owner or admin can see payments and invoices.
   When Polar fails, the page shows an inline alert and keeps the rest.
@@ -388,6 +395,22 @@ keep running (`apps/api/src/env.ts`, `billing-entitlements.ts`).
 With no token, checkout answers `503 BILLING_DISABLED` and creating a
 PRODUCTION deployment is refused with `402` unless enforcement is paused.
 TEST deployments are never gated.
+
+### 8. Refunds
+
+Refunds are issued by Deployz staff in the Polar dashboard (or
+`POST /v1/refunds/`), never by the vendor. A refund, full or partial,
+changes nothing in Deployz's subscription state: the subscription keeps
+running and renews as before. To end the service with the refund, also
+cancel (revoke) the subscription in Polar; that arrives as
+`subscription.canceled` / `subscription.revoked` and is handled as any
+lapse (step 7).
+
+The webhook endpoint is subscribed to `order.refunded`. The delivery is
+recorded PROCESSED against the organization whose subscription the order
+belongs to, so every refund is on file (`billing_provider_events`), and
+IGNORED when no subscription on file matches. The billing page reads the
+refunded amount live from the order (`refunded_amount`).
 
 ## What was deliberately not built
 

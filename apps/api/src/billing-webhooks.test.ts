@@ -745,6 +745,65 @@ describe('POST /api/billing/webhook (Polar)', () => {
     expect(rows).toHaveLength(0);
   });
 
+  describe('order.refunded', () => {
+    function refundEvent(subscriptionId: string | null): Record<string, unknown> {
+      return {
+        type: 'order.refunded',
+        timestamp: new Date().toISOString(),
+        data: {
+          id: 'ord_test_refund',
+          created_at: '2026-01-15T00:00:00Z',
+          status: 'partially_refunded',
+          paid: true,
+          total_amount: 2275,
+          refunded_amount: 1000,
+          currency: 'usd',
+          invoice_number: '2026-00003',
+          is_invoice_generated: true,
+          subscription_id: subscriptionId,
+          description: 'Deployz',
+        },
+      };
+    }
+
+    it("records a refund against the subscription's organization and changes no subscription state", async () => {
+      const org = await signUpAndGetOrg(auth, db, nextEmail());
+      const lastEventAt = new Date('2026-01-10T00:00:00Z');
+      await db.insert(schema.billingSubscriptions).values({
+        organizationId: org.organizationId,
+        providerCustomerId: 'cus_test_refund',
+        providerSubscriptionId: 'sub_test_refund',
+        status: 'ACTIVE',
+        lastProviderEventAt: lastEventAt,
+      });
+
+      const result = await send('msg_test_refund_1', refundEvent('sub_test_refund'));
+
+      expect(result.outcome).toBe('PROCESSED');
+      expect(await getEventRow(db, 'msg_test_refund_1')).toMatchObject({
+        eventType: 'order.refunded',
+        processingStatus: 'PROCESSED',
+        organizationId: org.organizationId,
+        error: null,
+      });
+      const row = await getSubscriptionRow(db, org.organizationId);
+      expect(row).toMatchObject({ status: 'ACTIVE', scheduledChangeAction: null });
+      expect(row!.lastProviderEventAt?.toISOString()).toBe(lastEventAt.toISOString());
+
+      expect((await send('msg_test_refund_1', refundEvent('sub_test_refund'))).outcome).toBe('DUPLICATE');
+    });
+
+    it('ignores a refund of an order for no subscription on file', async () => {
+      expect((await send('msg_test_refund_2', refundEvent('sub_test_unknown'))).outcome).toBe('IGNORED');
+      expect(await getEventRow(db, 'msg_test_refund_2')).toMatchObject({
+        processingStatus: 'IGNORED',
+        organizationId: null,
+        error: 'organization not found',
+      });
+      expect((await send('msg_test_refund_3', refundEvent(null))).outcome).toBe('IGNORED');
+    });
+  });
+
   describe("binding a new subscription through its checkout_id", () => {
     it('ignores forged metadata naming an organization when there is no checkout_id', async () => {
       const victim = await signUpAndGetOrg(auth, db, nextEmail());

@@ -25,6 +25,7 @@ const OWN_VOID_ORDER = '00000000-0000-4000-8000-000000000002';
 const OTHER_ORG_ORDER = '00000000-0000-4000-8000-000000000003';
 const OWN_UNPAID_ORDER = '00000000-0000-4000-8000-000000000004';
 const OWN_UNGENERATED_ORDER = '00000000-0000-4000-8000-000000000005';
+const OWN_REFUNDED_ORDER = '00000000-0000-4000-8000-000000000006';
 const UNKNOWN_ORDER = '00000000-0000-4000-8000-000000000009';
 
 function order(id: string, overrides: Partial<PolarOrder> = {}): PolarOrder {
@@ -34,6 +35,7 @@ function order(id: string, overrides: Partial<PolarOrder> = {}): PolarOrder {
     status: 'paid',
     paid: true,
     total_amount: 6800,
+    refunded_amount: 0,
     currency: 'usd',
     invoice_number: '2026-00002',
     is_invoice_generated: true,
@@ -47,6 +49,13 @@ const ORDERS: PolarOrder[] = [
   order(OWN_PAID_ORDER),
   order(OWN_VOID_ORDER, { status: 'void', paid: false, invoice_number: null }),
   order(OTHER_ORG_ORDER, { subscription_id: 'sub_other' }),
+  order(OWN_REFUNDED_ORDER, {
+    created_at: '2026-10-15T00:00:00Z',
+    status: 'partially_refunded',
+    total_amount: 2275,
+    refunded_amount: 1000,
+    invoice_number: '2026-00003',
+  }),
 ];
 
 function fakePolar(
@@ -55,6 +64,7 @@ function fakePolar(
   const ordersById: Record<string, PolarOrder> = {
     [OWN_PAID_ORDER]: ORDERS[0]!,
     [OTHER_ORG_ORDER]: ORDERS[2]!,
+    [OWN_REFUNDED_ORDER]: ORDERS[3]!,
     [OWN_UNPAID_ORDER]: order(OWN_UNPAID_ORDER, { status: 'pending', paid: false }),
     [OWN_UNGENERATED_ORDER]: order(OWN_UNGENERATED_ORDER, { is_invoice_generated: false }),
   };
@@ -222,6 +232,17 @@ describe('billing account and invoices', () => {
             billedAt: '2026-10-01T00:00:00Z',
             invoiceNumber: '2026-00002',
             amount: '6800',
+            refundedAmount: '0',
+            currencyCode: 'USD',
+          },
+          // A refund keeps the order on the list, with what was refunded.
+          {
+            id: OWN_REFUNDED_ORDER,
+            status: 'partially_refunded',
+            billedAt: '2026-10-15T00:00:00Z',
+            invoiceNumber: '2026-00003',
+            amount: '2275',
+            refundedAmount: '1000',
             currencyCode: 'USD',
           },
         ],
@@ -276,13 +297,15 @@ describe('billing account and invoices', () => {
     }
   });
 
-  it("returns an invoice link for the organization's own order", async () => {
+  it("returns an invoice link for the organization's own order, refunded or not", async () => {
     const calls = newCalls();
     const app = await buildServer({ auth, db, polar: fakePolar({ calls }) });
     try {
       const response = await get(app, `/api/billing/invoices/${OWN_PAID_ORDER}`, owner.cookie);
       expect(response.statusCode, response.body).toBe(200);
       expect(response.json()).toEqual({ url: `https://invoices.test/${OWN_PAID_ORDER}.pdf` });
+      const refunded = await get(app, `/api/billing/invoices/${OWN_REFUNDED_ORDER}`, owner.cookie);
+      expect(refunded.json()).toEqual({ url: `https://invoices.test/${OWN_REFUNDED_ORDER}.pdf` });
     } finally {
       await app.close();
     }

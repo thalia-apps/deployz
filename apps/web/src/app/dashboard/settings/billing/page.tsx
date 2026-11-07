@@ -458,6 +458,15 @@ function InvoicesCard({ account }: { account: BillingAccount }) {
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatMoney(transaction)}
+                        {Number(transaction.refundedAmount) > 0 ? (
+                          <span className="block text-xs text-muted-foreground">
+                            {formatMoney({
+                              amount: transaction.refundedAmount,
+                              currencyCode: transaction.currencyCode,
+                            })}{' '}
+                            refunded
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-right">
                         {transaction.invoiceNumber ? (

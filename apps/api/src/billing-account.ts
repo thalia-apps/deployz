@@ -48,6 +48,8 @@ export interface BillingAccount {
       status: string;
       billedAt: string | null;
       invoiceNumber: string | null;
+      /** What Polar has refunded of this order, in minor units; "0" if none. */
+      refundedAmount: string;
     }
   >;
 }
@@ -163,6 +165,7 @@ export async function getBillingAccount(
         billedAt: order.created_at,
         invoiceNumber: order.invoice_number,
         amount: String(order.total_amount),
+        refundedAmount: String(order.refunded_amount),
         currencyCode: order.currency.toUpperCase(),
       })),
   };
