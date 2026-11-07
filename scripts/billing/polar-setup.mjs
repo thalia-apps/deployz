@@ -8,8 +8,10 @@
 //      least one unit. A new price shape needs a new key, never an edit.
 //   2. The webhook endpoint, found by its URL, pinned to POLAR_API_VERSION
 //      and the events the API handles.
-//   3. Customer portal settings: no unit, plan or pause changes (Deployz owns
-//      the quantity). Best effort — a failure only warns.
+//   3. Organization settings: no unit, plan or pause changes in the customer
+//      portal (Deployz owns the quantity), and more than one subscription per
+//      customer (one buyer email can pay for several Deployz organizations).
+//      Best effort — a failure only warns.
 //
 // Inputs (environment): POLAR_TOKEN, POLAR_ENVIRONMENT (sandbox|production),
 // POLAR_WEBHOOK_URL, EXPECTED_ENVIRONMENT (the GitHub Environment).
@@ -136,21 +138,26 @@ async function ensureWebhook() {
   return updated;
 }
 
-async function lockPortalSubscriptionSettings(organizationId) {
+async function applyOrganizationSettings(organizationId) {
   try {
     const organization = await polar('GET', `/v1/organizations/${organizationId}`);
     const portal = organization.customer_portal_settings;
     const subscription = { ...portal.subscription, update_units: false, update_plan: false, pause: false };
-    if (Object.keys(subscription).every((key) => subscription[key] === portal.subscription[key])) {
-      console.log('Customer portal settings already lock units, plan and pause.');
+    const changes = {};
+    if (!Object.keys(subscription).every((key) => subscription[key] === portal.subscription[key])) {
+      changes.customer_portal_settings = { ...portal, subscription };
+    }
+    if (!organization.subscription_settings.allow_multiple_subscriptions) {
+      changes.subscription_settings = { ...organization.subscription_settings, allow_multiple_subscriptions: true };
+    }
+    if (Object.keys(changes).length === 0) {
+      console.log('Organization settings already lock the portal and allow multiple subscriptions.');
       return;
     }
-    await polar('PATCH', `/v1/organizations/${organizationId}`, {
-      customer_portal_settings: { ...portal, subscription },
-    });
-    console.log('Customer portal settings now lock units, plan and pause.');
+    await polar('PATCH', `/v1/organizations/${organizationId}`, changes);
+    console.log('Organization settings now lock the portal and allow multiple subscriptions.');
   } catch (error) {
-    console.log(`::warning::Could not lock the customer portal settings: ${error instanceof Error ? error.message : error}`);
+    console.log(`::warning::Could not apply the organization settings: ${error instanceof Error ? error.message : error}`);
   }
 }
 
@@ -162,7 +169,7 @@ try {
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 }
-await lockPortalSubscriptionSettings(product.organization_id);
+await applyOrganizationSettings(product.organization_id);
 
 if (!endpoint.secret) fail(`Webhook endpoint ${endpoint.id} returned no signing secret.`);
 if (process.env.GITHUB_ENV) {

@@ -1795,3 +1795,9 @@ production with a real card without a charge. Codes exist only when staff
 create them in Polar, so Deployz adds no discount logic. Rejected: paying
 and refunding each test (it charges the card), and a staff-only discount id
 in configuration (more code for the same result).
+
+Amended 2026-11-07: Polar allows more than one subscription per customer.
+Polar keeps one customer per buyer email, so without this the owner of a
+second Deployz organization could not subscribe it. Accepted: the Polar
+portal shows that buyer the subscriptions of all their organizations.
+Rejected: one buyer email per organization (the owner must invent emails).

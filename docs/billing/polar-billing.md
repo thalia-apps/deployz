@@ -390,11 +390,20 @@ The deploy step "Prepare Polar billing" (`.github/workflows/deploy-api.yml`)
 runs `scripts/billing/polar-setup.mjs` when `POLAR_TOKEN` is set. It finds
 or creates the product and the webhook endpoint
 (`https://<API_DOMAIN_NAME>/api/billing/webhook`, pinned to API version
-`2026-10`), locks the portal's unit, plan and pause changes, and adds
+`2026-10`), locks the portal's unit, plan and pause changes, allows more
+than one subscription per Polar customer, and adds
 `POLAR_PRODUCT_ID` and the masked `POLAR_WEBHOOK_SECRET` to the job
 environment. It refuses `POLAR_ENVIRONMENT=production` outside the
 `production` GitHub environment, and it never prints the token or the
 secret. `polar-catalog.md` records the ids.
+
+Polar keeps one customer per buyer email, so the owner of two Deployz
+organizations pays for both as one Polar customer. Multiple subscriptions
+must be allowed, or Polar refuses the second checkout ("You already have an
+active subscription"). Webhooks stay correct: an event maps to the
+organization by its subscription id or checkout intent, never by the
+customer. Accepted cost: the Polar portal shows that buyer every
+subscription paid with the email, other organizations' included.
 
 Billing is optional at boot: with no token every billing surface reports
 `BILLING_DISABLED` and nothing else is affected. With a token, the other
