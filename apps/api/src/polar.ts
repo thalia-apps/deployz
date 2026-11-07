@@ -168,6 +168,8 @@ export function createPolarClient(config: Pick<PolarConfig, 'token' | 'environme
       request('POST', '/v1/checkouts/', {
         products: [input.productId],
         units: input.units,
+        min_units: input.units,
+        max_units: input.units,
         external_customer_id: input.externalCustomerId,
         ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
         metadata: input.metadata,
