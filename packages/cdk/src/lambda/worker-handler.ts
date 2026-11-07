@@ -20,7 +20,7 @@ import {
 } from '@deployz/api/ai-config';
 import { createAnalysisRunner } from '@deployz/api/analysis';
 import { createJevShadowRunnerFromEnv, createJevFailureShadowRunnerFromEnv } from '@deployz/api/jev-shadow';
-import { createPaddle } from '@deployz/api/paddle';
+import { createPolar } from '@deployz/api/polar';
 import { createSecretCipherFromEnv, type SecretCipher } from '@deployz/api/pending-secrets';
 import type { QueueMessage } from '@deployz/api/queue';
 
@@ -225,9 +225,9 @@ export async function handler(event: WorkerEvent): Promise<BatchResponse | void>
         return 0;
       });
       // Paddle migration Phase 10 — the billing safety net. Same contract as
-      // the build sweep: a Paddle or billing failure must not fail the whole
+      // the build sweep: a Polar or billing failure must not fail the whole
       // scheduled invoke, and the next tick retries it anyway.
-      const billing = await sweepBilling(db, createPaddle()).catch((error: unknown) => {
+      const billing = await sweepBilling(db, createPolar()).catch((error: unknown) => {
         console.error('sweepBilling failed', error);
         return { promoted: 0, servingChanged: 0, unstuck: 0, reconciled: 0 };
       });

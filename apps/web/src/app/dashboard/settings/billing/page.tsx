@@ -96,8 +96,8 @@ export default async function BillingPage() {
       <p className="text-xs text-muted-foreground">
         A test deployment of your own app is never charged.
         {included > 0
-          ? ` ${included} production ${included === 1 ? 'deployment is' : 'deployments are'} included; ${formatDollars(billing.deploymentPrice)}/month applies to each live deployment beyond that.`
-          : ` ${formatDollars(billing.deploymentPrice)}/month applies to each customer deployment while it runs for your customer, and stops when it is removed.`}
+          ? ` ${included} production ${included === 1 ? 'deployment is' : 'deployments are'} included; ${formatDollars(billing.deploymentPrice)}/month applies to each live deployment beyond that, with a minimum of one.`
+          : ` ${formatDollars(billing.deploymentPrice)}/month applies to each customer deployment while it runs for your customer, with a minimum of one, and stops when it is removed.`}
         {' A failed or disconnected deployment is paused and not charged. Your customers’ deployments keep running whatever the payment state.'}
       </p>
     </div>
@@ -158,7 +158,7 @@ function PlanCard({
         <CardDescription>
           {status === 'PAST_DUE'
             ? 'Update your payment details to keep your subscription. Your customers’ deployments keep running.'
-            : status === 'PAUSED'
+            : status === 'PAUSED' || details?.scheduledChange
               ? 'Existing deployments keep running. Resume your subscription to add customer deployments.'
               : 'Customers can confirm invitations, and you can add customer deployments.'}
         </CardDescription>
@@ -168,9 +168,7 @@ function PlanCard({
           <Alert data-testid="billing-scheduled-change">
             <AlertTriangle aria-hidden className="size-4" />
             <AlertTitle>
-              {details.scheduledChange.action === 'cancel'
-                ? `Your subscription ends on ${formatBillingDate(details.scheduledChange.effectiveAt)}`
-                : `Your subscription is scheduled to ${details.scheduledChange.action} on ${formatBillingDate(details.scheduledChange.effectiveAt)}`}
+              {`Your subscription ends on ${formatBillingDate(details.scheduledChange.effectiveAt)}`}
             </AlertTitle>
             <AlertDescription>
               Existing deployments keep running. To keep your subscription, open the billing portal.
@@ -186,7 +184,7 @@ function PlanCard({
         ) : null}
         <dl className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <dt className="text-muted-foreground">Next payment</dt>
+            <dt className="text-muted-foreground">Next payment, before tax</dt>
             <dd className="font-medium tabular-nums" data-testid="billing-next-payment">
               {nextPaymentText ?? 'No payment is scheduled'}
             </dd>
@@ -250,7 +248,7 @@ function SubscribeCard({
   canManage: boolean;
   billingEnabled: boolean;
 }) {
-  const included = billing.productionDeployments.included;
+  const { included, units } = billing.productionDeployments;
   return (
     <Card data-testid="billing-plan">
       <CardHeader>
@@ -296,12 +294,22 @@ function SubscribeCard({
             </div>
           ) : null}
           <Separator />
-          <p className="text-muted-foreground">
-            You pay {formatDollars(billing.base)} today, then monthly.{' '}
-            {included > 0
-              ? `Each live customer deployment beyond the ${included} included adds ${formatDollars(billing.deploymentPrice)}/month.`
-              : `A customer deployment adds ${formatDollars(billing.deploymentPrice)}/month only while it is live.`}
-          </p>
+          {units > 1 ? (
+            // A restart with deployments still live bills all of them from today.
+            <p className="text-muted-foreground">
+              You pay {formatDollars(billing.base + units * billing.deploymentPrice)} today for your{' '}
+              {units} billed customer deployments, then monthly. Each customer deployment adds{' '}
+              {formatDollars(billing.deploymentPrice)}/month only while it is live.
+            </p>
+          ) : (
+            <p className="text-muted-foreground">
+              You pay {formatDollars(billing.base + billing.deploymentPrice)} today, then monthly. It
+              includes your first customer deployment.{' '}
+              {included > 0
+                ? `Each live customer deployment beyond the ${included} included, and beyond the first, adds ${formatDollars(billing.deploymentPrice)}/month.`
+                : `Each further customer deployment adds ${formatDollars(billing.deploymentPrice)}/month only while it is live.`}
+            </p>
+          )}
         </div>
       </CardContent>
       <CardFooter>
@@ -341,14 +349,15 @@ function ChargesCard({ billing }: { billing: BillingSummary }) {
           <div className="flex items-center justify-between">
             <span className="font-medium">Production deployments</span>
             <span className="font-medium tabular-nums">
-              {formatDollars(counts.billable * billing.deploymentPrice)}
+              {formatDollars(counts.units * billing.deploymentPrice)}
             </span>
           </div>
           <p className="text-muted-foreground tabular-nums" data-testid="billing-production-counts">
             {counts.active} active
             {counts.paused > 0 ? ` · ${counts.paused} paused` : ''}
             {counts.included > 0 ? ` · ${counts.included} included` : ''}
-            {` · ${counts.billable} billed × ${formatDollars(billing.deploymentPrice)}`}
+            {` · ${counts.units} billed × ${formatDollars(billing.deploymentPrice)}`}
+            {counts.units > counts.billable ? ' (minimum 1)' : ''}
           </p>
         </div>
         {deploymentCount > 0 ? (
@@ -390,10 +399,10 @@ const TRANSACTION_STATUS_LABELS: Record<
   BillingAccount['transactions'][number]['status'],
   { label: string; variant: 'secondary' | 'outline' | 'destructive' }
 > = {
-  completed: { label: 'Paid', variant: 'secondary' },
   paid: { label: 'Paid', variant: 'secondary' },
-  billed: { label: 'Due', variant: 'outline' },
-  past_due: { label: 'Past due', variant: 'destructive' },
+  pending: { label: 'Due', variant: 'outline' },
+  refunded: { label: 'Refunded', variant: 'outline' },
+  partially_refunded: { label: 'Partly refunded', variant: 'outline' },
 };
 
 function capitalize(text: string): string {
@@ -439,7 +448,12 @@ function InvoicesCard({ account }: { account: BillingAccount }) {
               </TableHeader>
               <TableBody>
                 {transactions.map((transaction) => {
-                  const status = TRANSACTION_STATUS_LABELS[transaction.status];
+                  // A deployment that stops mid-period is credited at once: a
+                  // negative order, shown as a credit rather than a payment.
+                  const status =
+                    Number(transaction.amount) < 0
+                      ? ({ label: 'Credit', variant: 'outline' } as const)
+                      : TRANSACTION_STATUS_LABELS[transaction.status];
                   return (
                     <TableRow key={transaction.id}>
                       <TableCell className="whitespace-nowrap">
@@ -453,6 +467,15 @@ function InvoicesCard({ account }: { account: BillingAccount }) {
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatMoney(transaction)}
+                        {Number(transaction.refundedAmount) > 0 ? (
+                          <span className="block text-xs text-muted-foreground">
+                            {formatMoney({
+                              amount: transaction.refundedAmount,
+                              currencyCode: transaction.currencyCode,
+                            })}{' '}
+                            refunded
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-right">
                         {transaction.invoiceNumber ? (

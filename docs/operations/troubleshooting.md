@@ -257,7 +257,7 @@ secrets "scheduled for deletion" still list for a while. Confirm each ARN
 against its own service before calling it a leak.
 
 **A vendor cannot create a production deployment (402).** The organisation
-has no active Paddle subscription. Checkout is the normal path;
+has no active Polar subscription. Checkout is the normal path;
 `BILLING_ENFORCEMENT=off` pauses the gate platform-wide for an incident.
 Existing deployments are never blocked by billing state.
 

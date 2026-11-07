@@ -183,9 +183,9 @@ export const healthStatusEnum = pgEnum('health_status', [
 
 // Paddle migration Phase 3 — minimal billing schema. `billing_provider`
 // exists so a row says what it is; this is not a multi-provider system.
-export const billingProviderEnum = pgEnum('billing_provider', ['PADDLE']);
+export const billingProviderEnum = pgEnum('billing_provider', ['PADDLE', 'POLAR']);
 
-// billing_subscriptions.status — mirrors the Paddle subscription lifecycle
+// billing_subscriptions.status — mirrors the provider subscription lifecycle
 // this control plane cares about.
 export const billingSubscriptionStatusEnum = pgEnum('billing_subscription_status', [
   'ACTIVE',

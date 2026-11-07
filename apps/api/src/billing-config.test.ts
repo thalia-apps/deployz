@@ -6,7 +6,7 @@ import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { createAuth, type Auth } from './auth.js';
-import type { PaddleBilling } from './paddle.js';
+import type { PolarBilling } from './polar.js';
 import { buildServer } from './server.js';
 
 /** Signs up a fresh user, which provisions its own vendor org (auth.ts session hook). */
@@ -34,18 +34,15 @@ async function signUpAndGetOrg(
   return { userId: signup.user.id, organizationId, cookie: setCookie };
 }
 
-// A fake PaddleBilling — the real @paddle/paddle-node-sdk client is never
-// constructed in a test, and its real shape (products/prices/etc resources)
-// is irrelevant here: only `config` is read by the route.
-function fakePaddleBilling(overrides: Partial<PaddleBilling['config']> = {}): PaddleBilling {
+// A fake PolarBilling — no real Polar client is constructed in a test: only
+// `polar !== null` is read by the route.
+function fakePolarBilling(overrides: Partial<PolarBilling['config']> = {}): PolarBilling {
   return {
-    client: {} as PaddleBilling['client'],
+    client: {} as PolarBilling['client'],
     config: {
-      apiKey: 'test_replace_me',
-      webhookSecret: 'test_replace_me',
-      clientToken: 'pdl_sdbx_replace_me',
-      pricePlatform: 'pri_platform_replace_me',
-      priceDeployment: 'pri_deployment_replace_me',
+      token: 'polar_oat_replace_me',
+      webhookSecret: 'polar_whs_replace_me',
+      productId: 'product_replace_me',
       environment: 'sandbox',
       ...overrides,
     },
@@ -71,7 +68,7 @@ describe('GET /api/billing/config', () => {
   });
 
   it('requires auth (401 without a session)', async () => {
-    const app = await buildServer({ auth, db, paddle: null });
+    const app = await buildServer({ auth, db, polar: null });
     try {
       const response = await app.inject({ method: 'GET', url: '/api/billing/config' });
       expect(response.statusCode).toBe(401);
@@ -80,8 +77,8 @@ describe('GET /api/billing/config', () => {
     }
   });
 
-  it('returns { enabled: false } when paddle is null', async () => {
-    const app = await buildServer({ auth, db, paddle: null });
+  it('returns { enabled: false } when polar is null', async () => {
+    const app = await buildServer({ auth, db, polar: null });
     try {
       const response = await app.inject({
         method: 'GET',
@@ -95,8 +92,8 @@ describe('GET /api/billing/config', () => {
     }
   });
 
-  it('returns the client token, environment and price ids when Paddle is configured', async () => {
-    const app = await buildServer({ auth, db, paddle: fakePaddleBilling({ environment: 'production' }) });
+  it('returns only { enabled: true } when Polar is configured', async () => {
+    const app = await buildServer({ auth, db, polar: fakePolarBilling({ environment: 'production' }) });
     try {
       const response = await app.inject({
         method: 'GET',
@@ -104,20 +101,14 @@ describe('GET /api/billing/config', () => {
         headers: { cookie: org.cookie },
       });
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toStrictEqual({
-        enabled: true,
-        environment: 'production',
-        clientToken: 'pdl_sdbx_replace_me',
-        pricePlatform: 'pri_platform_replace_me',
-        priceDeployment: 'pri_deployment_replace_me',
-      });
+      expect(response.json()).toStrictEqual({ enabled: true });
     } finally {
       await app.close();
     }
   });
 
-  it('never includes the api key or webhook secret in the response', async () => {
-    const app = await buildServer({ auth, db, paddle: fakePaddleBilling() });
+  it('never includes the token, webhook secret or product id in the response', async () => {
+    const app = await buildServer({ auth, db, polar: fakePolarBilling() });
     try {
       const response = await app.inject({
         method: 'GET',
@@ -126,9 +117,9 @@ describe('GET /api/billing/config', () => {
       });
       const body = response.json() as Record<string, unknown>;
       const raw = JSON.stringify(body);
-      expect(raw).not.toContain('apiKey');
+      expect(raw).not.toContain('token');
       expect(raw).not.toContain('webhookSecret');
-      expect(raw).not.toContain('test_replace_me');
+      expect(raw).not.toContain('replace_me');
     } finally {
       await app.close();
     }

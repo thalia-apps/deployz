@@ -145,52 +145,29 @@ if (process.env.BILLING_ENFORCEMENT === 'off') {
   );
 }
 
-// Phase 5 Paddle billing. Optional at boot: an absent PADDLE_API_KEY only
-// warns — every billing surface then reports BILLING_DISABLED (503) rather
-// than crashing local dev or a fixture-mode test run. Once PADDLE_API_KEY IS
-// set, the remaining four keys (plus PADDLE_ENVIRONMENT and the price id
-// format) are validated strictly: missing configuration fails clearly at
-// startup instead of silently no-oping against the wrong Paddle account.
-const paddleApiKey = process.env.PADDLE_API_KEY;
-const paddleWebhookSecret = process.env.PADDLE_WEBHOOK_SECRET;
-const paddleClientToken = process.env.PADDLE_CLIENT_TOKEN;
-const paddlePricePlatform = process.env.PADDLE_PRICE_PLATFORM;
-const paddlePriceDeployment = process.env.PADDLE_PRICE_DEPLOYMENT;
-const paddleEnvironment = process.env.PADDLE_ENVIRONMENT ?? 'sandbox';
+// Polar billing. Optional at boot: an absent POLAR_TOKEN only warns — every
+// billing surface then reports BILLING_DISABLED (503) rather than crashing
+// local dev or a fixture-mode test run. Once POLAR_TOKEN IS set, the other
+// values are validated strictly: missing configuration fails clearly at
+// startup instead of silently no-oping against the wrong Polar account.
+const polarToken = process.env.POLAR_TOKEN;
+const polarWebhookSecret = process.env.POLAR_WEBHOOK_SECRET;
+const polarProductId = process.env.POLAR_PRODUCT_ID;
+const polarEnvironment = process.env.POLAR_ENVIRONMENT ?? 'sandbox';
 
-if (!paddleApiKey) {
+if (!polarToken) {
   console.warn(
-    '[billing] PADDLE_API_KEY not set — billing is disabled; every billing surface reports BILLING_DISABLED. Set it in .env.',
+    '[billing] POLAR_TOKEN not set — billing is disabled; every billing surface reports BILLING_DISABLED. Set it in .env.',
   );
 } else {
-  if (!paddleWebhookSecret) {
-    throw new Error(
-      'PADDLE_API_KEY is set but PADDLE_WEBHOOK_SECRET is missing — set it in .env (Paddle billing requires both).',
-    );
+  if (!polarWebhookSecret) {
+    throw new Error('POLAR_TOKEN is set but POLAR_WEBHOOK_SECRET is missing — set it in .env.');
   }
-  if (!paddleClientToken) {
-    throw new Error(
-      'PADDLE_API_KEY is set but PADDLE_CLIENT_TOKEN is missing — set it in .env (Paddle billing requires both).',
-    );
+  if (!polarProductId) {
+    throw new Error('POLAR_TOKEN is set but POLAR_PRODUCT_ID is missing — set it in .env.');
   }
-  if (!paddlePricePlatform) {
-    throw new Error(
-      'PADDLE_API_KEY is set but PADDLE_PRICE_PLATFORM is missing — set it in .env (Paddle billing requires both).',
-    );
-  }
-  if (!paddlePriceDeployment) {
-    throw new Error(
-      'PADDLE_API_KEY is set but PADDLE_PRICE_DEPLOYMENT is missing — set it in .env (Paddle billing requires both).',
-    );
-  }
-  if (!paddlePricePlatform.startsWith('pri_')) {
-    throw new Error(`PADDLE_PRICE_PLATFORM must be a Paddle price id starting with "pri_"; got "${paddlePricePlatform}".`);
-  }
-  if (!paddlePriceDeployment.startsWith('pri_')) {
-    throw new Error(`PADDLE_PRICE_DEPLOYMENT must be a Paddle price id starting with "pri_"; got "${paddlePriceDeployment}".`);
-  }
-  if (paddleEnvironment !== 'sandbox' && paddleEnvironment !== 'production') {
-    throw new Error(`PADDLE_ENVIRONMENT must be "sandbox" or "production"; got "${paddleEnvironment}".`);
+  if (polarEnvironment !== 'sandbox' && polarEnvironment !== 'production') {
+    throw new Error(`POLAR_ENVIRONMENT must be "sandbox" or "production"; got "${polarEnvironment}".`);
   }
 }
 
@@ -347,7 +324,7 @@ export const env = {
   // Kill switch for the PRODUCTION-deployment subscription gate
   // (billing-entitlements.ts). BILLING_ENFORCEMENT=off lets every
   // organization deploy to production whatever its subscription status —
-  // for an incident where Paddle state is wrong or unreachable and
+  // for an incident where Polar state is wrong or unreachable and
   // customers must not be blocked. Any other value (including unset)
   // enforces. Nothing else in billing changes: webhooks, checkout,
   // reconciliation and the allowance counters all keep running.
@@ -366,15 +343,12 @@ export const env = {
   // can. Resolved once here (not read at call time) so it stays
   // test-injectable.
   teamAdminEnvGrantsEnabled: !process.env.AWS_LAMBDA_FUNCTION_NAME,
-  // Phase 5 Paddle billing (see the validation block above). All undefined
-  // when PADDLE_API_KEY is unset; otherwise the four companion keys are
-  // guaranteed present and price ids are guaranteed to start with "pri_".
-  paddleApiKey,
-  paddleWebhookSecret,
-  paddleClientToken,
-  paddlePricePlatform,
-  paddlePriceDeployment,
-  paddleEnvironment: paddleEnvironment as 'sandbox' | 'production',
+  // Polar billing (see the validation block above). All undefined when
+  // POLAR_TOKEN is unset; otherwise the companion values are guaranteed.
+  polarToken,
+  polarWebhookSecret,
+  polarProductId,
+  polarEnvironment: polarEnvironment as 'sandbox' | 'production',
   // DEPLOY-027 (Phase 4): KMS key ARN used to encrypt at-rest secret values.
   // Unset in local dev and tests → the API falls back to the in-memory cipher
   // stub. In AWS Lambda it is required: createSecretCipherFromEnv throws

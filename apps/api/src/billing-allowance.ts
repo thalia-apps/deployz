@@ -11,7 +11,7 @@ import { productionDeploymentCounts, type ProductionDeploymentCounts } from './b
 //
 // The update runs in one transaction with the organization row locked, so
 // two admin changes in flight each read the value the other left behind and
-// the audit trail never records a stale "previous". The Paddle round trip is
+// the audit trail never records a stale "previous". The Polar round trip is
 // NOT part of the transaction (billing-reconcile.ts): the caller reconciles
 // afterwards, and a provider failure never reverts what the admin decided —
 // the reconciliation ledger records the drift and the safety job repairs it.

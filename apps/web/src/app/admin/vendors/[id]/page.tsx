@@ -385,7 +385,7 @@ function DetailSkeleton() {
 
 // Paddle migration Phase 14 — the billing facts an admin needs to settle a
 // "why was I billed for N?" question, and the one action that fixes drift.
-// The live count is Deployz's number; the provider column is what Paddle had
+// The live count is Deployz's number; the provider column is what Polar had
 // on the last pass. Reconcile runs the SAME code the safety job runs.
 function VendorBillingSection({
   detail,
@@ -404,7 +404,7 @@ function VendorBillingSection({
         toast.success(
           result.action === 'NONE'
             ? `Already in sync — ${result.expected} live deployment${result.expected === 1 ? '' : 's'}.`
-            : `Reconciled — Paddle now billing ${result.expected} live deployment${result.expected === 1 ? '' : 's'} (was ${result.provider ?? 0}).`,
+            : `Reconciled — Polar now billing ${result.expected} live deployment${result.expected === 1 ? '' : 's'} (was ${result.provider ?? 0}).`,
         );
       } else {
         toast.error(`Reconciliation ${result.status.toLowerCase()}: ${result.reason ?? 'no reason recorded'}`);
@@ -460,11 +460,11 @@ function VendorBillingSection({
         toast.success('Allowance updated — nothing to reconcile yet.');
       } else if (result.reconciliation.status === 'SUCCEEDED') {
         toast.success(
-          `Allowance updated — Paddle now billing ${result.reconciliation.expected} deployment${result.reconciliation.expected === 1 ? '' : 's'}.`,
+          `Allowance updated — Polar now billing ${result.reconciliation.expected} deployment${result.reconciliation.expected === 1 ? '' : 's'}.`,
         );
       } else if (result.reconciliation.status === 'FAILED') {
         toast.error(
-          `Allowance saved, but Paddle could not be updated: ${result.reconciliation.reason ?? 'no reason recorded'}. Use Reconcile with Paddle to retry.`,
+          `Allowance saved, but Polar could not be updated: ${result.reconciliation.reason ?? 'no reason recorded'}. Use Reconcile with Polar to retry.`,
         );
       } else {
         toast.success(`Allowance saved — reconciliation skipped: ${result.reconciliation.reason ?? 'no reason recorded'}.`);
@@ -495,7 +495,7 @@ function VendorBillingSection({
             onClick={() => void onReconcile()}
             data-testid="admin-reconcile-billing"
           >
-            Reconcile with Paddle
+            Reconcile with Polar
           </Button>
         ) : null}
       </div>
@@ -507,7 +507,7 @@ function VendorBillingSection({
           <MetaRow label="Billable deployment quantity" value={String(billing.billableDeploymentQuantity)} />
           {billing.providerDeploymentQuantity !== null ? (
             <MetaRow
-              label="Paddle deployment quantity"
+              label="Polar unit count"
               value={`${billing.providerDeploymentQuantity} (as of ${fmt(billing.providerQuantityAsOf)})`}
             />
           ) : null}
@@ -593,7 +593,7 @@ function VendorBillingSection({
           </div>
           <p className="text-xs text-muted-foreground">
             The $49/month platform fee is unaffected. This changes the production deployment
-            quantity only. Invoice adjustments and proration are handled by Paddle.
+            quantity only. Invoice adjustments and proration are handled by Polar.
           </p>
           <div className="flex flex-col gap-0.5">
             <span className="text-xs text-muted-foreground">Reason</span>
@@ -624,7 +624,7 @@ function VendorBillingSection({
                   <TableHead>When</TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>Expected</TableHead>
-                  <TableHead>Paddle had</TableHead>
+                  <TableHead>Polar had</TableHead>
                   <TableHead>Outcome</TableHead>
                 </TableRow>
               </TableHeader>

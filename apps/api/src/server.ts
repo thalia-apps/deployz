@@ -142,14 +142,15 @@ import {
   productionDeploymentCounts,
   PLATFORM_PRICE_DOLLARS,
   DEPLOYMENT_PRICE_DOLLARS,
+  subscriptionUnits,
 } from './billing-domain.js';
 import { markDeploymentLive, markDeploymentRemoved } from './billing-lifecycle.js';
 import { getBillingAccount, getInvoiceUrl } from './billing-account.js';
 import { createBillingPortalLinks } from './billing-portal.js';
 import { reconcileBilling } from './billing-reconcile.js';
-import { handlePaddleWebhook } from './billing-webhooks.js';
+import { handlePolarWebhook, webhookHeaders } from './billing-webhooks.js';
 import { redactClaimedPayload, restoreMaskedInstallSecrets } from './claimed-payload.js';
-import { createPaddle, type PaddleBilling } from './paddle.js';
+import { createPolar, type PolarBilling } from './polar.js';
 import {
   createConfigStore,
   createConfigurableCustomersFinder,
@@ -502,11 +503,11 @@ export interface ServerDeps {
   // the real log reader when BUILD_LOG_GROUP_NAME is set (the deployed
   // Lambda) and to none elsewhere; tests inject a fake. Null means no reader.
   buildLogReader?: BuildLogReader | null | undefined;
-  // Injectable Phase 5 Paddle billing seam (paddle.ts). Defaults to
-  // env-configured createPaddle(), which is null when PADDLE_API_KEY is
-  // unset; tests inject a fake PaddleBilling so no real Paddle call ever
+  // Injectable Polar billing seam (polar.ts). Defaults to
+  // env-configured createPolar(), which is null when POLAR_TOKEN is
+  // unset; tests inject a fake PolarBilling so no real Polar call ever
   // leaves the machine.
-  paddle?: PaddleBilling | null | undefined;
+  polar?: PolarBilling | null | undefined;
   // Injectable Paddle migration Phase 7 fixture-mode override. Defaults to
   // env.billingFixtureMode; mirrors githubFixtureMode's `?? env.x` pattern.
   // When on, POST /api/organizations seeds a fixture ACTIVE subscription
@@ -1992,16 +1993,16 @@ function resolveProbeUrl(
 /**
  * Paddle migration Phase 9 — pushes the absolute live-deployment count onto
  * the subscription after a billing state actually changed. Always called
- * OUTSIDE the caller's transaction: a Paddle round trip must never hold a
+ * OUTSIDE the caller's transaction: a Polar round trip must never hold a
  * database connection open. Never throws — reconcileBilling records its own
  * failure, and the Phase 10 safety job retries the drift.
  */
 async function reconcileAfterBillingChange(
   db: RuntimeDb,
-  paddle: PaddleBilling | null,
+  polar: PolarBilling | null,
   organizationId: string,
 ): Promise<void> {
-  const result = await reconcileBilling({ db, paddle }, organizationId);
+  const result = await reconcileBilling({ db, polar }, organizationId);
   if (result.status === 'FAILED') {
     console.error(
       JSON.stringify({ event: 'billing:reconcile-failed', organizationId, error: result.reason }),
@@ -2030,7 +2031,7 @@ async function reconcileAfterBillingChange(
  */
 async function advanceStepTimingsAfterWrite(
   db: RuntimeDb,
-  paddle: PaddleBilling | null,
+  polar: PolarBilling | null,
   freshDeployment: DeploymentRow,
   knownDomain?: CustomDomainRow | null,
 ): Promise<void> {
@@ -2059,10 +2060,10 @@ async function advanceStepTimingsAfterWrite(
   if (derived.stage === 'READY') {
     try {
       // Phase 9: reconcile only when the billing state ACTUALLY moved. A
-      // heartbeat on an already-billing deployment must not pay for a Paddle
+      // heartbeat on an already-billing deployment must not pay for a Polar
       // round trip, and the Phase 10 job sweeps up any drift regardless.
       if (await markDeploymentLive(db, freshDeployment, new Date())) {
-        await reconcileAfterBillingChange(db, paddle, freshDeployment.organizationId);
+        await reconcileAfterBillingChange(db, polar, freshDeployment.organizationId);
       }
     } catch (error) {
       console.error(JSON.stringify({ event: 'billing:mark-live-failed', deploymentId: freshDeployment.id, error: String(error) }));
@@ -2296,7 +2297,7 @@ export async function buildServer({
   teamAdminEmails = env.teamAdminEmails,
   teamAdminEnvGrantsEnabled = env.teamAdminEnvGrantsEnabled,
   loggerInstance,
-  paddle = createPaddle(),
+  polar = createPolar(),
   billingFixtureMode,
   // Compiler-v2 artifact publication: the real S3 publisher only in the
   // deployed Lambda (env.releaseImageRegistryEnabled); simulated E2E, tests
@@ -2616,7 +2617,7 @@ export async function buildServer({
     });
   }
 
-  // GitHub and Paddle webhooks verify signatures over the raw body, so
+  // GitHub and Polar webhooks verify signatures over the raw body, so
   // register a raw-json parser for those routes before the JSON parser
   // consumes them. A bad signature -> 400/401 structured envelope.
   // No route reads a text/plain body; Fastify's default parser would let a
@@ -2800,7 +2801,7 @@ export async function buildServer({
 
   registerAdminRoutes(app, {
     db,
-    paddle,
+    polar,
     requireTeamAdmin,
     performRetryInstall,
     performRollback,
@@ -4483,6 +4484,13 @@ export async function buildServer({
     customerId: z.string().uuid().optional(),
     region: regionSchema.optional(),
     sizeProfile: infrastructureSizeTierSchema.optional(),
+    // The dashboard page the vendor returns to after paying. A path only: the
+    // origin is always WEB_URL, so a checkout can never redirect elsewhere.
+    returnPath: z
+      .string()
+      .max(200)
+      .regex(/^\/dashboard(\/[a-z0-9-]+)*$/)
+      .optional(),
   });
 
   // Deploy Link generation targets the SESSION org's customer (path) and
@@ -6972,10 +6980,10 @@ export async function buildServer({
       // pending-secrets drizzle queries do not contend with the connection
       // the tx holds (PGlite is single-connection).
       await pendingSecrets.deleteBoundForDeployment(deployment.id);
-      // Phase 9: outside the transaction — a Paddle round trip must never
+      // Phase 9: outside the transaction — a Polar round trip must never
       // hold the connection the delete just used.
       if (billingStopped) {
-        await reconcileAfterBillingChange(db, paddle, deployment.organizationId);
+        await reconcileAfterBillingChange(db, polar, deployment.organizationId);
       }
       return reply.code(200).send({ jobId: null, state: 'DELETED' });
     }
@@ -7050,7 +7058,7 @@ export async function buildServer({
         actorId: request.user?.id ?? 'system',
       })
     ) {
-      await reconcileAfterBillingChange(db, paddle, deployment.organizationId);
+      await reconcileAfterBillingChange(db, polar, deployment.organizationId);
     }
 
     // The stack is coming down — start tearing down any custom domain
@@ -7252,7 +7260,7 @@ export async function buildServer({
     // Phase 9: outside the transaction, and only when this backstop was the
     // write that actually stopped billing.
     if (billingStopped) {
-      await reconcileAfterBillingChange(db, paddle, deployment.organizationId);
+      await reconcileAfterBillingChange(db, polar, deployment.organizationId);
     }
 
     // DEPLOY-027 (Phase 4): force-completed deployments never had a
@@ -8445,7 +8453,9 @@ export async function buildServer({
       .where(eq(schema.organization.id, organizationId))
       .limit(1);
     const counts = productionDeploymentCounts(deployments, organizationRow?.included ?? 0);
-    const total = PLATFORM_PRICE_DOLLARS + counts.billable * DEPLOYMENT_PRICE_DOLLARS;
+    // The subscription always bills at least one unit (subscriptionUnits).
+    const units = subscriptionUnits(counts.billable);
+    const total = PLATFORM_PRICE_DOLLARS + units * DEPLOYMENT_PRICE_DOLLARS;
 
     const [subscriptionRow] = await db
       .select({
@@ -8461,7 +8471,7 @@ export async function buildServer({
       base: PLATFORM_PRICE_DOLLARS,
       deploymentPrice: DEPLOYMENT_PRICE_DOLLARS,
       deployments: deploymentItems,
-      productionDeployments: counts,
+      productionDeployments: { ...counts, units },
       total,
       subscription: subscriptionRow
         ? {
@@ -8473,20 +8483,10 @@ export async function buildServer({
     };
   });
 
-  // GET /api/billing/config — what apps/web needs to open Paddle.js checkout
-  // (Phase 8): the client token, environment and price ids. Never the api key
-  // or webhook secret — those never leave the server.
+  // GET /api/billing/config — whether subscriptions can be bought here.
+  // Never the token or the webhook secret — those never leave the server.
   app.get('/api/billing/config', { preHandler: requireAuth }, async () => {
-    if (!paddle) {
-      return { enabled: false };
-    }
-    return {
-      enabled: true,
-      environment: paddle.config.environment,
-      clientToken: paddle.config.clientToken,
-      pricePlatform: paddle.config.pricePlatform,
-      priceDeployment: paddle.config.priceDeployment,
-    };
+    return { enabled: polar !== null };
   });
 
   const BILLING_ROLE_MESSAGE =
@@ -8495,7 +8495,7 @@ export async function buildServer({
   // POST /api/billing/checkout — the vendor's first production deployment
   // (Phase 8), or a subscribe-only start (invitation-first flow). Nothing is
   // provisioned here: the request is parked as a checkout intent and answered
-  // with the Paddle transaction id apps/web opens with Paddle.js. A parked
+  // with the Polar checkout URL apps/web redirects to. A parked
   // deployment row appears only when the subscription activates (see
   // onSubscriptionChanged below); a subscribe-only intent creates nothing.
   app.post('/api/billing/checkout', { preHandler: requireAuth }, async (request) => {
@@ -8512,7 +8512,7 @@ export async function buildServer({
       );
     }
     return createCheckoutIntent(
-      { db, paddle },
+      { db, polar },
       {
         organizationId,
         ...(body.applicationId !== undefined ? { applicationId: body.applicationId } : {}),
@@ -8520,26 +8520,28 @@ export async function buildServer({
         ...(body.region !== undefined ? { region: body.region } : {}),
         ...(body.sizeProfile !== undefined ? { sizeProfile: body.sizeProfile } : {}),
         createdBy: request.user?.id ?? null,
+        customerEmail: request.user?.email ?? null,
+        successUrl: `${env.webUrl}${body.returnPath ?? '/dashboard/settings/billing'}?checkout=complete`,
       },
     );
   });
 
-  // POST /api/billing/portal — mint short-lived, pre-authenticated links into
-  // Paddle's hosted customer portal (Phase 12). Card, invoices and cancel all
-  // live there, never on a Deployz screen. The links are for the signed-in
-  // organization's own Paddle customer; nothing about the session is cached.
+  // POST /api/billing/portal — mint a short-lived, pre-authenticated link into
+  // Polar's hosted customer portal. Card, invoices and cancel all live there,
+  // never on a Deployz screen. The link is for the signed-in organization's
+  // own Polar customer; nothing about the session is cached.
   app.post('/api/billing/portal', { preHandler: requireAuth }, async (request) => {
     requireOwnerOrAdmin(request, BILLING_ROLE_MESSAGE);
     const organizationId = requireSessionOrganizationId(request);
-    return createBillingPortalLinks({ db, paddle }, organizationId);
+    return createBillingPortalLinks({ db, polar }, organizationId);
   });
 
   // GET /api/billing/account — the next payment, the payment method and the
-  // invoices, read live from Paddle for the organization's own subscription.
+  // invoices, read live from Polar for the organization's own subscription.
   app.get('/api/billing/account', { preHandler: requireAuth }, async (request) => {
     requireOwnerOrAdmin(request, BILLING_ROLE_MESSAGE);
     const organizationId = requireSessionOrganizationId(request);
-    return getBillingAccount({ db, paddle }, organizationId);
+    return getBillingAccount({ db, polar }, organizationId);
   });
 
   // GET /api/billing/invoices/:transactionId — a short-lived link to one
@@ -8550,31 +8552,28 @@ export async function buildServer({
     async (request) => {
       requireOwnerOrAdmin(request, BILLING_ROLE_MESSAGE);
       const organizationId = requireSessionOrganizationId(request);
-      return getInvoiceUrl({ db, paddle }, organizationId, request.params.transactionId);
+      return getInvoiceUrl({ db, polar }, organizationId, request.params.transactionId);
     },
   );
 
-  // POST /api/billing/webhook — Paddle subscription/transaction events.
-  // Signature-verified over the raw body (see the addContentTypeParser
-  // carve-out above); ApiErrors (missing/invalid signature, billing
-  // disabled) render through the existing error handler as 401/503. A
-  // processing failure throws a plain Error so this answers 500 and Paddle
-  // retries the same event id.
+  // POST /api/billing/webhook — Polar subscription events. Signature-verified
+  // over the raw body (see the addContentTypeParser carve-out above);
+  // ApiErrors (missing/invalid signature, billing disabled) render through
+  // the existing error handler as 401/503. A processing failure throws a
+  // plain Error so this answers 500 and Polar retries the same webhook id.
   app.post('/api/billing/webhook', async (request, reply) => {
-    const signatureHeader = request.headers['paddle-signature'];
-    const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
-    const result = await handlePaddleWebhook(
+    const result = await handlePolarWebhook(
       {
         db,
-        paddle,
+        polar,
         // Phase 8 — the subscription is live, so the production deployment
         // parked on it can now be created. completePendingCheckoutIntent
         // never throws, so a deployment that cannot be created does not make
-        // Paddle redeliver an event that was applied correctly.
+        // Polar redeliver an event that was applied correctly.
         onSubscriptionChanged: async ({ organizationId, status, checkoutIntentId }) => {
           if (status !== 'ACTIVE') return;
           const completed = await completePendingCheckoutIntent(
-            { db, paddle, materialization: { pendingSecrets, cipher }, templatePublisher },
+            { db, polar, materialization: { pendingSecrets, cipher }, templatePublisher },
             organizationId,
             checkoutIntentId,
           );
@@ -8588,11 +8587,11 @@ export async function buildServer({
           // push the absolute live-deployment count onto it. Also covers a
           // resumed subscription whose deployments changed while it was
           // paused.
-          await reconcileAfterBillingChange(db, paddle, organizationId);
+          await reconcileAfterBillingChange(db, polar, organizationId);
         },
       },
       request.body as string,
-      signature,
+      webhookHeaders(request.headers),
     );
     return reply.send({ received: true, outcome: result.outcome });
   });
@@ -9956,14 +9955,14 @@ export async function buildServer({
     // Phase 9: outside the transaction, and only when this backstop was the
     // write that actually stopped billing.
     if (billingStopped) {
-      await reconcileAfterBillingChange(db, paddle, deployment.organizationId);
+      await reconcileAfterBillingChange(db, polar, deployment.organizationId);
     }
 
     // derived from the values THIS request just wrote, not the stale
     // pre-transaction `deployment`. The release pointers are deliberately
     // absent: promotion happens on the heartbeat (§10.3).
     try {
-      await advanceStepTimingsAfterWrite(db, paddle, {
+      await advanceStepTimingsAfterWrite(db, polar, {
         ...deployment,
         ...(nextState ? { state: nextState } : {}),
       });
@@ -10169,7 +10168,7 @@ export async function buildServer({
           .where(eq(schema.deployments.id, deployment.id));
 
         try {
-          await advanceStepTimingsAfterWrite(db, paddle, { ...deployment, observedState: nextObservedState });
+          await advanceStepTimingsAfterWrite(db, polar, { ...deployment, observedState: nextObservedState });
         } catch (error) {
           request.log.warn({ err: error }, 'step-timings advance failed');
         }
@@ -10718,7 +10717,7 @@ export async function buildServer({
     try {
       await advanceStepTimingsAfterWrite(
         db,
-        paddle,
+        polar,
         {
           ...deployment,
           observedState: observedState as Record<string, unknown> | null,

@@ -7,7 +7,7 @@ import type { RuntimeDb } from '@deployz/db';
 
 import { updateIncludedProductionDeployments } from '../billing-allowance.js';
 import { reconcileBilling } from '../billing-reconcile.js';
-import type { PaddleBilling } from '../paddle.js';
+import type { PolarBilling } from '../polar.js';
 import * as schema from '@deployz/db/schema';
 
 import { ApiError, NotFoundError } from '../errors.js';
@@ -32,9 +32,9 @@ import {
 
 export interface AdminRouteDeps {
   db: RuntimeDb;
-  // Phase 14: the Reconcile action talks to Paddle through the same client
+  // Phase 14: the Reconcile action talks to Polar through the same client
   // the billing routes use; null when billing is disabled.
-  paddle: PaddleBilling | null;
+  polar: PolarBilling | null;
   requireTeamAdmin: (request: FastifyRequest) => Promise<void>;
   // Safe recovery actions (docs/admin/team-admin.md's Supported admin
   // actions): the SAME domain workflows the vendor routes use, extracted in
@@ -139,7 +139,7 @@ export function registerAdminRoutes(
   app: FastifyInstance,
   {
     db,
-    paddle,
+    polar,
     requireTeamAdmin,
     performRetryInstall,
     performRollback,
@@ -310,7 +310,7 @@ export function registerAdminRoutes(
   // admin.* audit event only after the workflow succeeds — a guard refusal
   // propagates without an audit row.
 
-  // POST /api/admin/vendors/:id/reconcile-billing — Paddle migration Phase
+  // POST /api/admin/vendors/:id/reconcile-billing — billing migration Phase
   // 14. Runs the SAME reconcileBilling the lifecycle hooks and the safety job
   // run: it pushes the absolute live-deployment count onto the subscription
   // and records its own ledger row, so an admin can settle a "why was I
@@ -325,7 +325,7 @@ export function registerAdminRoutes(
       if (!detail) throw new NotFoundError('Vendor not found');
       const body = retryInstallBodySchema.parse(request.body ?? {});
       const actor = requireActor(request);
-      const result = await reconcileBilling({ db, paddle }, id);
+      const result = await reconcileBilling({ db, polar }, id);
 
       await recordAdminAuditEvent(db, {
         actor,
@@ -345,11 +345,11 @@ export function registerAdminRoutes(
   // POST /api/admin/vendors/:id/included-deployments — the included
   // production deployment allowance (docs/billing/included-deployments-
   // implementation.md). The ONLY write path for the value: it belongs to the
-  // organization, changes only the per-deployment quantity Paddle bills, and
+  // organization, changes only the per-deployment units Polar bills, and
   // never touches the platform item or any deployment. Commercial action:
   // reason is required, every call is audited with the old and new state,
   // and a real change on a subscribed organization runs the SAME
-  // reconcileBilling the lifecycle hooks and the safety job run. A Paddle
+  // reconcileBilling the lifecycle hooks and the safety job run. A Polar
   // failure there never reverts the allowance — the ledger row and the
   // Reconcile action / safety job repair the drift.
   app.post(
@@ -371,7 +371,7 @@ export function registerAdminRoutes(
         .where(eq(schema.billingSubscriptions.organizationId, id))
         .limit(1);
       const reconciliationTriggered = change.changed && subscription !== undefined;
-      const reconciliation = reconciliationTriggered ? await reconcileBilling({ db, paddle }, id) : null;
+      const reconciliation = reconciliationTriggered ? await reconcileBilling({ db, polar }, id) : null;
 
       await recordAdminAuditEvent(db, {
         actor,

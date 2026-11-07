@@ -278,7 +278,7 @@ describe('DeployzStack', () => {
   });
 
   // Lambda refuses an environment over 4 KB (keys plus values). A production
-  // release with Paddle configured measured 4391 bytes and rolled back, so
+  // release with billing configured measured 4391 bytes and rolled back, so
   // the GitHub App PEM moved to Secrets Manager.
   it('keeps a fully configured Lambda environment under the 4 KB limit', () => {
     const pem = `-----BEGIN RSA PRIVATE KEY-----\n${'A'.repeat(64).concat('\n').repeat(25)}-----END RSA PRIVATE KEY-----\n`;
@@ -308,12 +308,10 @@ describe('DeployzStack', () => {
       CLOUDFLARE_ZONE_NAME: 'deployz.dev',
       DEPLOYZ_DEFAULT_HOSTNAME_PREFIX: 'd-',
       CLOUDFLARE_ZONE_EDIT_API_TOKEN: 't'.repeat(40),
-      PADDLE_API_KEY: `pdl_live_apikey_${'p'.repeat(64)}`,
-      PADDLE_WEBHOOK_SECRET: `pdl_ntfset_${'n'.repeat(26)}_${'s'.repeat(32)}`,
-      PADDLE_CLIENT_TOKEN: `live_${'c'.repeat(27)}`,
-      PADDLE_PRICE_PLATFORM: 'pri_01m610t25agdphge6d8w4fh77r',
-      PADDLE_PRICE_DEPLOYMENT: 'pri_01m610t2fp2ydcya68hn9gvr14',
-      PADDLE_ENVIRONMENT: 'production',
+      POLAR_TOKEN: `polar_oat_${'p'.repeat(64)}`,
+      POLAR_WEBHOOK_SECRET: `polar_whs_${'s'.repeat(64)}`,
+      POLAR_PRODUCT_ID: '00000000-0000-4000-8000-000000000000',
+      POLAR_ENVIRONMENT: 'production',
       BILLING_ENFORCEMENT: 'off',
     };
     const saved = { ...process.env };

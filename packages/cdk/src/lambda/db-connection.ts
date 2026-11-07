@@ -86,6 +86,7 @@ import migration0056 from '../../../db/drizzle/0056_github_connection_status.sql
 import migration0057 from '../../../db/drizzle/0057_two_factor.sql';
 import migration0058 from '../../../db/drizzle/0058_auth_rate_limit.sql';
 import migration0059 from '../../../db/drizzle/0059_deployment_backup_retention.sql';
+import migration0060 from '../../../db/drizzle/0060_polar_billing.sql';
 import journal from '../../../db/drizzle/meta/_journal.json';
 import { migrationsUpToDate, withMigrationLock } from './migration-check.js';
 
@@ -160,6 +161,7 @@ const MIGRATION_SQL: Record<string, string> = {
   '0057_two_factor': migration0057,
   '0058_auth_rate_limit': migration0058,
   '0059_deployment_backup_retention': migration0059,
+  '0060_polar_billing': migration0060,
 };
 
 interface RdsSecret {

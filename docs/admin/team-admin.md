@@ -123,12 +123,12 @@ human-entered reason for risky operations, and writes an audit event:
 - Reconcile billing — runs the same `reconcileBilling` the lifecycle hooks
   and the safety job run; reason optional (`admin.billing.reconcile_requested`).
 - Set the included production deployment allowance — the ONE commercial
-  override Team Admin can make (`docs/billing/paddle-billing.md`,
+  override Team Admin can make (`docs/billing/polar-billing.md`,
   "Included production deployments"). `POST
   /api/admin/vendors/:id/included-deployments` with an integer 0..10000 and
   a required reason; the vendor detail previews the billable quantity
   before and after and warns when a decrease may increase the invoice. A
-  real change on a subscribed organization runs `reconcileBilling`; a Paddle
+  real change on a subscribed organization runs `reconcileBilling`; a Polar
   failure never reverts the value (`admin.billing.included_deployments.updated`).
   No vendor route can write it, and support mode is read-only.
 

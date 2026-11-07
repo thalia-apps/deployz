@@ -77,8 +77,9 @@ export type DeploymentBillingState = z.infer<typeof deploymentBillingStateSchema
 
 // organization.included_production_deployments — the admin-set number of live
 // PRODUCTION deployments an organization may run before the per-deployment
-// charge applies. Pooled and concurrent, never consumed. The billable Paddle
-// quantity is max(active - included, 0) (apps/api/src/billing-domain.ts).
+// charge applies. Pooled and concurrent, never consumed. The billable
+// quantity is max(active - included, 0), and Polar bills max(that, 1) units
+// (apps/api/src/billing-domain.ts).
 // The upper bound is a sanity cap, mirrored by the database CHECK constraint.
 export const INCLUDED_PRODUCTION_DEPLOYMENTS_MAX = 10000;
 export const includedProductionDeploymentsSchema = z
@@ -361,10 +362,10 @@ export type RuntimeHealthLayers = z.infer<typeof runtimeHealthLayersSchema>;
 
 // Paddle migration Phase 3 — minimal billing schema. `provider` exists so a
 // row says what it is, nothing more; this is not a multi-provider system.
-export const billingProviderSchema = z.enum(['PADDLE']);
+export const billingProviderSchema = z.enum(['PADDLE', 'POLAR']);
 export type BillingProvider = z.infer<typeof billingProviderSchema>;
 
-// billing_subscriptions.status — mirrors the Paddle subscription lifecycle
+// billing_subscriptions.status — mirrors the provider subscription lifecycle
 // this control plane cares about.
 export const billingSubscriptionStatusSchema = z.enum([
   'ACTIVE',
@@ -968,7 +969,7 @@ export const billingSubscriptionSchema = z.object({
   status: billingSubscriptionStatusSchema,
   currentPeriodStart: z.iso.datetime().nullable(),
   currentPeriodEnd: z.iso.datetime().nullable(),
-  // Paddle's `scheduled_change` — a pending cancel/pause/resume already
+  // A pending change (Polar: cancel at the period end) already
   // accepted for this subscription, with its effective date. Null when
   // nothing is scheduled.
   scheduledChangeAction: z.string().nullable(),

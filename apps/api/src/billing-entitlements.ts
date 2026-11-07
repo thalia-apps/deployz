@@ -14,8 +14,12 @@ import { getSubscriptionStatus } from './organizations.js';
 // refusal below into the checkout flow).
 
 /**
- * A PRODUCTION deployment requires an ACTIVE Deployz subscription.
- * PAST_DUE, PAUSED, CANCELED and no row at all all refuse the same way.
+ * A PRODUCTION deployment requires an ACTIVE Deployz subscription that is
+ * not set to end. PAST_DUE, PAUSED, CANCELED and no row at all refuse the
+ * same way. A subscription set to end at the period end is ACTIVE but
+ * refuses too: Polar accepts no unit change on it, so a new deployment
+ * would run unbilled. Resuming the subscription in the billing portal lifts
+ * the refusal; existing deployments are never affected.
  *
  * `enforcementPaused` is the BILLING_ENFORCEMENT=off kill switch (env.ts):
  * when it is true the gate opens for every organization, whatever its
@@ -37,6 +41,19 @@ export async function assertProductionDeploymentAllowed(
       'SUBSCRIPTION_REQUIRED',
       'A production deployment needs an active Deployz subscription.',
       { subscriptionStatus },
+    );
+  }
+  const [scheduled] = await db
+    .select({ action: schema.billingSubscriptions.scheduledChangeAction, at: schema.billingSubscriptions.scheduledChangeAt })
+    .from(schema.billingSubscriptions)
+    .where(eq(schema.billingSubscriptions.organizationId, organizationId))
+    .limit(1);
+  if (scheduled?.action === 'cancel') {
+    throw new ApiError(
+      402,
+      'SUBSCRIPTION_REQUIRED',
+      'Your subscription is set to end. Resume it in the billing portal to add customer deployments.',
+      { subscriptionStatus, cancelAt: scheduled.at?.toISOString() ?? null },
     );
   }
 }

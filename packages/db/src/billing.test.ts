@@ -20,7 +20,7 @@ async function expectPgError(promise: Promise<unknown>, pattern: RegExp): Promis
   throw new Error(`expected rejection matching ${pattern}, but the query succeeded`);
 }
 
-// Paddle migration Phase 3 — billing_subscriptions is one row per
+// Billing Phase 3 — billing_subscriptions is one row per
 // organization; billing_provider_events dedupes a redelivered webhook at the
 // database, not only in application code.
 describe('billing schema constraints', () => {
@@ -71,7 +71,7 @@ describe('billing schema constraints', () => {
     );
   });
 
-  // Paddle migration Phase 8 — activation resumes every PENDING intent, so a
+  // Billing Phase 8 — activation resumes every PENDING intent, so a
   // second one would provision a second deployment for one checkout.
   it('rejects a second PENDING billing_checkout_intents row for the same organization', async () => {
     const intent = {
@@ -103,7 +103,7 @@ describe('billing schema constraints', () => {
     ).resolves.toBeDefined();
   });
 
-  // One intent per Paddle transaction: the webhook resolves an activation
+  // One intent per Polar checkout: the webhook resolves an activation
   // back to a single parked request.
   it('rejects a duplicate billing_checkout_intents.provider_transaction_id', async () => {
     await expectPgError(

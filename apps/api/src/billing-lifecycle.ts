@@ -13,7 +13,7 @@ import {
 import { recordEvent, type EventWriter } from './events.js';
 
 // Idempotent DB helpers for the billing transitions the deployment
-// lifecycle hooks into (docs/billing/paddle-billing.md, "The lifecycle, end
+// lifecycle hooks into (docs/billing/polar-billing.md, "The lifecycle, end
 // to end"). Each computes the pure domain patch, applies it with a WHERE guard
 // on the expected previous billing_state (so two concurrent writers can
 // never both apply it), and records the matching event. A no-op transition

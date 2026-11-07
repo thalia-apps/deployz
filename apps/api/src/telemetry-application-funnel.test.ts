@@ -72,7 +72,7 @@ describe('application/analysis funnel events (PR1)', () => {
     db = createDb(client);
     auth = createAuth(db);
     org = await signUpAndGetOrg(auth, db, 'telemetry-funnel@example.com');
-    // Deploy-link creation below is always PRODUCTION; Paddle migration
+    // Deploy-link creation below is always PRODUCTION; billing
     // Phase 7 gates that behind an ACTIVE subscription, unrelated to what
     // this file exercises (application/analysis funnel telemetry).
     await db.insert(schema.billingSubscriptions).values({

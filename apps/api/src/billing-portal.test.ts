@@ -7,50 +7,29 @@ import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { createAuth, type Auth } from './auth.js';
-import type { PaddleBilling } from './paddle.js';
+import type { PolarBilling } from './polar.js';
 import { buildServer } from './server.js';
 
-// Paddle migration Phase 12 — the customer portal. Fixture ids only
-// (ctm_test_1, sub_test_1, ...); no test reaches the Paddle API.
+// Billing Phase 12 — the customer portal. Fixture ids only
+// (ctm_test_1, sub_test_1, ...); no test reaches the Polar API.
 
-interface PortalCall {
-  customerId: string;
-  subscriptionIds: string[];
-}
-
-/** A Paddle double: records what portal session was asked for and answers
- *  with the shape the SDK returns. */
-function fakePaddle(options: { calls?: PortalCall[]; error?: Error } = {}): PaddleBilling {
+/** A Polar double: records which customer a portal URL was asked for and
+ *  answers with one portal URL. */
+function fakePolar(options: { calls?: string[]; error?: Error } = {}): PolarBilling {
   return {
     config: {
-      apiKey: 'test_replace_me',
+      token: 'test_replace_me',
       webhookSecret: 'test_replace_me',
-      clientToken: 'pdl_sdbx_replace_me',
-      pricePlatform: 'pri_platform_replace_me',
-      priceDeployment: 'pri_deployment_replace_me',
+      productId: 'prod_test_replace_me',
       environment: 'sandbox',
     },
     client: {
-      customerPortalSessions: {
-        create: async (customerId: string, subscriptionIds: string[]) => {
-          if (options.error) throw options.error;
-          options.calls?.push({ customerId, subscriptionIds });
-          return {
-            id: 'cpls_test_1',
-            customerId,
-            urls: {
-              general: { overview: 'https://portal.test/overview' },
-              subscriptions: subscriptionIds.map((id) => ({
-                id,
-                cancelSubscription: `https://portal.test/${id}/cancel`,
-                updateSubscriptionPaymentMethod: `https://portal.test/${id}/payment`,
-              })),
-            },
-            createdAt: new Date().toISOString(),
-          };
-        },
+      createCustomerPortalUrl: async (customerId: string) => {
+        if (options.error) throw options.error;
+        options.calls?.push(customerId);
+        return 'https://portal.test/session';
       },
-    } as unknown as PaddleBilling['client'],
+    } as unknown as PolarBilling['client'],
   };
 }
 
@@ -82,7 +61,7 @@ function postPortal(app: FastifyInstance, cookie?: string) {
   });
 }
 
-describe('POST /api/billing/portal (Paddle migration Phase 12)', () => {
+describe('POST /api/billing/portal (billing Phase 12)', () => {
   let client: PGlite | undefined;
   let db: Db;
   let auth: Auth;
@@ -101,7 +80,7 @@ describe('POST /api/billing/portal (Paddle migration Phase 12)', () => {
   });
 
   it('401s without a session', async () => {
-    const app = await buildServer({ auth, db, paddle: fakePaddle() });
+    const app = await buildServer({ auth, db, polar: fakePolar() });
     try {
       expect((await postPortal(app)).statusCode).toBe(401);
     } finally {
@@ -109,8 +88,8 @@ describe('POST /api/billing/portal (Paddle migration Phase 12)', () => {
     }
   });
 
-  it('503s when Paddle is not configured', async () => {
-    const app = await buildServer({ auth, db, paddle: null });
+  it('503s when Polar is not configured', async () => {
+    const app = await buildServer({ auth, db, polar: null });
     try {
       const response = await postPortal(app, org.cookie);
       expect(response.statusCode).toBe(503);
@@ -121,8 +100,8 @@ describe('POST /api/billing/portal (Paddle migration Phase 12)', () => {
   });
 
   it('409s an organization in evaluation — there is nothing to manage', async () => {
-    const calls: PortalCall[] = [];
-    const app = await buildServer({ auth, db, paddle: fakePaddle({ calls }) });
+    const calls: string[] = [];
+    const app = await buildServer({ auth, db, polar: fakePolar({ calls }) });
     try {
       const response = await postPortal(app, org.cookie);
       expect(response.statusCode).toBe(409);
@@ -133,42 +112,43 @@ describe('POST /api/billing/portal (Paddle migration Phase 12)', () => {
     }
   });
 
-  it("mints links for the organization's OWN customer and subscription", async () => {
+  it("mints a link for the organization's OWN customer", async () => {
     await db.insert(schema.billingSubscriptions).values({
       organizationId: org.organizationId,
       providerCustomerId: 'ctm_test_1',
       providerSubscriptionId: 'sub_test_1',
       status: 'ACTIVE',
     });
-    const calls: PortalCall[] = [];
-    const app = await buildServer({ auth, db, paddle: fakePaddle({ calls }) });
+    const calls: string[] = [];
+    const app = await buildServer({ auth, db, polar: fakePolar({ calls }) });
     try {
       const response = await postPortal(app, org.cookie);
       expect(response.statusCode, response.body).toBe(200);
       // The session's authorization IS the customer id on file — never a
       // value from the request.
-      expect(calls).toEqual([{ customerId: 'ctm_test_1', subscriptionIds: ['sub_test_1'] }]);
+      expect(calls).toEqual(['ctm_test_1']);
+      // Polar's portal has one entry page; every target lands there.
       expect(response.json()).toEqual({
-        overview: 'https://portal.test/overview',
-        updatePaymentMethod: 'https://portal.test/sub_test_1/payment',
-        cancel: 'https://portal.test/sub_test_1/cancel',
+        overview: 'https://portal.test/session',
+        updatePaymentMethod: 'https://portal.test/session',
+        cancel: 'https://portal.test/session',
       });
     } finally {
       await app.close();
     }
   });
 
-  it('502s without leaking the provider error when Paddle refuses', async () => {
+  it('502s without leaking the provider error when Polar refuses', async () => {
     const app = await buildServer({
       auth,
       db,
-      paddle: fakePaddle({ error: new Error('internal paddle detail') }),
+      polar: fakePolar({ error: new Error('internal polar detail') }),
     });
     try {
       const response = await postPortal(app, org.cookie);
       expect(response.statusCode).toBe(502);
       expect(response.json()).toMatchObject({ error: { code: 'PORTAL_UNAVAILABLE' } });
-      expect(response.body).not.toContain('internal paddle detail');
+      expect(response.body).not.toContain('internal polar detail');
     } finally {
       await app.close();
     }

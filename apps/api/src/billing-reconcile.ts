@@ -3,36 +3,35 @@ import { eq } from 'drizzle-orm';
 import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
-import { productionDeploymentCounts } from './billing-domain.js';
-import type { PaddleBilling } from './paddle.js';
+import { productionDeploymentCounts, subscriptionUnits } from './billing-domain.js';
+import { applySubscriptionSnapshot, mapSubscriptionStatus } from './billing-webhooks.js';
+import { PolarApiError, type PolarBilling, type PolarSubscription } from './polar.js';
 
-// Paddle migration Phase 9 — reconciliation. Deployz owns exactly one billing
-// number: how many production deployments are actually live, less the
-// organization's included allowance (billing-domain.ts). This module pushes
-// that ABSOLUTE quantity onto the subscription's per-deployment item — never
-// a delta, never an increment. A missed or duplicated call therefore cannot
-// drift the quantity: running it twice produces the same subscription as
-// running it once. Paddle never learns about the allowance itself; it only
-// ever receives the final billable quantity.
+// Reconciliation. Deployz owns exactly one billing number: how many
+// production deployments are actually live, less the organization's included
+// allowance, with a floor of one unit (billing-domain.ts). This module pushes
+// that ABSOLUTE unit count onto the Polar subscription — never a delta, never
+// an increment. A missed or duplicated call therefore cannot drift the
+// quantity: running it twice produces the same subscription as running it
+// once. Polar never learns about the allowance itself; it only ever receives
+// the final unit count.
 //
 // Everything here is decoupled from deployment safety (audit §4). It is
 // called only after a billing state actually changed, it never runs inside
-// the caller's transaction (a Paddle round trip must not hold a database
+// the caller's transaction (a provider round trip must not hold a database
 // connection open), and it never throws: a provider failure is recorded and
-// the Phase 10 safety job picks the drift up on its next pass.
+// the safety job picks the drift up on its next pass.
 
 export interface ReconcileDeps {
   db: RuntimeDb;
-  paddle: PaddleBilling | null;
+  polar: PolarBilling | null;
   now?: () => Date;
 }
 
 /** What reconciliation did. Recorded verbatim in `billing_reconciliation_events.action`. */
 export type ReconcileAction =
-  | 'NONE' // provider already matched the expected quantity
-  | 'QUANTITY_UPDATED' // the per-deployment item was set to the expected count
-  | 'ITEM_REMOVED' // the last live deployment went away; the item was dropped
-  | 'ITEM_ADDED' // the first live deployment appeared; the item was added
+  | 'NONE' // provider already matched the expected unit count
+  | 'QUANTITY_UPDATED' // the subscription units were set to the expected count
   | 'SKIPPED';
 
 export interface ReconcileResult {
@@ -42,17 +41,19 @@ export interface ReconcileResult {
   active: number;
   /** The organization's included production deployments. */
   included: number;
-  /** What Deployz believes should be billed: max(active - included, 0). */
+  /** The unit count Deployz believes should be billed: max(active - included, 1). */
   expected: number;
   /** What the provider had before the update — null when it was never read. */
   provider: number | null;
   reason?: string;
 }
 
-// The subscription states whose quantity Paddle will accept an update for.
-// PAUSED and CANCELED are not updatable, and a CANCELED subscription bills
-// nothing anyway.
+// The subscription states whose units Deployz updates. PAUSED and CANCELED
+// are left alone, and a CANCELED subscription bills nothing anyway.
 const UPDATABLE_STATUSES: ReadonlySet<string> = new Set(['ACTIVE', 'PAST_DUE']);
+
+/** Two reconciles of one organization can run at once; each re-counts after its update, at most this often. */
+const MAX_PUSHES = 3;
 
 async function recordReconciliation(
   db: RuntimeDb,
@@ -69,22 +70,11 @@ async function recordReconciliation(
   });
 }
 
-/**
- * Brings the organization's subscription in line with the number of live
- * production deployments.
- *
- * A no-op pass (the provider already agreed) writes no reconciliation row —
- * this runs on every billing transition and on the Phase 10 schedule, and a
- * ledger of "nothing happened" would bury the entries that matter. It still
- * stamps `lastReconciledAt`, which is what says the check ran.
- */
-export async function reconcileBilling(
-  deps: ReconcileDeps,
+/** Live production deployments, the allowance, and the unit count they make. */
+async function countUnits(
+  db: RuntimeDb,
   organizationId: string,
-): Promise<ReconcileResult> {
-  const { db, paddle } = deps;
-  const now = deps.now ?? (() => new Date());
-
+): Promise<{ active: number; included: number; billable: number; expected: number }> {
   const rows = await db
     .select({
       deploymentType: schema.deployments.deploymentType,
@@ -97,12 +87,85 @@ export async function reconcileBilling(
     .from(schema.organization)
     .where(eq(schema.organization.id, organizationId))
     .limit(1);
-  const { active, included, billable: expected } = productionDeploymentCounts(
-    rows,
-    organization?.included ?? 0,
-  );
+  const { active, included, billable } = productionDeploymentCounts(rows, organization?.included ?? 0);
+  return { active, included, billable, expected: subscriptionUnits(billable) };
+}
 
-  if (!paddle) {
+/**
+ * Polar is the source of truth for the subscription's status and a scheduled
+ * cancellation. A webhook that was lost, or that an older delivery overwrote,
+ * leaves the local row wrong; this writes what Polar says through the same
+ * snapshot code as the webhook, dated by Polar's own `modified_at`. It writes
+ * nothing when the two agree.
+ */
+async function repairFromPolar(
+  db: RuntimeDb,
+  organizationId: string,
+  local: { status: string; scheduledChangeAction: string | null },
+  live: PolarSubscription,
+): Promise<{ status: string; scheduledCancel: boolean }> {
+  const status = mapSubscriptionStatus(live.status);
+  if (!status) return { status: local.status, scheduledCancel: local.scheduledChangeAction === 'cancel' };
+  const scheduledCancel = live.cancel_at_period_end && status !== 'CANCELED';
+  if (status !== local.status || scheduledCancel !== (local.scheduledChangeAction === 'cancel')) {
+    const observedAt = live.modified_at ? new Date(live.modified_at) : new Date();
+    await db.transaction((tx) => applySubscriptionSnapshot(tx, organizationId, live, observedAt));
+  }
+  return { status, scheduledCancel };
+}
+
+/** Sets the units on Polar; returns the ledger note when the difference is left for a later order. */
+async function pushUnits(
+  polar: PolarBilling,
+  subscriptionId: string,
+  status: string,
+  units: number,
+): Promise<string | undefined> {
+  // Polar owns the money math. The prorated difference is billed NOW
+  // (`invoice`): a charge for a deployment that went live mid-period, a
+  // credit for one that stopped. When the card is declined (402) the change
+  // still lands, with the difference left for Polar's next order
+  // (`prorate`): the deployment is running and must not go unbilled. A
+  // PAST_DUE subscription goes straight to `prorate`, so a failing card is
+  // not charged again on every pass.
+  if (status === 'PAST_DUE') {
+    await polar.client.updateSubscriptionUnits(subscriptionId, units, 'prorate');
+    return 'subscription past due; the difference is billed at renewal';
+  }
+  try {
+    await polar.client.updateSubscriptionUnits(subscriptionId, units, 'invoice');
+    return undefined;
+  } catch (error) {
+    if (!(error instanceof PolarApiError && error.status === 402)) throw error;
+    await polar.client.updateSubscriptionUnits(subscriptionId, units, 'prorate');
+    return 'payment failed; the difference is billed at renewal';
+  }
+}
+
+/**
+ * Brings the organization's subscription in line with the number of live
+ * production deployments.
+ *
+ * A no-op pass (the provider already agreed) writes no reconciliation row —
+ * this runs on every billing transition and on the Phase 10 schedule, and a
+ * ledger of "nothing happened" would bury the entries that matter. It still
+ * stamps `lastReconciledAt`, which is what says the check ran.
+ *
+ * Nothing serializes two reconciles of one organization (a Polar round trip
+ * must not hold a database connection). Instead every pass re-counts after
+ * its own update and pushes again when the count moved, so the last pass to
+ * finish leaves Polar at the current count.
+ */
+export async function reconcileBilling(
+  deps: ReconcileDeps,
+  organizationId: string,
+): Promise<ReconcileResult> {
+  const { db, polar } = deps;
+  const now = deps.now ?? (() => new Date());
+
+  let { active, included, billable, expected } = await countUnits(db, organizationId);
+
+  if (!polar) {
     // Billing is switched off for this deployment of the control plane; there
     // is no provider to disagree with.
     return {
@@ -124,8 +187,8 @@ export async function reconcileBilling(
 
   if (!subscription) {
     // Evaluation mode. Nothing was ever sold, so nothing can be reconciled.
-    // Recorded only when Deployz believes something should be billed, which
-    // would mean a live production deployment with no subscription behind it.
+    // Recorded only when a live production deployment beyond the allowance
+    // has no subscription behind it.
     const result: ReconcileResult = {
       status: 'SKIPPED',
       action: 'SKIPPED',
@@ -135,11 +198,17 @@ export async function reconcileBilling(
       provider: null,
       reason: 'no subscription',
     };
-    if (expected > 0) await recordReconciliation(db, organizationId, result);
+    if (billable > 0) await recordReconciliation(db, organizationId, result);
     return result;
   }
 
-  if (!UPDATABLE_STATUSES.has(subscription.status)) {
+  const stamp = async () => {
+    await db
+      .update(schema.billingSubscriptions)
+      .set({ lastReconciledAt: now() })
+      .where(eq(schema.billingSubscriptions.organizationId, organizationId));
+  };
+  const skipped = async (status: string): Promise<ReconcileResult> => {
     const result: ReconcileResult = {
       status: 'SKIPPED',
       action: 'SKIPPED',
@@ -147,66 +216,71 @@ export async function reconcileBilling(
       included,
       expected,
       provider: null,
-      reason: `subscription is ${subscription.status}`,
+      reason: `subscription is ${status}`,
     };
-    if (expected > 0) await recordReconciliation(db, organizationId, result);
+    if (billable > 0) await recordReconciliation(db, organizationId, result);
     return result;
-  }
+  };
+  // A subscription set to end at the period end cannot change units on
+  // Polar's side (403 AlreadyCanceledSubscription), and new customer
+  // deployments are refused meanwhile (billing-entitlements.ts). Stamped, so
+  // the safety job does not retry it every pass; resuming the subscription
+  // reconciles again (the webhook path, or the next pass reading Polar). A
+  // deployment already live that resumes in this window runs unbilled until
+  // the period ends: an accepted, bounded loss.
+  const cancellationScheduled: ReconcileResult = {
+    status: 'SKIPPED',
+    action: 'SKIPPED',
+    active,
+    included,
+    expected,
+    provider: null,
+    reason: 'cancellation scheduled',
+  };
+
+  if (!UPDATABLE_STATUSES.has(subscription.status)) return skipped(subscription.status);
 
   try {
-    const live = await paddle.client.subscriptions.get(subscription.providerSubscriptionId);
-    // Paddle keeps an item on the record as `inactive` once it has been
-    // removed from the subscription. Those must be filtered out of BOTH the
-    // count and the rebuilt list below: sending one back would resurrect an
-    // item Paddle had already stopped billing.
-    const liveItems = live.items.filter((item) => item.status !== 'inactive');
-    // Paddle returns the full price object per item; the per-deployment item
-    // is the one priced at PADDLE_PRICE_DEPLOYMENT. Its absence means zero.
-    const deploymentItem = liveItems.find((item) => item.price?.id === paddle.config.priceDeployment);
-    const provider = deploymentItem?.quantity ?? 0;
+    const live = await polar.client.getSubscription(subscription.providerSubscriptionId);
+    const { status, scheduledCancel } = await repairFromPolar(db, organizationId, subscription, live);
+    if (scheduledCancel) {
+      await stamp();
+      return cancellationScheduled;
+    }
+    if (!UPDATABLE_STATUSES.has(status)) return await skipped(status);
 
-    if (provider === expected) {
-      await db
-        .update(schema.billingSubscriptions)
-        .set({ lastReconciledAt: now() })
-        .where(eq(schema.billingSubscriptions.organizationId, organizationId));
+    const provider = live.units ?? 0;
+    let pushed = provider;
+    let note: string | undefined;
+    for (let pushes = 0; pushed !== expected && pushes < MAX_PUSHES; pushes += 1) {
+      note = (await pushUnits(polar, subscription.providerSubscriptionId, status, expected)) ?? note;
+      pushed = expected;
+      ({ active, included, billable, expected } = await countUnits(db, organizationId));
+    }
+
+    if (pushed === provider) {
+      await stamp();
       return { status: 'SUCCEEDED', action: 'NONE', active, included, expected, provider };
     }
 
-    // Paddle replaces the item list wholesale: anything omitted is removed,
-    // so every other item has to be sent back unchanged. The per-deployment
-    // item is dropped rather than set to zero — the price's own minimum
-    // quantity is 1, so zero is not a value it can hold.
-    const items = liveItems
-      .filter((item) => item.price?.id !== paddle.config.priceDeployment)
-      .map((item) => ({ priceId: item.price!.id, quantity: item.quantity }));
-    if (expected > 0) {
-      items.push({ priceId: paddle.config.priceDeployment, quantity: expected });
-    }
-
-    await paddle.client.subscriptions.update(subscription.providerSubscriptionId, {
-      items,
-      // Paddle owns the money math: a deployment that goes live mid-cycle is
-      // charged for the part of the cycle it is live, and one that is removed
-      // is credited the same way.
-      prorationBillingMode: 'prorated_immediately',
-      // The deployment is already running. Refusing the quantity change
-      // because a card failed would only under-bill it; letting the change
-      // land keeps the subscription honest and leaves Paddle to chase the
-      // payment (Phase 13 acts on the resulting status).
-      onPaymentFailure: 'apply_change',
-    });
-
-    const action: ReconcileAction =
-      expected === 0 ? 'ITEM_REMOVED' : provider === 0 ? 'ITEM_ADDED' : 'QUANTITY_UPDATED';
-    const result: ReconcileResult = { status: 'SUCCEEDED', action, active, included, expected, provider };
+    const result: ReconcileResult = {
+      status: 'SUCCEEDED',
+      action: 'QUANTITY_UPDATED',
+      active,
+      included,
+      expected,
+      provider,
+      ...(note ? { reason: note } : {}),
+    };
     await recordReconciliation(db, organizationId, result);
-    await db
-      .update(schema.billingSubscriptions)
-      .set({ lastReconciledAt: now() })
-      .where(eq(schema.billingSubscriptions.organizationId, organizationId));
+    await stamp();
     return result;
   } catch (error) {
+    // Polar set the subscription to end meanwhile (the webhook has not
+    // arrived yet): the same as the scheduled-cancel skip above.
+    if (error instanceof PolarApiError && error.code === 'AlreadyCanceledSubscription') {
+      return cancellationScheduled;
+    }
     const result: ReconcileResult = {
       status: 'FAILED',
       action: 'NONE',

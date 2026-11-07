@@ -26,13 +26,13 @@ export const billingSubscriptions = pgTable('billing_subscriptions', {
     .notNull()
     .unique()
     .references(() => organization.id),
-  provider: billingProviderEnum('provider').notNull().default('PADDLE'),
+  provider: billingProviderEnum('provider').notNull().default('POLAR'),
   providerCustomerId: text('provider_customer_id').notNull(),
   providerSubscriptionId: text('provider_subscription_id').notNull().unique(),
   status: billingSubscriptionStatusEnum('status').notNull(),
   currentPeriodStart: timestamp('current_period_start', { withTimezone: true }),
   currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
-  // Paddle's `scheduled_change` — a pending cancel/pause/resume already
+  // A pending change (Polar: cancel at the period end) already
   // accepted for this subscription, with its effective date. Null when
   // nothing is scheduled. Written by the Phase 6 webhook handler.
   scheduledChangeAction: text('scheduled_change_action'),
@@ -47,7 +47,7 @@ export const billingSubscriptions = pgTable('billing_subscriptions', {
 // dedupe-checked at the database, not only in application code.
 export const billingProviderEvents = pgTable('billing_provider_events', {
   id: id(),
-  provider: billingProviderEnum('provider').notNull().default('PADDLE'),
+  provider: billingProviderEnum('provider').notNull().default('POLAR'),
   providerEventId: text('provider_event_id').notNull().unique(),
   eventType: text('event_type').notNull(),
   organizationId: text('organization_id').references(() => organization.id),
@@ -96,10 +96,10 @@ export const billingCheckoutIntents = pgTable(
     // The size the vendor chose for the parked deployment; null = the
     // application default when the checkout completes.
     sizeProfile: infrastructureSizeTierEnum('size_profile'),
-    provider: billingProviderEnum('provider').notNull().default('PADDLE'),
-    // Null only in the instant between the row insert and the provider
-    // accepting the transaction — the intent id goes into the transaction's
-    // customData, so the row must exist first.
+    provider: billingProviderEnum('provider').notNull().default('POLAR'),
+    // The Polar checkout id. Null only in the instant between the row insert
+    // and Polar creating the checkout — the webhook binds the subscription to
+    // this intent through it, so the row must exist first.
     providerTransactionId: text('provider_transaction_id').unique(),
     status: billingCheckoutIntentStatusEnum('status').notNull().default('PENDING'),
     // The deployment this intent became, once resumed.

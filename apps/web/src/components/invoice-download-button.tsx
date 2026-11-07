@@ -6,10 +6,10 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { errorMessage } from '@/lib/api-client';
-import { fetchInvoiceUrl } from '@/lib/billing-checkout';
+import { fetchInvoiceUrl, openInNewTab } from '@/lib/billing-checkout';
 
-// One invoice PDF. The link is minted on click because it expires; the PDF
-// downloads as an attachment, so the vendor stays on the billing page.
+// One invoice PDF. The link is minted on click because it expires, and it
+// opens in a new tab, so the vendor stays on the billing page.
 export function InvoiceDownloadButton({
   transactionId,
   invoiceNumber,
@@ -22,7 +22,7 @@ export function InvoiceDownloadButton({
   async function onClick(): Promise<void> {
     setPending(true);
     try {
-      window.location.assign(await fetchInvoiceUrl(transactionId));
+      await openInNewTab(() => fetchInvoiceUrl(transactionId));
     } catch (caught) {
       toast.error(errorMessage(caught));
     } finally {

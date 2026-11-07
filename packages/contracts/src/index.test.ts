@@ -90,9 +90,9 @@ describe('failureCodeSchema (§61 stable taxonomy)', () => {
   });
 });
 
-describe('billing enums (Paddle migration Phase 3)', () => {
-  it('billingProviderSchema accepts PADDLE only', () => {
-    expect(billingProviderSchema.options).toEqual(['PADDLE']);
+describe('billing enums (billing Phase 3)', () => {
+  it('billingProviderSchema accepts PADDLE (history) and POLAR', () => {
+    expect(billingProviderSchema.options).toEqual(['PADDLE', 'POLAR']);
   });
 
   it('billingSubscriptionStatusSchema accepts the four subscription states', () => {
@@ -144,7 +144,7 @@ describe('core-object round-trip (db row -> JSON -> schema.parse -> wire)', () =
       {
         id: crypto.randomUUID(),
         organizationId: 'org_01JABC',
-        provider: 'PADDLE',
+        provider: 'POLAR',
         providerCustomerId: 'ctm_01JABC',
         providerSubscriptionId: 'sub_01JABC',
         status: 'ACTIVE',
