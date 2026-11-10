@@ -369,6 +369,61 @@ describe('settleDestroy', () => {
     expect(deleter.retained).toEqual([]);
   });
 
+  // A DELETE_FAILED stack never retries by itself. A failure recorded before
+  // this DESTROY began (a leftover resource the customer has since removed)
+  // gets one fresh attempt, still retaining only the database and its network.
+  describe('a failure that predates this operation', () => {
+    const OPERATION_STARTED_AT = '2026-11-10T12:00:00.000Z';
+    const gateway = (timestamp?: string): StackResource => ({
+      logicalId: 'NetworkInternetGateway',
+      type: 'AWS::EC2::InternetGateway',
+      status: 'DELETE_FAILED',
+      statusReason: "The internetGateway 'igw-1' has dependencies and cannot be deleted.",
+      ...(timestamp !== undefined ? { timestamp } : {}),
+    });
+
+    it('asks CloudFormation to retry once instead of failing', async () => {
+      const { cfn, deleter } = scriptedDeleteFailedStack(['DELETE_IN_PROGRESS'], [gateway('2026-11-04T05:42:00.000Z')]);
+
+      const outcome = await settleDestroy(deps(cfn, deleter), false, OPERATION_STARTED_AT);
+
+      expect(outcome).toEqual({ state: 'deleting' });
+      expect(deleter.deleted).toEqual([STACK_NAME]);
+      expect(deleter.retained).toEqual([[]]);
+    });
+
+    it('still retains the database and its network, and not the stale resource', async () => {
+      const { cfn, deleter } = scriptedDeleteFailedStack(['DELETE_IN_PROGRESS'], [
+        DB_ORPHAN,
+        STUCK_SECURITY_GROUP,
+        gateway('2026-11-04T05:42:00.000Z'),
+      ]);
+
+      const outcome = await settleDestroy(deps(cfn, deleter), false, OPERATION_STARTED_AT);
+
+      expect(outcome).toEqual({ state: 'deleting' });
+      expect(deleter.retained).toEqual([[DB_ORPHAN.logicalId, STUCK_SECURITY_GROUP.logicalId]]);
+    });
+
+    it('reports a failure that happened during this operation as a real one', async () => {
+      const { cfn, deleter } = scriptedDeleteFailedStack(['DELETE_IN_PROGRESS'], [gateway('2026-11-10T12:00:30.000Z')]);
+
+      const outcome = await settleDestroy(deps(cfn, deleter), false, OPERATION_STARTED_AT);
+
+      expect(outcome.state).toBe('failed');
+      expect((outcome as { reason: string }).reason).toContain('NetworkInternetGateway (AWS::EC2::InternetGateway)');
+      expect(deleter.retained).toEqual([]);
+    });
+
+    it('fails as before when it cannot tell how old the failure is', async () => {
+      const { cfn, deleter } = scriptedDeleteFailedStack(['DELETE_IN_PROGRESS'], [gateway()]);
+
+      expect((await settleDestroy(deps(cfn, deleter), false, OPERATION_STARTED_AT)).state).toBe('failed');
+      expect((await settleDestroy(deps(cfn, deleter))).state).toBe('failed');
+      expect(deleter.retained).toEqual([]);
+    });
+  });
+
   it('treats network resources failing with no database as a genuine failure', async () => {
     const { cfn, deleter } = scriptedDeleteFailedStack(['DELETE_IN_PROGRESS'], [STUCK_SECURITY_GROUP]);
 

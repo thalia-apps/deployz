@@ -827,7 +827,16 @@ network it pins (DB subnet group, security group, subnet, VPC and the secondary 
 block the database-only subnets use — and the
 network only while a database is blocked or already retained) may be
 retained. Any other `DELETE_FAILED` resource is a real failure:
-`STACK_DELETE_FAILED` naming its logical id, type and reason, nothing retained. The deployment then settles
+`STACK_DELETE_FAILED` naming its logical id, type and reason, nothing retained.
+CloudFormation never retries a `DELETE_FAILED` stack by itself, and it keeps a
+failed resource's reason until something retries it. So when every such
+resource failed **before** this DESTROY began (its timestamp is older than the
+operation's start), the failure may have been fixed since — the customer
+removed the leftover resource that blocked it. The relay then re-issues
+`delete-stack` once, still retaining only the database and the network it
+pins, and judges the result on a later tick. A resource that fails again
+carries a newer timestamp and is reported as a real failure. A resource with
+no timestamp is never treated as stale. The deployment then settles
 `DELETED` — truthfully: the application and cache are gone; the database, the network it pins (including the secondary VPC CIDR block), its credential secrets and the bucket are deliberately retained
 (no final snapshot is ever taken), clearly visible, and removable by
 PURGE.

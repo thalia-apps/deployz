@@ -172,6 +172,14 @@ async function stopStandaloneTasks(deps: DestroyDeps): Promise<void> {
   }
 }
 
+/** True when `timestamp` is a known time before `reference` (unknown is not older). */
+function isOlderThan(timestamp: string | undefined, reference: string): boolean {
+  if (timestamp === undefined) return false;
+  const at = Date.parse(timestamp);
+  const since = Date.parse(reference);
+  return !Number.isNaN(at) && !Number.isNaN(since) && at < since;
+}
+
 type DestroyOutcome =
   | { readonly state: 'succeeded'; readonly alreadyAbsent: boolean }
   | { readonly state: 'failed'; readonly reason: string }
@@ -185,6 +193,7 @@ type DestroyOutcome =
 export async function settleDestroy(
   deps: DestroyDeps,
   dataDeletionAuthorized = false,
+  operationStartedAt?: string,
 ): Promise<DestroyOutcome> {
   const lookup = await deps.cfn.describeStack(deps.stackName);
 
@@ -221,6 +230,17 @@ export async function settleDestroy(
         await deps.cfn.describeStackResources(deps.stackName),
       );
       if (unrelated.length > 0) {
+        // CloudFormation keeps a failed resource's reason until something
+        // retries it, and a stack left on DELETE_FAILED never retries by
+        // itself. A failure that predates this operation may since have been
+        // fixed in the customer's account (a leftover resource removed), so
+        // ask CloudFormation once, still retaining only the database and the
+        // network it pins. If that attempt fails again, the failure is newer
+        // than this operation and is reported as a real one below.
+        if (operationStartedAt !== undefined && unrelated.every((r) => isOlderThan(r.timestamp, operationStartedAt))) {
+          await deps.deleter.deleteStack(deps.stackName, blocked);
+          return { state: 'deleting' };
+        }
         const details = unrelated
           .map((r) => `${r.logicalId} (${r.type})${r.statusReason ? `: ${r.statusReason}` : ''}`)
           .join('; ');
@@ -336,7 +356,7 @@ export function createDestroyExecutor(deps: DestroyDeps): CommandExecutor {
 
     let outcome: DestroyOutcome;
     try {
-      outcome = await settleDestroy(deps, readDataDeletionAuthorized(command.payload));
+      outcome = await settleDestroy(deps, readDataDeletionAuthorized(command.payload), startedAt);
     } catch (err) {
       return result(command, false, {
         error: String(err),
@@ -439,7 +459,7 @@ export function createDestroyResumer(deps: DestroyDeps): () => Promise<RelayComm
       ...(resumeAfter !== undefined ? { resumeAfter } : {}),
     });
 
-    const outcome = await settleDestroy(deps, readDataDeletionAuthorized(pending.payload));
+    const outcome = await settleDestroy(deps, readDataDeletionAuthorized(pending.payload), pending.startedAt);
 
     // Best-effort, once per resume tick — same rule as the executor above.
     await collector?.poll(pending.stackName);
