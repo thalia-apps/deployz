@@ -117,6 +117,43 @@ describe('toLambdaResult', () => {
     expect(result.headers).toEqual({ 'content-length': '0' });
   });
 
+  // The bug an invoice PDF hit: Fastify's `body` is the bytes read as UTF-8
+  // text, so 0x80-0xFF bytes became U+FFFD and the file opened blank.
+  it('sends a binary body as its exact bytes, base64-encoded', () => {
+    const pdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a, 0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a, 0x00, 0xff]);
+    const result = toLambdaResult({
+      statusCode: 200,
+      headers: { 'content-type': 'application/pdf', 'content-length': pdf.length },
+      body: pdf.toString('utf8'),
+      rawPayload: pdf,
+    });
+
+    expect(result.isBase64Encoded).toBe(true);
+    expect(Buffer.from(result.body!, 'base64').equals(pdf)).toBe(true);
+    expect(result.headers).toEqual({ 'content-type': 'application/pdf' });
+  });
+
+  it('keeps JSON and text bodies as text even when the raw bytes are present', () => {
+    const body = '{"ok":true}';
+    const json = toLambdaResult({
+      statusCode: 200,
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+      body,
+      rawPayload: Buffer.from(body),
+    });
+    const problem = toLambdaResult({
+      statusCode: 400,
+      headers: { 'content-type': 'application/problem+json' },
+      body,
+      rawPayload: Buffer.from(body),
+    });
+
+    expect(json.body).toBe(body);
+    expect(json.isBase64Encoded).toBe(false);
+    expect(problem.body).toBe(body);
+    expect(problem.isBase64Encoded).toBe(false);
+  });
+
   it('gzips a large body when the client accepts gzip', () => {
     const body = JSON.stringify({ rows: Array.from({ length: 200 }, (_, id) => ({ id, state: 'RUNNING' })) });
     const result = toLambdaResult(

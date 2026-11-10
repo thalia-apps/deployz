@@ -35,6 +35,9 @@ export interface InjectedResponse {
   readonly statusCode: number;
   readonly headers?: Record<string, string | string[] | number | undefined>;
   readonly body: string;
+  /** The exact bytes. `body` is those bytes read as UTF-8 text, which
+   *  corrupts a binary file such as a PDF. */
+  readonly rawPayload?: Buffer;
 }
 
 export function toInjectOptions(event: APIGatewayProxyEventV2): InjectOptions {
@@ -70,6 +73,10 @@ export function toInjectOptions(event: APIGatewayProxyEventV2): InjectOptions {
   };
 }
 
+// A response whose content type is not text must go out as its exact bytes,
+// base64-encoded, or API Gateway sends the UTF-8 text reading of them.
+const TEXT_CONTENT_TYPE = /^(text\/|application\/(json|xml|javascript|x-www-form-urlencoded)\b|[^;]*\+(json|xml)\b)/i;
+
 // API Gateway HTTP APIs do not compress responses, and the list routes send
 // hundreds of KB of JSON. Smaller bodies go as they are.
 const GZIP_MIN_BYTES = 1024;
@@ -93,6 +100,18 @@ export function toLambdaResult(
       continue;
     }
     headers[key] = String(value);
+  }
+
+  const contentType = headers['content-type'];
+  if (response.rawPayload && contentType !== undefined && !TEXT_CONTENT_TYPE.test(contentType)) {
+    delete headers['content-length'];
+    return {
+      statusCode: response.statusCode,
+      headers,
+      ...(cookies.length > 0 ? { cookies } : {}),
+      body: response.rawPayload.toString('base64'),
+      isBase64Encoded: true,
+    };
   }
 
   const compressible =
