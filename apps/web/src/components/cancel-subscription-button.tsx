@@ -16,13 +16,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { errorMessage } from '@/lib/api-client';
-import { formatBillingDate } from '@/lib/billing';
 import { cancelSubscription } from '@/lib/billing-checkout';
 
 // Ends the subscription when the paid period ends, without leaving Deployz.
 // The dialog says what happens first; the billing page then shows the end
 // date Polar reports, which stays the source of truth.
-export function CancelSubscriptionButton({ periodEnd }: { periodEnd: string | null }) {
+export function CancelSubscriptionButton({ endsOn }: { endsOn: string | null }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -32,9 +31,9 @@ export function CancelSubscriptionButton({ periodEnd }: { periodEnd: string | nu
     setPending(true);
     setError(null);
     try {
-      const { endsAt } = await cancelSubscription();
+      await cancelSubscription();
       setOpen(false);
-      toast.success(`Your subscription ends on ${formatBillingDate(endsAt)}.`);
+      toast.success('Your subscription will end when the paid period ends.');
       router.refresh();
     } catch (caught) {
       setError(errorMessage(caught));
@@ -58,8 +57,8 @@ export function CancelSubscriptionButton({ periodEnd }: { periodEnd: string | nu
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
             <AlertDialogDescription>
-              {periodEnd
-                ? `Your subscription stays active until ${formatBillingDate(periodEnd)}, then ends. `
+              {endsOn
+                ? `Your subscription stays active until ${endsOn}, then ends. `
                 : 'Your subscription stays active until the end of the paid period, then ends. '}
               You are not refunded for the current period. Customer deployments keep running, and you can
               subscribe again later.

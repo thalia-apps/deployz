@@ -140,6 +140,7 @@ function PlanCard({
   }
 
   const details = account?.status === 'ok' ? account.account : null;
+  const periodEnd = details?.nextPayment?.date ?? billing.subscription?.currentPeriodEnd ?? null;
   const nextPaymentText = details?.nextPayment
     ? `${formatMoney(details.nextPayment)} on ${formatBillingDate(details.nextPayment.date)}`
     : billing.subscription?.currentPeriodEnd && !details?.scheduledChange
@@ -226,9 +227,7 @@ function PlanCard({
             </ManageBillingButton>
             <ManageBillingButton target="overview">Open billing portal</ManageBillingButton>
             {details?.scheduledChange?.action === 'cancel' ? null : (
-              <CancelSubscriptionButton
-                periodEnd={details?.nextPayment?.date ?? billing.subscription?.currentPeriodEnd ?? null}
-              />
+              <CancelSubscriptionButton endsOn={periodEnd ? formatBillingDate(periodEnd) : null} />
             )}
             <p className="w-full text-xs text-muted-foreground">
               Updating your card and the billing portal open Polar in a new tab. Polar does not allow its
