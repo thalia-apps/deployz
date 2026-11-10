@@ -96,6 +96,14 @@ describe('createPolarClient', () => {
     });
   });
 
+  it('asks Polar to end the subscription when the period ends', async () => {
+    const calls = stubFetch(200, { id: 'sub_1', current_period_end: '2026-12-10T00:00:00Z' });
+    await createPolarClient({ token: 'tok', environment: 'sandbox' }).cancelSubscriptionAtPeriodEnd('sub_1');
+    expect(calls[0]!.init.method).toBe('PATCH');
+    expect(calls[0]!.url).toContain('/v1/subscriptions/sub_1');
+    expect(JSON.parse(calls[0]!.init.body as string)).toEqual({ cancel_at_period_end: true });
+  });
+
   it('sends the embedding origin so Polar reports the payment to the page', async () => {
     const calls = stubFetch(201, { id: 'chk_1', url: 'https://sandbox.polar.sh/checkout/x', status: 'open' });
     await createPolarClient({ token: 'tok', environment: 'sandbox' }).createCheckout({

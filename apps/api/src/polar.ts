@@ -120,6 +120,8 @@ export interface PolarClient {
   /** Sets the ABSOLUTE unit count, billing the prorated difference the way
    *  `proration` says. */
   updateSubscriptionUnits(id: string, units: number, proration: ProrationBehavior): Promise<PolarSubscription>;
+  /** Ends the subscription when the current period ends; nothing is refunded. */
+  cancelSubscriptionAtPeriodEnd(id: string): Promise<PolarSubscription>;
   createCheckout(input: CreateCheckoutInput): Promise<PolarCheckout>;
   getCheckout(id: string): Promise<PolarCheckout>;
   /** A short-lived, pre-authenticated customer portal URL. */
@@ -166,6 +168,8 @@ export function createPolarClient(config: Pick<PolarConfig, 'token' | 'environme
     getSubscription: (id) => request('GET', `/v1/subscriptions/${encodeURIComponent(id)}`),
     updateSubscriptionUnits: (id, units, proration) =>
       request('PATCH', `/v1/subscriptions/${encodeURIComponent(id)}`, { units, proration_behavior: proration }),
+    cancelSubscriptionAtPeriodEnd: (id) =>
+      request('PATCH', `/v1/subscriptions/${encodeURIComponent(id)}`, { cancel_at_period_end: true }),
     createCheckout: (input) =>
       request('POST', '/v1/checkouts/', {
         products: [input.productId],

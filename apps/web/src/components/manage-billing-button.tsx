@@ -8,9 +8,8 @@ import { Button } from '@/components/ui/button';
 import { errorMessage } from '@/lib/api-client';
 import { openBillingPortal, openInNewTab, type BillingPortalTarget } from '@/lib/billing-checkout';
 
-// The way into the billing provider's hosted customer portal. Every screen
-// that manages a subscription (card, invoices, cancel) is the provider's, so
-// this is a hand-off, not a page: it mints a short-lived pre-authenticated
+// The way into the billing provider's hosted customer portal, for the one
+// thing only it can do: the card form. That makes this a hand-off, not a page: it mints a short-lived pre-authenticated
 // session on the API and opens it in a new tab, never an iframe — the portal
 // is where the vendor's card lives, and Deployz stays open behind it.
 export function ManageBillingButton({

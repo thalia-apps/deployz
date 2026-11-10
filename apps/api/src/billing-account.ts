@@ -206,3 +206,49 @@ export async function getInvoiceUrl(
   }
   return { url };
 }
+
+/**
+ * Ends the organization's subscription when the paid period ends. Polar sends
+ * the status change as a webhook, which stays the authority for what the
+ * page shows; this only asks for it and returns the date it will end.
+ */
+export async function cancelSubscriptionAtPeriodEnd(
+  deps: AccountDeps,
+  organizationId: string,
+): Promise<{ endsAt: string }> {
+  const { polar, subscriptionId } = await requireSubscription(deps, organizationId);
+  try {
+    const subscription = await polar.client.cancelSubscriptionAtPeriodEnd(subscriptionId);
+    return { endsAt: subscription.current_period_end };
+  } catch (error) {
+    if (error instanceof PolarApiError && error.code === 'AlreadyCanceledSubscription') {
+      throw new ApiError(409, 'ALREADY_CANCELLING', 'This subscription already ends at the end of the paid period.');
+    }
+    logProviderFailure('billing:cancel-failed', organizationId, error);
+    throw new ApiError(502, 'CANCEL_FAILED', 'Could not cancel the subscription. Try again.');
+  }
+}
+
+const INVOICE_MAX_BYTES = 10 * 1024 * 1024;
+
+/** One invoice PDF, read from Polar by the API so the vendor downloads it
+ *  from Deployz and never visits a Polar page. */
+export async function getInvoicePdf(
+  deps: AccountDeps,
+  organizationId: string,
+  orderId: string,
+): Promise<{ pdf: Buffer }> {
+  const { url } = await getInvoiceUrl(deps, organizationId, orderId);
+  if (!url.startsWith('https://')) {
+    throw providerFailure('billing:invoice-failed', organizationId, new Error('invoice link is not https'));
+  }
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+    if (!response.ok) throw new Error(`invoice download answered ${response.status}`);
+    const pdf = Buffer.from(await response.arrayBuffer());
+    if (pdf.length > INVOICE_MAX_BYTES) throw new Error('invoice is larger than expected');
+    return { pdf };
+  } catch (error) {
+    throw providerFailure('billing:invoice-failed', organizationId, error);
+  }
+}

@@ -37,7 +37,7 @@ Deployz owns eligibility and exactly one number: the unit count,
 | The unit count pushed as an absolute number: `max(live − included, 1)` | Invoices, receipts, tax |
 | The included production deployment allowance (admin-set, per organization) | Nothing — Polar never learns it exists |
 | The checkout intent (a parked request, never a deployment) | The checkout (shown embedded) and the card form |
-| Subscription status as projected from webhooks | Dunning, past-due, cancel |
+| Subscription status as projected from webhooks | Dunning, past-due |
 | The customer portal *link* | The customer portal |
 | A read-only view of the next renewal, payment method and invoices | The numbers in that view, read live on every request |
 
@@ -253,9 +253,20 @@ most 15 minutes, not an hour.
   Only an owner or admin sees these actions; with billing disabled the page
   says subscriptions are not available. Below the Plan card: the
   per-customer breakdown (before tax), then the invoices.
-- Polar's portal has one entry page with the card form, the invoices and the
-  cancel action, so every portal button opens it through a short-lived
-  customer session for the organization's own Polar customer id.
+- Cancelling and invoices stay inside Deployz. "Cancel subscription" opens a
+  confirmation dialog that names the end date; confirming calls
+  `POST /api/billing/cancel`, which asks Polar to end the subscription at the
+  end of the paid period (`PATCH /v1/subscriptions/{id}` with
+  `cancel_at_period_end: true`; nothing is refunded). The webhook stays the
+  authority for the status, and resuming a scheduled cancellation is still on
+  Polar's portal. An invoice downloads from
+  `GET /api/billing/invoices/:id/file`, which the API reads from Polar and
+  serves as the PDF (10 MB limit, owner or admin only).
+- Polar's portal sends `x-frame-options: DENY`, so it cannot be shown inside
+  Deployz. The card form is only in the portal, so "Update payment details"
+  and "Open billing portal" open it through a short-lived customer session
+  for the organization's own Polar customer id, in a new tab, and the page
+  says so.
 - The checkout opens embedded on top of the current Deployz page, so the
   vendor never leaves it. The API creates the Polar checkout with
   `embed_origin` set to the web origin, so Polar reports the payment to the

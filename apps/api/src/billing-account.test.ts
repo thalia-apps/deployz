@@ -1,7 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
@@ -18,6 +18,7 @@ interface Calls {
   orderLists: string[];
   paymentMethodLists: string[];
   invoiceUrls: string[];
+  cancels: string[];
 }
 
 const OWN_PAID_ORDER = '00000000-0000-4000-8000-000000000001';
@@ -59,7 +60,13 @@ const ORDERS: PolarOrder[] = [
 ];
 
 function fakePolar(
-  options: { calls?: Calls; error?: Error; paymentMethodError?: Error; scheduledCancel?: boolean } = {},
+  options: {
+    calls?: Calls;
+    error?: Error;
+    paymentMethodError?: Error;
+    scheduledCancel?: boolean;
+    cancelError?: Error;
+  } = {},
 ): PolarBilling {
   const ordersById: Record<string, PolarOrder> = {
     [OWN_PAID_ORDER]: ORDERS[0]!,
@@ -97,6 +104,11 @@ function fakePolar(
           prices: [{ amount_type: 'fixed', price_amount: 4900 }, { amount_type: 'seat_based' }],
         };
       },
+      cancelSubscriptionAtPeriodEnd: async (subscriptionId: string) => {
+        options.calls?.cancels.push(subscriptionId);
+        if (options.cancelError) throw options.cancelError;
+        return { current_period_end: '2026-12-10T00:00:00Z' };
+      },
       listSubscriptionOrders: async (subscriptionId: string) => {
         options.calls?.orderLists.push(subscriptionId);
         return ORDERS;
@@ -120,7 +132,7 @@ function fakePolar(
 }
 
 function newCalls(): Calls {
-  return { subscriptionGets: [], orderLists: [], paymentMethodLists: [], invoiceUrls: [] };
+  return { subscriptionGets: [], orderLists: [], paymentMethodLists: [], invoiceUrls: [], cancels: [] };
 }
 
 async function signUp(auth: Auth, db: Db, email: string) {
@@ -136,6 +148,10 @@ async function signUp(auth: Auth, db: Db, email: string) {
     .limit(1);
   if (!membership) throw new Error('signup did not provision an organization');
   return { userId: signup.user.id, organizationId: membership.organizationId, cookie };
+}
+
+function post(app: FastifyInstance, url: string, cookie?: string) {
+  return app.inject({ method: 'POST', url, headers: cookie ? { cookie } : {} });
 }
 
 function get(app: FastifyInstance, url: string, cookie?: string) {
@@ -166,6 +182,10 @@ describe('billing account and invoices', () => {
 
   afterAll(async () => {
     await client?.close();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('401s without a session', async () => {
@@ -342,6 +362,88 @@ describe('billing account and invoices', () => {
     }
   });
 
+  it('cancels at the end of the period and returns the end date', async () => {
+    const calls = newCalls();
+    const app = await buildServer({ auth, db, polar: fakePolar({ calls }) });
+    try {
+      const response = await post(app, '/api/billing/cancel', owner.cookie);
+      expect(response.statusCode, response.body).toBe(200);
+      expect(response.json()).toEqual({ endsAt: '2026-12-10T00:00:00Z' });
+      expect(calls.cancels).toEqual(['sub_own']);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('409s a subscription that already ends, and 502s other Polar failures without leaking them', async () => {
+    const already = await buildServer({
+      auth,
+      db,
+      polar: fakePolar({ cancelError: new PolarApiError(403, 'already', 'AlreadyCanceledSubscription') }),
+    });
+    const broken = await buildServer({ auth, db, polar: fakePolar({ cancelError: new Error('secret provider detail') }) });
+    try {
+      const first = await post(already, '/api/billing/cancel', owner.cookie);
+      expect(first.statusCode).toBe(409);
+      expect(first.json()).toMatchObject({ error: { code: 'ALREADY_CANCELLING' } });
+      const second = await post(broken, '/api/billing/cancel', owner.cookie);
+      expect(second.statusCode).toBe(502);
+      expect(second.body).not.toContain('secret provider detail');
+    } finally {
+      await already.close();
+      await broken.close();
+    }
+  });
+
+  it('409s a cancel from an organization in evaluation and 401s without a session', async () => {
+    const calls = newCalls();
+    const app = await buildServer({ auth, db, polar: fakePolar({ calls }) });
+    try {
+      const response = await post(app, '/api/billing/cancel', evaluating.cookie);
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toMatchObject({ error: { code: 'NO_SUBSCRIPTION' } });
+      expect((await post(app, '/api/billing/cancel')).statusCode).toBe(401);
+      expect(calls.cancels).toHaveLength(0);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('serves the invoice PDF itself from Deployz', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        if (String(input).startsWith('https://invoices.test/')) {
+          return new Response(new Uint8Array([37, 80, 68, 70]), { status: 200 });
+        }
+        throw new Error(`unexpected fetch ${String(input)}`);
+      }),
+    );
+    const app = await buildServer({ auth, db, polar: fakePolar() });
+    try {
+      const response = await get(app, `/api/billing/invoices/${OWN_PAID_ORDER}/file`, owner.cookie);
+      expect(response.statusCode, response.body).toBe(200);
+      expect(response.headers['content-type']).toBe('application/pdf');
+      expect(response.headers['content-disposition']).toContain('attachment');
+      expect(response.rawPayload.toString('latin1')).toBe('%PDF');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('409s the invoice file while it is being prepared and 404s an order of another organization', async () => {
+    const app = await buildServer({ auth, db, polar: fakePolar() });
+    try {
+      const notReady = await get(app, `/api/billing/invoices/${OWN_UNGENERATED_ORDER}/file`, owner.cookie);
+      expect(notReady.statusCode).toBe(409);
+      expect(notReady.json()).toMatchObject({ error: { code: 'INVOICE_NOT_READY' } });
+      const other = await get(app, `/api/billing/invoices/${OTHER_ORG_ORDER}/file`, owner.cookie);
+      expect(other.statusCode).toBe(404);
+    } finally {
+      await app.close();
+    }
+  });
+
   it('403s a member who is not an owner or admin', async () => {
     const member = await signUp(auth, db, `account-member-${crypto.randomUUID()}@example.com`);
     await db.insert(schema.member).values({
@@ -358,6 +460,8 @@ describe('billing account and invoices', () => {
     try {
       expect((await get(app, '/api/billing/account', member.cookie)).statusCode).toBe(403);
       expect((await get(app, `/api/billing/invoices/${OWN_PAID_ORDER}`, member.cookie)).statusCode).toBe(403);
+      expect((await get(app, `/api/billing/invoices/${OWN_PAID_ORDER}/file`, member.cookie)).statusCode).toBe(403);
+      expect((await post(app, '/api/billing/cancel', member.cookie)).statusCode).toBe(403);
     } finally {
       await app.close();
     }

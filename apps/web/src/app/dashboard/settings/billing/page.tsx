@@ -1,6 +1,7 @@
 import { AlertTriangle, ChevronDown, CreditCard, Receipt } from 'lucide-react';
 
 import { DocsLink } from '@/components/docs-link';
+import { CancelSubscriptionButton } from '@/components/cancel-subscription-button';
 import { InvoiceDownloadButton } from '@/components/invoice-download-button';
 import { ManageBillingButton } from '@/components/manage-billing-button';
 import { StartSubscriptionButton } from '@/components/start-subscription-button';
@@ -225,10 +226,14 @@ function PlanCard({
             </ManageBillingButton>
             <ManageBillingButton target="overview">Open billing portal</ManageBillingButton>
             {details?.scheduledChange?.action === 'cancel' ? null : (
-              <ManageBillingButton target="cancel" variant="ghost">
-                Cancel subscription
-              </ManageBillingButton>
+              <CancelSubscriptionButton
+                periodEnd={details?.nextPayment?.date ?? billing.subscription?.currentPeriodEnd ?? null}
+              />
             )}
+            <p className="w-full text-xs text-muted-foreground">
+              Updating your card and the billing portal open Polar in a new tab. Polar does not allow its
+              portal to be shown inside other sites.
+            </p>
           </>
         )}
       </CardFooter>

@@ -4,7 +4,8 @@
 // as active, so the page only has to wait for it. A checkout that cannot be
 // embedded sends the vendor back with `?checkout=complete` instead.
 
-import { apiRequest } from '@/lib/api-client';
+import { apiRequest, ApiRequestError } from '@/lib/api-client';
+import { apiUrl } from '@/lib/api-url';
 import type { SubscriptionStatus } from '@/lib/organization-vocabulary';
 
 export interface CheckoutIntent {
@@ -93,7 +94,7 @@ export function createCheckoutIntent(input: CreateCheckoutIntentInput): Promise<
 
 /** Which part of the billing portal the button is for. Polar's portal has
  *  one entry page, so every target opens it. */
-export type BillingPortalTarget = 'overview' | 'updatePaymentMethod' | 'cancel';
+export type BillingPortalTarget = 'overview' | 'updatePaymentMethod';
 
 /** `POST /api/billing/portal` — a short-lived, pre-authenticated link into
  *  Polar's customer portal. Minted on every click and never cached: the
@@ -105,11 +106,34 @@ export async function openBillingPortal(target: BillingPortalTarget): Promise<st
   return links[target];
 }
 
-/** `GET /api/billing/invoices/:id` — a short-lived link to one invoice PDF.
- *  Minted on every click; the link expires. */
-export async function fetchInvoiceUrl(orderId: string): Promise<string> {
-  const { url } = await apiRequest<{ url: string }>(
-    `/api/billing/invoices/${encodeURIComponent(orderId)}`,
-  );
-  return url;
+/** `POST /api/billing/cancel` — ends the subscription when the paid period
+ *  ends. The billing page then shows the end date Polar reports. */
+export function cancelSubscription(): Promise<{ endsAt: string }> {
+  return apiRequest<{ endsAt: string }>('/api/billing/cancel', { method: 'POST' });
+}
+
+/** `GET /api/billing/invoices/:id/file` — saves one invoice PDF from the
+ *  Deployz API, so the vendor never visits a Polar page. */
+export async function downloadInvoice(orderId: string, invoiceNumber: string): Promise<void> {
+  const response = await fetch(`${apiUrl}/api/billing/invoices/${encodeURIComponent(orderId)}/file`, {
+    credentials: 'include',
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as {
+      error?: { code?: string; message?: string };
+    } | null;
+    throw new ApiRequestError(
+      payload?.error?.code ?? 'REQUEST_FAILED',
+      payload?.error?.message ?? 'Something went wrong. Try again in a moment.',
+    );
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `invoice-${invoiceNumber}.pdf`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }

@@ -145,7 +145,7 @@ import {
   subscriptionUnits,
 } from './billing-domain.js';
 import { markDeploymentLive, markDeploymentRemoved } from './billing-lifecycle.js';
-import { getBillingAccount, getInvoiceUrl } from './billing-account.js';
+import { cancelSubscriptionAtPeriodEnd, getBillingAccount, getInvoicePdf, getInvoiceUrl } from './billing-account.js';
 import { createBillingPortalLinks } from './billing-portal.js';
 import { reconcileBilling } from './billing-reconcile.js';
 import { handlePolarWebhook, webhookHeaders } from './billing-webhooks.js';
@@ -8554,6 +8554,31 @@ export async function buildServer({
       requireOwnerOrAdmin(request, BILLING_ROLE_MESSAGE);
       const organizationId = requireSessionOrganizationId(request);
       return getInvoiceUrl({ db, polar }, organizationId, request.params.transactionId);
+    },
+  );
+
+  // POST /api/billing/cancel — ends the subscription when the paid period
+  // ends. The webhook reports the new status.
+  app.post('/api/billing/cancel', { preHandler: requireAuth }, async (request) => {
+    requireOwnerOrAdmin(request, BILLING_ROLE_MESSAGE);
+    const organizationId = requireSessionOrganizationId(request);
+    return cancelSubscriptionAtPeriodEnd({ db, polar }, organizationId);
+  });
+
+  // GET /api/billing/invoices/:transactionId/file — the invoice PDF itself,
+  // so the vendor downloads it without leaving Deployz.
+  app.get<{ Params: { transactionId: string } }>(
+    '/api/billing/invoices/:transactionId/file',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      requireOwnerOrAdmin(request, BILLING_ROLE_MESSAGE);
+      const organizationId = requireSessionOrganizationId(request);
+      const { pdf } = await getInvoicePdf({ db, polar }, organizationId, request.params.transactionId);
+      return reply
+        .header('content-type', 'application/pdf')
+        .header('content-disposition', 'attachment; filename="invoice.pdf"')
+        .header('cache-control', 'no-store')
+        .send(pdf);
     },
   );
 
