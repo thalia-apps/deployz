@@ -377,6 +377,7 @@ describe('POST /api/billing/checkout', () => {
       expect(response.statusCode, response.body).toBe(200);
       expect(created).toHaveLength(1);
       expect(created[0]!.successUrl).toBe(`${env.webUrl}/dashboard/deployments/new?checkout=complete`);
+      expect(created[0]!.embedOrigin).toBe(new URL(env.webUrl).origin);
     } finally {
       await app.close();
     }

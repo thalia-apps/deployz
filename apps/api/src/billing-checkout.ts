@@ -17,8 +17,9 @@ import { requirePreflightReady, runApplicationPreflight } from './preflight.js';
 // customer deployment: nothing is provisioned, no deployment row is written
 // and no install link exists. The request is parked as a
 // billing_checkout_intents row tied to a Polar checkout, and the vendor pays
-// on Polar's hosted checkout page. When the subscription activates, the
-// webhook completes the intent and only then does the deployment row appear.
+// in Polar's checkout, embedded in the Deployz page. When the subscription
+// activates, the webhook completes the intent and only then does the
+// deployment row appear.
 //
 // The checkout is for ONE unit: the subscription always bills at least one
 // customer deployment ($49 + $19 = $68). The parked deployment uses that
@@ -54,11 +55,13 @@ export interface CreateCheckoutIntentParams {
   customerEmail: string | null;
   /** Where Polar sends the vendor after paying (server-built, same origin). */
   successUrl: string;
+  /** The origin of the page that embeds Polar's checkout. */
+  embedOrigin?: string;
 }
 
 export interface CreatedCheckoutIntent {
   checkoutIntentId: string;
-  /** Polar's hosted checkout page; apps/web redirects the browser to it. */
+  /** Polar's checkout; apps/web shows it embedded in the page. */
   checkoutUrl: string;
 }
 
@@ -227,6 +230,7 @@ export async function createCheckoutIntent(
         customerEmail: params.customerEmail,
         metadata: { organizationId: params.organizationId, checkoutIntentId: intent.id },
         successUrl: params.successUrl,
+        ...(params.embedOrigin ? { embedOrigin: params.embedOrigin } : {}),
       });
     } catch (error) {
       logCheckoutFailure(params.organizationId, error);

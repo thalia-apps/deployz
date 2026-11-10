@@ -1,15 +1,15 @@
 // Starting a subscription. The API parks a checkout intent and hands back
-// the URL of Polar's hosted checkout; the browser goes there, and Polar sends
-// the vendor back with `?checkout=complete`. The subscription is created by
-// the API when Polar reports it as active, so the page only has to wait for
-// it.
+// the URL of a Polar checkout; the page shows it embedded, on top of the
+// current page. The subscription is created by the API when Polar reports it
+// as active, so the page only has to wait for it. A checkout that cannot be
+// embedded sends the vendor back with `?checkout=complete` instead.
 
 import { apiRequest } from '@/lib/api-client';
 import type { SubscriptionStatus } from '@/lib/organization-vocabulary';
 
 export interface CheckoutIntent {
   checkoutIntentId: string;
-  /** Polar's hosted checkout page. */
+  /** Polar's checkout, shown embedded in the page. */
   checkoutUrl: string;
 }
 
@@ -42,6 +42,35 @@ export async function openInNewTab(mintUrl: () => Promise<string>): Promise<'new
   tab.opener = null;
   tab.location.href = url;
   return 'new-tab';
+}
+
+/**
+ * Shows Polar's checkout embedded on top of the page. Resolves `paid` when
+ * the payment goes through, or when the vendor closes the overlay after Polar
+ * confirmed the order (the payment is then processing); the page waits for
+ * the webhook either way. Resolves `closed` when the vendor leaves without
+ * paying. The embed script is loaded on the click, so no other page pays for
+ * it.
+ */
+export async function openEmbeddedCheckout(
+  url: string,
+  theme: 'light' | 'dark' = 'light',
+): Promise<'paid' | 'closed'> {
+  const { PolarEmbedCheckout } = await import('@polar-sh/checkout/embed');
+  const checkout = await PolarEmbedCheckout.create(url, { theme });
+  return new Promise((resolve) => {
+    let confirmed = false;
+    checkout.addEventListener('confirmed', () => {
+      confirmed = true;
+    });
+    checkout.addEventListener('success', (event) => {
+      // Stay on this page: the embed would otherwise redirect to the success URL.
+      event.preventDefault();
+      resolve('paid');
+      checkout.close();
+    });
+    checkout.addEventListener('close', () => resolve(confirmed ? 'paid' : 'closed'));
+  });
 }
 
 /** The query parameter Polar's success URL carries back to the page. */

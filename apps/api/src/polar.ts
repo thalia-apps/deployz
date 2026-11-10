@@ -83,6 +83,8 @@ export interface CreateCheckoutInput {
   customerEmail: string | null;
   metadata: Record<string, string>;
   successUrl: string;
+  /** The origin of the page that embeds the checkout; lets Polar report the payment to it. */
+  embedOrigin?: string;
 }
 
 /** A non-2xx answer from Polar. `status` is the HTTP status; `code` is
@@ -174,6 +176,7 @@ export function createPolarClient(config: Pick<PolarConfig, 'token' | 'environme
         ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
         metadata: input.metadata,
         success_url: input.successUrl,
+        ...(input.embedOrigin ? { embed_origin: input.embedOrigin } : {}),
         allow_discount_codes: true,
         allow_trial: false,
       }),

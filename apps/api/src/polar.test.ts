@@ -96,6 +96,20 @@ describe('createPolarClient', () => {
     });
   });
 
+  it('sends the embedding origin so Polar reports the payment to the page', async () => {
+    const calls = stubFetch(201, { id: 'chk_1', url: 'https://sandbox.polar.sh/checkout/x', status: 'open' });
+    await createPolarClient({ token: 'tok', environment: 'sandbox' }).createCheckout({
+      productId: 'prod_1',
+      units: 1,
+      externalCustomerId: 'org_1',
+      customerEmail: null,
+      metadata: {},
+      successUrl: 'https://app.example.com/dashboard/settings/billing',
+      embedOrigin: 'https://app.example.com',
+    });
+    expect(JSON.parse(calls[0]!.init.body as string).embed_origin).toBe('https://app.example.com');
+  });
+
   it('throws a PolarApiError with the HTTP status on a non-2xx answer', async () => {
     stubFetch(404, { detail: 'Not found' });
     await expect(

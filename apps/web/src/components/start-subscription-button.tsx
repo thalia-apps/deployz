@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
@@ -12,20 +13,17 @@ import {
   CHECKOUT_COMPLETE_PARAM,
   createCheckoutIntent,
   fetchSubscriptionStatus,
-  openInNewTab,
+  openEmbeddedCheckout,
 } from '@/lib/billing-checkout';
 
 const ACTIVATION_POLL_MS = 2_000;
 const ACTIVATION_WAIT_MS = 30_000;
-// While the vendor pays in the checkout tab, this page checks less often and
-// for longer: paying takes minutes, not seconds.
-const PAYMENT_POLL_MS = 5_000;
-const PAYMENT_WAIT_MS = 15 * 60_000;
 
 // Starts the subscription: a subscribe-only checkout intent opens the billing
-// provider's hosted checkout in a new tab, which returns to this page with
-// ?checkout=complete when paid. Neither tab is the authority — the webhook
-// is — so both wait until the organization reads ACTIVE, then refresh.
+// provider's checkout embedded in this page. When it is paid, the page waits
+// until the organization reads ACTIVE, then refreshes — the webhook is the
+// authority, not the checkout. A checkout that cannot be embedded returns to
+// this page with ?checkout=complete, which waits the same way.
 export function StartSubscriptionButton({
   children,
   onActivated,
@@ -35,7 +33,8 @@ export function StartSubscriptionButton({
   onActivated?: () => void;
 }) {
   const router = useRouter();
-  const [state, setState] = useState<'idle' | 'opening' | 'paying' | 'activating' | 'delayed'>('idle');
+  const { resolvedTheme } = useTheme();
+  const [state, setState] = useState<'idle' | 'opening' | 'activating' | 'delayed'>('idle');
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
 
@@ -77,28 +76,21 @@ export function StartSubscriptionButton({
     setError(null);
     setState('opening');
     try {
-      const opened = await openInNewTab(
-        async () => (await createCheckoutIntent({ returnPath: window.location.pathname })).checkoutUrl,
-      );
-      if (opened === 'new-tab') {
-        setState('paying');
-        // No payment arrived in the wait: offer the button again, never a
-        // "payment received" the vendor did not make.
-        if (!(await waitForActivation(PAYMENT_POLL_MS, PAYMENT_WAIT_MS)) && mounted.current) setState('idle');
+      const { checkoutUrl } = await createCheckoutIntent({ returnPath: window.location.pathname });
+      const outcome = await openEmbeddedCheckout(checkoutUrl, resolvedTheme === 'dark' ? 'dark' : 'light');
+      if (!mounted.current) return;
+      // Closed without paying: offer the button again, never a "payment
+      // received" the vendor did not make.
+      if (outcome === 'closed') {
+        setState('idle');
+        return;
       }
+      setState('activating');
+      if (!(await waitForActivation(ACTIVATION_POLL_MS, ACTIVATION_WAIT_MS)) && mounted.current) setState('delayed');
     } catch (caught) {
       setError(errorMessage(caught));
       setState('idle');
     }
-  }
-
-  if (state === 'paying') {
-    return (
-      <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-busy="true">
-        <Spinner aria-hidden />
-        Complete the payment in the new tab. This page updates when your subscription starts.
-      </p>
-    );
   }
 
   if (state === 'activating') {

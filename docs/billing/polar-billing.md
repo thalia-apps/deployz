@@ -36,7 +36,7 @@ Deployz owns eligibility and exactly one number: the unit count,
 | `billing_state` per deployment (NOT_STARTED / ACTIVE / PAUSED / STOPPED) | Proration when the unit count changes mid-period |
 | The unit count pushed as an absolute number: `max(live − included, 1)` | Invoices, receipts, tax |
 | The included production deployment allowance (admin-set, per organization) | Nothing — Polar never learns it exists |
-| The checkout intent (a parked request, never a deployment) | The hosted checkout page and the card form |
+| The checkout intent (a parked request, never a deployment) | The checkout (shown embedded) and the card form |
 | Subscription status as projected from webhooks | Dunning, past-due, cancel |
 | The customer portal *link* | The customer portal |
 | A read-only view of the next renewal, payment method and invoices | The numbers in that view, read live on every request |
@@ -256,12 +256,26 @@ most 15 minutes, not an hour.
 - Polar's portal has one entry page with the card form, the invoices and the
   cancel action, so every portal button opens it through a short-lived
   customer session for the organization's own Polar customer id.
-- Every Polar page — checkout, portal, invoice PDF — opens in a new tab, so
-  the vendor keeps their place in Deployz. The tab opens during the click
-  and is pointed at the URL once the API has minted it, without an opener; a
-  browser that blocks it gets the page in the same tab. While the vendor
-  pays in the checkout tab, the billing page waits up to 15 minutes for the
-  subscription to read ACTIVE and then refreshes.
+- The checkout opens embedded on top of the current Deployz page, so the
+  vendor never leaves it. The API creates the Polar checkout with
+  `embed_origin` set to the web origin, so Polar reports the payment to the
+  page. On success the page closes the overlay, waits up to 30 seconds for
+  the subscription to read ACTIVE (the webhook is the authority) and then
+  refreshes. Closing the overlay without paying returns the button. A
+  checkout that was opened before this change, or that cannot be embedded,
+  still ends on the `?checkout=complete` return URL, which waits the same
+  way.
+- Setup for each Polar environment (sandbox and production): add the web
+  host (for example `app.deployz.dev`, no scheme; write the port out for a
+  non-default port) under Settings → Embedding. Polar's browser frame rules
+  refuse to show the checkout on a host that is not listed (the console
+  names `frame-ancestors`). `embed_origin` must be the same origin the vendor
+  uses to open Deployz. Apple Pay and Google Pay stay off in the embedded
+  checkout until Polar validates the domain through its support.
+- The portal and the invoice PDF still open in a new tab, so the vendor keeps
+  their place in Deployz. The tab opens during the click and is pointed at
+  the URL once the API has minted it, without an opener; a browser that
+  blocks it gets the page in the same tab.
 - For an owner or admin, the subscribed page also shows what Polar holds,
   read live and never stored: the next renewal (date and recurring amount
   before tax; prorated adjustments and tax are added by Polar on the

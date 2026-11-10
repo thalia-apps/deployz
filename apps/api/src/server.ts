@@ -8522,6 +8522,7 @@ export async function buildServer({
         createdBy: request.user?.id ?? null,
         customerEmail: request.user?.email ?? null,
         successUrl: `${env.webUrl}${body.returnPath ?? '/dashboard/settings/billing'}?checkout=complete`,
+        embedOrigin: new URL(env.webUrl).origin,
       },
     );
   });
