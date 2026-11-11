@@ -286,7 +286,7 @@ policy for each deployment's next DEPLOY_RELEASE:
 
 | Application setting | Effective policy |
 | --- | --- |
-| No vendor override | Run the frozen command the stack compiled |
+| No vendor override | Run the application's detected command (the Procfile `release:` line); the frozen command when it is the same or nothing is detected |
 | A vendor command | Run the correction (equal to the frozen command → frozen) |
 | A vendor `null` ("No separate migration") | Skip the migration |
 

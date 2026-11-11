@@ -1146,8 +1146,9 @@ type MigrationPolicy =
 /**
  * The effective migration policy for one deployment's next DEPLOY_RELEASE,
  * from the application's migration setting and its vendor-override marker:
- * no override runs the frozen command; an explicit command is a correction;
- * an explicit null (no separate migration) skips the migration. The
+ * no override runs the detected command (a correction when it differs from
+ * the frozen one); an explicit command is a correction; an explicit null
+ * (no separate migration) skips the migration. The
  * deployment's spec and topology never change — a correction is accepted
  * only when the frozen deployment already has a migration workload
  * (`frozenCommand` is null when it does not).
@@ -1165,10 +1166,16 @@ async function migrationPolicyFor(
     .from(schema.applications)
     .where(eq(schema.applications.id, applicationId))
     .limit(1);
-  if (!application || !readVendorOverrides(application.detectedMetadata).includes('migrationCommand')) {
-    return { mode: 'frozen' };
-  }
+  if (!application) return { mode: 'frozen' };
   const command = application.migrationCommand?.trim() || null;
+  if (!readVendorOverrides(application.detectedMetadata).includes('migrationCommand')) {
+    // A detected command that changed since the deployment froze (the
+    // repository's Procfile `release:` line) is a correction too. Detection
+    // never skips a migration, so an absent detected command stays frozen.
+    return command === null || frozenCommand === null || command === frozenCommand
+      ? { mode: 'frozen' }
+      : { mode: 'corrected', command };
+  }
   if (command === null) return frozenCommand === null ? { mode: 'frozen' } : { mode: 'skipped' };
   if (frozenCommand === null) {
     throw new ApiError(

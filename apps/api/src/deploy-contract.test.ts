@@ -460,6 +460,26 @@ describe('deploy contract, busy gate and restart', () => {
       });
     });
 
+    it('follows a changed detected command without a vendor override', async () => {
+      const { appId, releaseId, deployment } = await migratingSetup('v7.2.2');
+      await db
+        .update(schema.applications)
+        .set({ migrationCommand: 'npm run db:migrate && npm run db:setup' })
+        .where(eq(schema.applications.id, appId));
+
+      const response = await post(`/api/deployments/${deployment.id}/deploy`, { releaseId });
+      expect(response.statusCode, response.body).toBe(202);
+
+      const [job] = await deployJobs(deployment.id);
+      expect(job?.payload).toMatchObject({
+        migrationTask: {
+          identity: migrationIdentity('npm run db:migrate && npm run db:setup', digestOf('v7.2.2')),
+          command: 'npm run db:migrate && npm run db:setup',
+        },
+        migrationPolicy: expect.stringMatching(/^corrected:[0-9a-f]{16}$/),
+      });
+    });
+
     it('treats a correction equal to the frozen command as the frozen policy', async () => {
       const { appId, releaseId, deployment } = await migratingSetup('v7.3.0');
       await setMigration(appId, 'npm run db:migrate');
