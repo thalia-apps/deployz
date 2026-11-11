@@ -121,7 +121,10 @@ function currentSetting(row: EnvironmentSetupRow, draft: EnvironmentSetting | un
       stage: row.suggestion?.setting.stage ?? row.stage,
       required: row.suggestion?.setting.required ?? row.required,
       secret: row.suggestion?.setting.secret ?? row.secret,
-      provider: row.suggestion?.setting.provider ?? (row.effectiveProvider === 'unreviewed' ? 'none' : row.effectiveProvider),
+      provider:
+        row.effectiveProvider === 'vendor'
+          ? 'vendor'
+          : (row.suggestion?.setting.provider ?? (row.effectiveProvider === 'unreviewed' ? 'none' : row.effectiveProvider)),
     }
   );
 }

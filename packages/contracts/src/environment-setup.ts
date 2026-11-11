@@ -360,6 +360,11 @@ export function evaluateEnvironmentSetup(input: {
       } else if (legacyCustomerRequired) {
         effectiveProvider = 'unreviewed';
         status = 'needs-decision';
+      } else if (vendorValueKeys.has(key)) {
+        // The vendor saved a value for a name that analysis now detects. A
+        // later analysis must not turn that value into "not used".
+        effectiveProvider = 'vendor';
+        status = 'ready';
       } else {
         effectiveProvider = 'none';
         status = 'optional';

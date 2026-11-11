@@ -170,6 +170,17 @@ describe('evaluateEnvironmentSetup', () => {
     expect(evaluation.counts.optional).toBe(1);
   });
 
+  it('legacy: an optional variable with a saved vendor value stays vendor-provided', () => {
+    const evaluation = evaluateEnvironmentSetup({
+      variables: [variable({ key: 'ADMIN_EMAIL', required: false, classification: 'optional' })],
+      settings: null,
+      vendorValueKeys: new Set(['ADMIN_EMAIL']),
+    });
+    const row = evaluation.rows[0];
+    expect(row?.effectiveProvider).toBe('vendor');
+    expect(row?.status).toBe('ready');
+  });
+
   it('legacy: undefined classification and required counts as needs-decision', () => {
     const evaluation = evaluateEnvironmentSetup({
       variables: [variable({ key: 'SOME_KEY', required: true })],
