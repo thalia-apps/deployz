@@ -3418,9 +3418,24 @@ export function unusableMigrationScript(tree: FileTree): [key: string, command: 
   return collectScripts(tree).find(([key, command]) => command.trim() !== '' && /migrat|alteration/i.test(key) && !UNSAFE_MIGRATION_KEY_REGEX.test(key));
 }
 
-/** A safe migration script exists for the deployed app — the mode='pre_deploy' signal. */
+/**
+ * The command of a Procfile `release:` line: the repository itself declares
+ * what runs before each deploy, in any language. It passes the same safety
+ * filter as a package script (no rollback, reset, seed, build or test step).
+ */
+export function selectProcfileReleaseCommand(tree: FileTree): string | undefined {
+  for (const [path, content] of Object.entries(tree)) {
+    if (!content || !PROCFILE_REGEX.test(path) || !isRuntimeSourcePath(path)) continue;
+    const command = /^release:[ \t]*(.+)$/m.exec(content)?.[1]?.trim();
+    if (!command || MIGRATION_DEV_REGEX.test(command) || UNSAFE_MIGRATION_COMMAND_REGEX.test(command)) continue;
+    return command;
+  }
+  return undefined;
+}
+
+/** A safe migration script or Procfile release command exists for the deployed app — the mode='pre_deploy' signal. */
 export function hasPreDeployMigration(tree: FileTree): boolean {
-  return selectMigrationScript(tree) !== undefined;
+  return selectProcfileReleaseCommand(tree) !== undefined || selectMigrationScript(tree) !== undefined;
 }
 
 /**

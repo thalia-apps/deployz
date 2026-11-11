@@ -44,6 +44,7 @@ import {
   runSoftReview,
   selectAiContextFiles,
   selectMigrationScript,
+  selectProcfileReleaseCommand,
   softReviewFileRequests,
   softReviewTargets,
   TREE_PATHS,
@@ -1412,6 +1413,8 @@ function withPrismaSchemaFlag(command: string, packageDir: string, tree: FileTre
  * environment, not the relay's.
  */
 function resolveMigrationCommand(tree: FileTree): MigrationCommandResolution | undefined {
+  const release = selectProcfileReleaseCommand(tree);
+  if (release) return qualifyMigrationCommand(tree, release, '');
   const script = selectMigrationScript(tree);
   if (!script) return undefined;
   const [, command, packageDir] = script;

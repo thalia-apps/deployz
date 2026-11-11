@@ -250,3 +250,11 @@ This change also fixed the `Timeout calling "onTaskUpdate"` flake that had
 been failing pushes to `main`: the CDK project's synchronous esbuild calls
 were blocking the Vitest worker's RPC channel. Eight consecutive
 verification runs after the fix were green.
+
+## No manual AWS step
+
+A deploy, an update and a removal must finish with no console action in the
+customer account. If a test or a manual run needs a console step (a one-off
+task, a security group edit, a resource delete), treat it as a defect: fix it
+in code and add a test for the case, as `destroy.test.ts` does for a stuck
+internet gateway.

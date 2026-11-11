@@ -45,6 +45,7 @@ export {
   collectScripts,
   collectScriptsWithDir,
   selectMigrationScript,
+  selectProcfileReleaseCommand,
   dockerfileWorkdirs,
   detectDeclaredWorkerCommands,
   detectDeclaredWorkerCommand,

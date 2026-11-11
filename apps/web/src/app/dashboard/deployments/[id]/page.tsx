@@ -1732,6 +1732,12 @@ function DisconnectStatusPanel({
     detail.relayStatus === 'DISCONNECTED' &&
     Number.isFinite(pendingSince) &&
     Date.now() - pendingSince >= DESTROY_PENDING_STALE_AFTER_MS;
+  const waitingForRelay =
+    detail.relayStatus === 'DISCONNECTED' && Number.isFinite(pendingSince) && !forceCompleteEligible;
+  const minutesUntilForceComplete = Math.max(
+    1,
+    Math.ceil((DESTROY_PENDING_STALE_AFTER_MS - (Date.now() - pendingSince)) / 60_000),
+  );
   const lastContact = relativeTime(detail.lastHealthAt);
 
   async function onForceComplete(): Promise<void> {
@@ -1769,6 +1775,13 @@ function DisconnectStatusPanel({
             </li>
           ))}
         </ul>
+      ) : null}
+      {waitingForRelay ? (
+        <p className="text-sm text-muted-foreground">
+          The Deployz connector is offline, so removal is waiting. It resumes when the connector
+          reconnects. If it stays offline, you can complete the removal in about{' '}
+          {minutesUntilForceComplete} {minutesUntilForceComplete === 1 ? 'minute' : 'minutes'}.
+        </p>
       ) : null}
       {forceCompleteEligible ? (
         <div className="flex flex-col gap-3 rounded-lg border border-destructive/50 p-4">

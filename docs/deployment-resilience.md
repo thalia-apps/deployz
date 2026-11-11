@@ -260,6 +260,12 @@ install / database ready
   certificate only when the certificate carries this installation's tag.
   Pinning the exact template bucket host is a post-MVP item.
 
+- **Release command and first-install setup.** A Procfile `release:` line is the
+  migration command, in any language, and wins over a package script
+  (`selectProcfileReleaseCommand`). It passes the same safety filter. First-install
+  setup (first plan, first records) is an idempotent step chained in that line
+  (`release: <migrate> && <setup>`), because the line runs on every release.
+  Deployz has no separate setup slot.
 - **Analysis freezes only a safe command.** `selectMigrationScript`
   (`packages/analysis`) accepts only a script of the deployed app's own
   package that applies pending migrations. It rejects create, generate,
@@ -826,8 +832,12 @@ until the stack reaches `DELETE_COMPLETE`. Only the RDS instance and the
 network it pins (DB subnet group, security group, subnet, VPC and the secondary VPC CIDR
 block the database-only subnets use — and the
 network only while a database is blocked or already retained) may be
-retained. Any other `DELETE_FAILED` resource is a real failure:
-`STACK_DELETE_FAILED` naming its logical id, type and reason, nothing retained.
+retained. A stuck internet gateway is the one other exception: when the gateway
+(or its attachment) fails again during this DESTROY, the relay retains it and the
+free network resources around it (subnets, security groups, VPC), so the removal
+completes with no console step. PURGE clears them later. Any other `DELETE_FAILED`
+resource is a real failure: `STACK_DELETE_FAILED` naming its logical id, type and
+reason, nothing retained.
 CloudFormation never retries a `DELETE_FAILED` stack by itself, and it keeps a
 failed resource's reason until something retries it. So when every such
 resource failed **before** this DESTROY began (its timestamp is older than the

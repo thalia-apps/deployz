@@ -111,6 +111,21 @@ const DATABASE_PINNED_TYPES: ReadonlySet<string> = new Set([
   'AWS::EC2::VPCCidrBlock',
 ]);
 
+/** The internet gateway and what it holds. A customer's leftover public-IP ENI can pin them. */
+const GATEWAY_TYPES: ReadonlySet<string> = new Set(['AWS::EC2::InternetGateway', 'AWS::EC2::VPCGatewayAttachment']);
+
+/**
+ * The failed resources a stuck internet gateway leaves behind: the gateway,
+ * its attachment, and the network that holds them. They cost nothing and
+ * hold no data, so retaining them completes the removal. Returns the logical
+ * ids to retain, or undefined when anything else failed or no gateway did.
+ */
+function retainableGatewayNetwork(unrelated: readonly StackResource[]): string[] | undefined {
+  if (!unrelated.some((r) => GATEWAY_TYPES.has(r.type))) return undefined;
+  const inert = (r: StackResource): boolean => GATEWAY_TYPES.has(r.type) || DATABASE_PINNED_TYPES.has(r.type);
+  return unrelated.every(inert) ? unrelated.map((r) => r.logicalId) : undefined;
+}
+
 /**
  * Splits the DELETE_FAILED resources into the ones the data-preserving
  * recovery may retain (the retained database and the network it pins) and
@@ -239,6 +254,15 @@ export async function settleDestroy(
         // than this operation and is reported as a real one below.
         if (operationStartedAt !== undefined && unrelated.every((r) => isOlderThan(r.timestamp, operationStartedAt))) {
           await deps.deleter.deleteStack(deps.stackName, blocked);
+          return { state: 'deleting' };
+        }
+        // A gateway that still fails after that attempt is held by something in
+        // the customer's account. Retain it and the free network around it, so
+        // the removal completes without a console step. PURGE clears them later.
+        const gatewayNetwork = retainableGatewayNetwork(unrelated);
+        if (gatewayNetwork !== undefined) {
+          await stopStandaloneTasks(deps);
+          await deps.deleter.deleteStack(deps.stackName, [...blocked, ...gatewayNetwork]);
           return { state: 'deleting' };
         }
         const details = unrelated

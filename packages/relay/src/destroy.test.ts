@@ -405,18 +405,40 @@ describe('settleDestroy', () => {
       expect(deleter.retained).toEqual([[DB_ORPHAN.logicalId, STUCK_SECURITY_GROUP.logicalId]]);
     });
 
-    it('reports a failure that happened during this operation as a real one', async () => {
+    it('retains a gateway that fails again during this operation', async () => {
       const { cfn, deleter } = scriptedDeleteFailedStack(['DELETE_IN_PROGRESS'], [gateway('2026-11-10T12:00:30.000Z')]);
 
       const outcome = await settleDestroy(deps(cfn, deleter), false, OPERATION_STARTED_AT);
 
+      expect(outcome).toEqual({ state: 'deleting' });
+      expect(deleter.retained).toEqual([['NetworkInternetGateway']]);
+    });
+
+    it('reports a failure of any other resource during this operation as a real one', async () => {
+      const bucket: StackResource = {
+        logicalId: 'StorageBucket',
+        type: 'AWS::S3::Bucket',
+        status: 'DELETE_FAILED',
+        statusReason: 'The bucket you tried to delete is not empty',
+        timestamp: '2026-11-10T12:00:30.000Z',
+      };
+      const { cfn, deleter } = scriptedDeleteFailedStack(['DELETE_IN_PROGRESS'], [gateway('2026-11-10T12:00:30.000Z'), bucket]);
+
+      const outcome = await settleDestroy(deps(cfn, deleter), false, OPERATION_STARTED_AT);
+
       expect(outcome.state).toBe('failed');
-      expect((outcome as { reason: string }).reason).toContain('NetworkInternetGateway (AWS::EC2::InternetGateway)');
+      expect((outcome as { reason: string }).reason).toContain('StorageBucket (AWS::S3::Bucket)');
       expect(deleter.retained).toEqual([]);
     });
 
     it('fails as before when it cannot tell how old the failure is', async () => {
-      const { cfn, deleter } = scriptedDeleteFailedStack(['DELETE_IN_PROGRESS'], [gateway()]);
+      const bucket: StackResource = {
+        logicalId: 'StorageBucket',
+        type: 'AWS::S3::Bucket',
+        status: 'DELETE_FAILED',
+        statusReason: 'The bucket you tried to delete is not empty',
+      };
+      const { cfn, deleter } = scriptedDeleteFailedStack(['DELETE_IN_PROGRESS'], [bucket]);
 
       expect((await settleDestroy(deps(cfn, deleter), false, OPERATION_STARTED_AT)).state).toBe('failed');
       expect((await settleDestroy(deps(cfn, deleter))).state).toBe('failed');
