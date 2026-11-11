@@ -1851,7 +1851,8 @@ function RemovedDeploymentNotes({
               <AlertDescription>
                 Deployz could not verify or remove resources because the Deployz connector was
                 offline during removal. Everything in the customer AWS account may remain and
-                keep costing money.
+                keep costing money. If the connector stack is already deleted, Deployz cannot
+                remove them: delete the database, storage bucket and secrets in the AWS console.
               </AlertDescription>
             </>
           ) : (
@@ -1859,8 +1860,8 @@ function RemovedDeploymentNotes({
               <AlertTitle>Retained resources remain in the customer AWS account</AlertTitle>
               <AlertDescription>
                 {retainedNames && retainedNames.length > 0
-                  ? `${retainedUntilDeletedSentence(retainedNames)}, and may continue to generate AWS charges. The Deployz connector also stays; your customer deletes that stack once retained data is gone.`
-                  : 'Retained resources remain in the customer AWS account until you delete them, and may continue to generate AWS charges. The Deployz connector also stays; your customer deletes that stack once retained data is gone.'}
+                  ? `${retainedUntilDeletedSentence(retainedNames)}, and may continue to generate AWS charges. The Deployz connector also stays. Delete the retained data first: after your customer deletes the connector stack, Deployz cannot remove it.`
+                  : 'Retained resources remain in the customer AWS account until you delete them, and may continue to generate AWS charges. The Deployz connector also stays. Delete the retained data first: after your customer deletes the connector stack, Deployz cannot remove it.'}
               </AlertDescription>
             </>
           )}
