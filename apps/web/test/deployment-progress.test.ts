@@ -436,6 +436,11 @@ describe('removed-state guards', () => {
     expect(hero.title).toBe(REMOVED_PROGRESS.DELETED.title);
     expect(hero.tone).toBe('neutral');
   });
+
+  it('a removed deployment shows a done icon once cleanup is complete and a warning when it is not', () => {
+    expect(deriveHero(heroInput({ state: 'DELETED', cleanupState: 'COMPLETE' })).tone).toBe('success');
+    expect(deriveHero(heroInput({ state: 'DELETED', cleanupState: 'SKIPPED_RELAY_OFFLINE' })).tone).toBe('warning');
+  });
 });
 
 // The live-progress-feedback pure formatters shared by LiveStepDetail (the

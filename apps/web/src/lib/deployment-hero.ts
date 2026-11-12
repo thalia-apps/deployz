@@ -218,7 +218,12 @@ export function deriveHero(detail: HeroInput): HeroModel {
           : 'The application and its networking were removed. Anything Deployz kept is listed under Infrastructure.';
     return {
       kind: 'deleted',
-      tone: 'neutral',
+      tone:
+        detail.cleanupState === 'COMPLETE'
+          ? 'success'
+          : detail.cleanupState === 'SKIPPED_RELAY_OFFLINE' || detail.cleanupState === 'PURGE_FAILED'
+            ? 'warning'
+            : 'neutral',
       title: REMOVED_PROGRESS.DELETED.title,
       description,
       liveReleaseNote: null,
