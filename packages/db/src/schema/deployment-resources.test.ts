@@ -1,4 +1,5 @@
 import type { PGlite } from '@electric-sql/pglite';
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { persistDeploymentResourceSnapshot } from '../deployment-resources-persist.js';
@@ -127,6 +128,40 @@ describe('persistDeploymentResourceSnapshot', () => {
       resourceStatusReason: null,
       lastUpdatedAt: new Date('2026-09-01T13:00:00.000Z'),
     });
+  });
+
+  it('drops the rows of a replaced stack when a complete snapshot of a new stack arrives', async () => {
+    const [existing] = await ctx.select().from(deployments).where(eq(deployments.id, deploymentId));
+    const [created] = await ctx
+      .insert(deployments)
+      .values({
+        customerId: existing!.customerId,
+        applicationId: existing!.applicationId,
+        organizationId: existing!.organizationId,
+        region: 'us-east-1',
+        enrollmentCode: 'code-replaced-stack',
+      })
+      .returning({ id: deployments.id });
+    const id = created!.id;
+    const oldStack = 'arn:aws:cloudformation:us-east-1:123456789012:stack/deployz-app/old';
+    const newStack = 'arn:aws:cloudformation:us-east-1:123456789012:stack/deployz-app/new';
+
+    await persistDeploymentResourceSnapshot(ctx, {
+      deploymentId: id,
+      stackId: oldStack,
+      observedAt: '2026-09-02T10:00:00.000Z',
+      resources: [resource('NetworkNatGateway', 'AWS::EC2::NatGateway', 'DELETE_IN_PROGRESS', { physicalId: 'nat-old' })],
+    });
+    await persistDeploymentResourceSnapshot(ctx, {
+      deploymentId: id,
+      stackId: newStack,
+      observedAt: '2026-09-02T11:00:00.000Z',
+      resources: [resource('NetworkNatGateway', 'AWS::EC2::NatGateway', 'CREATE_COMPLETE', { physicalId: 'nat-new' })],
+    });
+
+    const mine = await ctx.select().from(deploymentResources).where(eq(deploymentResources.deploymentId, id));
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ stackId: newStack, physicalResourceId: 'nat-new', resourceStatus: 'ready' });
   });
 
   it('keeps the final snapshot after a later null observation (no-op)', async () => {

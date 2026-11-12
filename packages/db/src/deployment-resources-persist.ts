@@ -1,5 +1,5 @@
 import { classifyResource, mapResourceStatus, type ResourceClassification } from '@deployz/contracts';
-import { sql } from 'drizzle-orm';
+import { and, eq, lte, ne, sql } from 'drizzle-orm';
 
 import { deploymentResources } from './schema/deployment-resources.js';
 import type { RuntimeDb } from './client.js';
@@ -10,7 +10,11 @@ import type { RuntimeDb } from './client.js';
 // merge is a pure roll-forward: `null` (a partial read, or a stack that
 // vanished) is a NO-OP — the previous complete snapshot is kept, because a
 // partial read must never overwrite a good one. Rows are never deleted when a
-// stack disappears: the last complete snapshot IS the final snapshot.
+// stack disappears: the last complete snapshot IS the final snapshot. The one
+// exception is a stack the deployment replaced: a complete snapshot of a new
+// stack drops the older rows of any other stack of the same deployment (a
+// failed first attempt that was deleted and created again), so the inventory
+// never mixes two stacks.
 
 /** The minimal resource shape the persist helper needs. The relay's
  *  `StackResource` (packages/relay) satisfies this structurally. */
@@ -73,8 +77,19 @@ export async function persistDeploymentResourceSnapshot(
   // Stale guard: never overwrite a newer snapshot with a stale one. Rows that
   // fail the guarded update are simply left untouched (counted as not
   // persisted this call). firstSeenAt is only ever set on insert.
-  const rows = await db.transaction(async (tx) =>
-    tx
+  const rows = await db.transaction(async (tx) => {
+    if (values.length > 0) {
+      await tx
+        .delete(deploymentResources)
+        .where(
+          and(
+            eq(deploymentResources.deploymentId, input.deploymentId),
+            ne(deploymentResources.stackId, input.stackId),
+            lte(deploymentResources.lastUpdatedAt, observedAt),
+          ),
+        );
+    }
+    return tx
       .insert(deploymentResources)
       .values(values)
       .onConflictDoUpdate({
@@ -96,8 +111,8 @@ export async function persistDeploymentResourceSnapshot(
         },
         setWhere: sql`${deploymentResources.lastUpdatedAt} <= excluded.last_updated_at`,
       })
-      .returning(),
-  );
+      .returning();
+  });
 
   return { persisted: true, count: rows.length };
 }
