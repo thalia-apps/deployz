@@ -1880,14 +1880,16 @@ function RemovedDeploymentNotes({
     return (
       <Alert>
         <AlertTriangle aria-hidden />
-        <AlertTitle>The Deployz connector is still installed in the customer AWS account</AlertTitle>
+        <AlertTitle>The Deployz connector may still be installed in the customer AWS account</AlertTitle>
         <AlertDescription>
           Deployz removed everything it created for this deployment. The connector stack{' '}
           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
             {detail.bootstrapStackName}
           </code>{' '}
           was created by your customer, so only they can delete it — ask them to delete that
-          stack in CloudFormation. Their install link shows the same step.
+          stack in CloudFormation. Their install link shows the same step. Deployz has no access
+          to the account after removal, so it cannot see the stack. If it is already deleted,
+          nothing more is needed.
         </AlertDescription>
       </Alert>
     );
