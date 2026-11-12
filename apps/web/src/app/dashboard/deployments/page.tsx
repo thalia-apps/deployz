@@ -171,9 +171,8 @@ export default function DeploymentsPage() {
   );
 
   const filtersActive = hasActiveFilters(query);
-  const removedCount = deployments.filter(
-    (deployment) => deployment.state === 'DELETED' && deployment.cleanupState !== 'COMPLETE',
-  ).length;
+  const removed = deployments.filter((deployment) => deployment.state === 'DELETED');
+  const removedCount = removed.filter((deployment) => deployment.cleanupState !== 'COMPLETE').length;
 
   function clearFilters(): void {
     setParams({ q: null, status: null, application: null, region: null });
@@ -282,7 +281,7 @@ export default function DeploymentsPage() {
           {rows.length === 0 ? (
             filtersActive ? (
               <NoMatchesState heading="No deployments match these filters." onClear={clearFilters} />
-            ) : removedCount > 0 ? (
+            ) : removed.length > 0 ? (
               <p className="px-1 text-sm text-muted-foreground">
                 No active deployments.{' '}
                 <button
@@ -290,9 +289,11 @@ export default function DeploymentsPage() {
                   className="underline underline-offset-4"
                   onClick={() => setParams({ status: 'removed' })}
                 >
-                  {removedCount === 1
-                    ? '1 removed deployment may still have retained resources.'
-                    : `${removedCount} removed deployments may still have retained resources.`}
+                  {removedCount === 0
+                    ? `View ${removed.length} removed ${removed.length === 1 ? 'deployment' : 'deployments'}.`
+                    : removedCount === 1
+                      ? '1 removed deployment may still have retained resources.'
+                      : `${removedCount} removed deployments may still have retained resources.`}
                 </button>
               </p>
             ) : null

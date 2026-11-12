@@ -1914,7 +1914,10 @@ function AcknowledgeCleanup({ deploymentId, onChanged }: { deploymentId: string;
     setError(null);
     try {
       await acknowledgeCleanup(deploymentId);
-      toast.success('Marked as deleted');
+      toast.success('Marked as deleted', {
+        description: 'Deployz no longer lists this deployment\'s data as retained.',
+        duration: 10_000,
+      });
       onChanged();
     } catch (caught) {
       setError(actionErrorMessage(caught, "Couldn't save this. Try again."));
