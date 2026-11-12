@@ -885,6 +885,11 @@ PURGE still completes and reports `task-definition-revisions` in the result's
 `leftovers` instead of claiming removal.
 A failed purge lands on `cleanupState: PURGE_FAILED` and stays retryable.
 
+When the connector is gone, no purge can run. For `SKIPPED_RELAY_OFFLINE` and
+`PURGE_FAILED` the owner can call `POST /api/deployments/:id/acknowledge-cleanup`
+("I deleted it myself"). It sets `cleanupState: COMPLETE` and writes the audit
+event `deployment.cleanup_acknowledged`. Deployz does not verify it.
+
 ## First-install recovery
 
 `ROLLBACK_COMPLETE` cannot brick a deployment: the vendor's retry-install

@@ -556,6 +556,15 @@ export function purgeDeployment(deploymentId: string, confirmName: string): Prom
   return postJson<JobResult>(`/api/deployments/${encodeURIComponent(deploymentId)}/purge`, { confirmName });
 }
 
+/** POST /api/deployments/:id/acknowledge-cleanup — the owner says they deleted
+ *  the retained resources themselves. Deployz cannot verify it. */
+export function acknowledgeCleanup(deploymentId: string): Promise<{ cleanupState: 'COMPLETE' }> {
+  return postJson<{ cleanupState: 'COMPLETE' }>(
+    `/api/deployments/${encodeURIComponent(deploymentId)}/acknowledge-cleanup`,
+    {},
+  );
+}
+
 /**
  * §14 clear the relay binding and mint a fresh enrollment code.
  *

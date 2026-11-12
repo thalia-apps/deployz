@@ -7373,6 +7373,41 @@ export async function buildServer({
     return { job, created };
   }
 
+  // The owner says they deleted the retained resources themselves (the
+  // connector is gone, so no purge can run). Only for a removal Deployz could
+  // not finish: SKIPPED_RELAY_OFFLINE or PURGE_FAILED. It is recorded in the
+  // audit log; Deployz cannot verify it.
+  app.post('/api/deployments/:id/acknowledge-cleanup', { preHandler: requireAuth }, async (request) => {
+    requireOwnerOrAdmin(request);
+    const { id } = request.params as { id: string };
+    requireUuidId(id);
+    const organizationId = requireSessionOrganizationId(request);
+    const deployment = await loadOwnedDeployment(db, id, organizationId);
+    if (
+      deployment.state !== 'DELETED' ||
+      (deployment.cleanupState !== 'SKIPPED_RELAY_OFFLINE' && deployment.cleanupState !== 'PURGE_FAILED')
+    ) {
+      throw new ApiError(
+        409,
+        'NOT_ACKNOWLEDGEABLE',
+        'Only a removed deployment whose cleanup Deployz could not finish can be marked as deleted by you.',
+      );
+    }
+    await db
+      .update(schema.deployments)
+      .set({ cleanupState: 'COMPLETE' })
+      .where(eq(schema.deployments.id, deployment.id));
+    await recordAuditEvent(db, {
+      organizationId,
+      actorId: request.user!.id,
+      eventType: 'deployment.cleanup_acknowledged',
+      previousState: deployment.cleanupState,
+      requestedState: 'COMPLETE',
+      payload: { schemaVersion: 1, deploymentId: deployment.id },
+    });
+    return { cleanupState: 'COMPLETE' };
+  });
+
   app.post('/api/deployments/:id/purge', { preHandler: requireAuth }, async (request, reply) => {
     requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };

@@ -7885,6 +7885,29 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
 
     expect(fakeEcr.principals()).not.toContain('arn:aws:iam::210987654302:root');
   });
+
+  it('lets the owner mark unfinished cleanup as deleted, and refuses other states', async () => {
+    const application = await insertApplication(db, org.organizationId);
+    const customer = await insertCustomer(db, org.organizationId);
+    const offline = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'DELETED',
+      cleanupState: 'SKIPPED_RELAY_OFFLINE',
+    });
+    const normal = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'DELETED',
+      cleanupState: null,
+    });
+
+    const refused = await postJson(app, `/api/deployments/${normal.id}/acknowledge-cleanup`, {}, { cookie: org.cookie });
+    expect(refused.statusCode).toBe(409);
+
+    const ok = await postJson(app, `/api/deployments/${offline.id}/acknowledge-cleanup`, {}, { cookie: org.cookie });
+    expect(ok.statusCode).toBe(200);
+    const [row] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, offline.id));
+    expect(row?.cleanupState).toBe('COMPLETE');
+    const again = await postJson(app, `/api/deployments/${offline.id}/acknowledge-cleanup`, {}, { cookie: org.cookie });
+    expect(again.statusCode).toBe(409);
+  });
 });
 
 

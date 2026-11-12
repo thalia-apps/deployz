@@ -104,6 +104,7 @@ import {
   forceCompleteDisconnect,
   isDeploymentNotFound,
   purgeDeployment,
+  acknowledgeCleanup,
   resetRelay,
   restartDeployment,
   retryInstall,
@@ -1873,6 +1874,9 @@ function RemovedDeploymentNotes({
           retainedNames={retainedNames}
           onChanged={onChanged}
         />
+        {detail.cleanupState === 'SKIPPED_RELAY_OFFLINE' || detail.cleanupState === 'PURGE_FAILED' ? (
+          <AcknowledgeCleanup deploymentId={detail.id} onChanged={onChanged} />
+        ) : null}
       </div>
     );
   }
@@ -1897,6 +1901,40 @@ function RemovedDeploymentNotes({
   }
 
   return null;
+}
+
+// The owner deleted the retained resources in the AWS console. Deployz cannot
+// verify it, so it only stops reporting them as retained.
+function AcknowledgeCleanup({ deploymentId, onChanged }: { deploymentId: string; onChanged: () => void }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onConfirm(): Promise<void> {
+    setPending(true);
+    setError(null);
+    try {
+      await acknowledgeCleanup(deploymentId);
+      toast.success('Marked as deleted');
+      onChanged();
+    } catch (caught) {
+      setError(actionErrorMessage(caught, "Couldn't save this. Try again."));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-muted-foreground">
+        Already deleted the database, storage bucket and secrets yourself? Deployz cannot check
+        this. It will stop listing them as retained.
+      </p>
+      <Button size="sm" variant="outline" className="self-start" disabled={pending} onClick={() => void onConfirm()}>
+        I deleted it myself
+      </Button>
+      <OperationError error={error} />
+    </div>
+  );
 }
 
 // P2 purge: the explicit destructive action for resources a disconnect left
