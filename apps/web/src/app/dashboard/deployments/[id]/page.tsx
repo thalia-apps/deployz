@@ -69,6 +69,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -2036,6 +2037,7 @@ function DisconnectDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [plan, setPlan] = useState<PlanState>({ status: 'loading' });
+  const [deleteData, setDeleteData] = useState(false);
   const confirmed = confirmText.trim() === customerName;
 
   // What "Disconnect" will actually do is the deterministic destroy plan
@@ -2046,6 +2048,7 @@ function DisconnectDialog({
     if (!open) return;
     let cancelled = false;
     setConfirmText('');
+    setDeleteData(false);
     setError(null);
     setPlan({ status: 'loading' });
     fetchDeploymentPlan(deploymentId, 'destroy')
@@ -2071,8 +2074,8 @@ function DisconnectDialog({
     setPending(true);
     setError(null);
     try {
-      await destroyDeployment(deploymentId);
-      toast.success('Removal requested');
+      await destroyDeployment(deploymentId, false, deleteData && retained.length > 0);
+      toast.success(deleteData && retained.length > 0 ? 'Removal and data deletion requested' : 'Removal requested');
       onDone();
     } catch (caught) {
       setError(actionErrorMessage(caught, "Couldn't remove this deployment. Try again."));
@@ -2139,6 +2142,22 @@ function DisconnectDialog({
                     generating charges. Delete retained data removes them later, and needs the connector, so your
                     customer should keep it until then.
                   </p>
+                  <div className="mt-2 flex items-start gap-3 rounded-md border px-3 py-2">
+                    <Switch
+                      id="disconnect-delete-data"
+                      checked={deleteData}
+                      onCheckedChange={setDeleteData}
+                      aria-label="Also delete the retained data"
+                    />
+                    <Label htmlFor="disconnect-delete-data" className="flex flex-col items-start gap-0.5">
+                      <span className="text-foreground">Also delete the retained data</span>
+                      <span className="font-normal text-muted-foreground">
+                        Deletes the retained resources as soon as the removal finishes, with no
+                        snapshot. This cannot be undone. Your customer keeps the connector stack
+                        until the page says the retained data was deleted.
+                      </span>
+                    </Label>
+                  </div>
                 </div>
               ) : null}
             </>

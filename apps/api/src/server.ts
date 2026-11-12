@@ -4549,6 +4549,9 @@ export async function buildServer({
 
   const destroyBodySchema = z.object({
     finalSnapshot: z.boolean().nullish(),
+    // Delete the retained data (database, storage, secrets) as soon as the
+    // removal succeeds, so removal leaves nothing behind.
+    purgeAfter: z.boolean().nullish(),
   });
 
   const addDomainBodySchema = z.object({ hostname: z.string() });
@@ -7044,6 +7047,7 @@ export async function buildServer({
       payload: {
         finalSnapshot: body.finalSnapshot ?? false,
         dataDeletionAuthorized: neverInstalled,
+        ...(body.purgeAfter === true ? { purgeAfter: true } : {}),
       },
       requestedBy: request.user?.id ?? null,
     });
@@ -7323,6 +7327,52 @@ export async function buildServer({
   // typed the application name in the dashboard to confirm, and the API
   // checks it against `confirmName`; the relay
   // re-verifies ownership of every resource before deleting it.
+  // One mutating operation per deployment: a purge already in flight must
+  // not be joined by another. Shared by the purge route and the automatic
+  // purge that follows a removal requested with `purgeAfter`.
+  async function queuePurgeJob(
+    deployment: DeploymentRow,
+    userId: string | null,
+    clientKey: string | null | undefined,
+  ): Promise<{ job: { id: string; state: string }; created: boolean }> {
+    const idempotencyKey =
+      clientKey ?? (await retryAwareIdempotencyKey(db, deployment.id, 'PURGE', `${deployment.id}:PURGE`));
+    await requireDeploymentIdle(db, deployment.id, idempotencyKey);
+    const { job, created } = await createOrReuseJob(db, {
+      deploymentId: deployment.id,
+      type: 'PURGE',
+      idempotencyKey,
+      // Phase 5 §9.6: a reset may have LEFT an older installation behind
+      // (previous stack/install ids recorded on the row). Carry them so the
+      // purge can find and account for that stack's retained resources
+      // instead of silently orphaning them.
+      payload: {
+        ...(deployment.previousInstallationId
+          ? { previousInstallationId: deployment.previousInstallationId }
+          : {}),
+        ...(deployment.previousBootstrapStackName
+          ? { previousBootstrapStackName: deployment.previousBootstrapStackName }
+          : {}),
+      },
+      requestedBy: userId,
+    });
+    if (created) {
+      await recordEvent(db, {
+        organizationId: deployment.organizationId,
+        eventType: 'purge.requested',
+        actorType: userId ? 'user' : 'system',
+        actorId: userId ?? 'system',
+        deploymentId: deployment.id,
+        customerId: deployment.customerId,
+        jobId: job.id,
+        previousState: deployment.state,
+        result: 'pending',
+        payload: {},
+      });
+    }
+    return { job, created };
+  }
+
   app.post('/api/deployments/:id/purge', { preHandler: requireAuth }, async (request, reply) => {
     requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };
@@ -7353,44 +7403,11 @@ export async function buildServer({
     if (typeof confirmName !== 'string' || confirmName.trim() !== application?.name) {
       throw new ApiError(400, 'CONFIRMATION_MISMATCH', 'Type the application name exactly to confirm');
     }
-    // One mutating operation per deployment: a purge already in flight must
-    // not be joined by another.
-    const idempotencyKey =
-      clientIdempotencyKey(request, deployment.id, 'PURGE') ??
-      (await retryAwareIdempotencyKey(db, deployment.id, 'PURGE', `${deployment.id}:PURGE`));
-    await requireDeploymentIdle(db, deployment.id, idempotencyKey);
-    const { job, created } = await createOrReuseJob(db, {
-      deploymentId: deployment.id,
-      type: 'PURGE',
-      idempotencyKey,
-      // Phase 5 §9.6: a reset may have LEFT an older installation behind
-      // (previous stack/install ids recorded on the row). Carry them so the
-      // purge can find and account for that stack's retained resources
-      // instead of silently orphaning them.
-      payload: {
-        ...(deployment.previousInstallationId
-          ? { previousInstallationId: deployment.previousInstallationId }
-          : {}),
-        ...(deployment.previousBootstrapStackName
-          ? { previousBootstrapStackName: deployment.previousBootstrapStackName }
-          : {}),
-      },
-      requestedBy: request.user?.id ?? null,
-    });
-    if (created) {
-      await recordEvent(db, {
-        organizationId: deployment.organizationId,
-        eventType: 'purge.requested',
-        actorType: 'user',
-        actorId: request.user?.id ?? 'system',
-        deploymentId: deployment.id,
-        customerId: deployment.customerId,
-        jobId: job.id,
-        previousState: deployment.state,
-        result: 'pending',
-        payload: {},
-      });
-    }
+    const { job, created } = await queuePurgeJob(
+      deployment,
+      request.user?.id ?? null,
+      clientIdempotencyKey(request, deployment.id, 'PURGE'),
+    );
 
     // Phase 11: a purge is the authorized final teardown — drop the
     // deployment's deployz-zone CNAMEs and its default-HTTPS state now
@@ -10008,6 +10025,28 @@ export async function buildServer({
     }
     if ((job.type === 'DESTROY' || job.type === 'PURGE') && state === 'SUCCEEDED') {
       await revokePullFromCustomer(ecrGrantDeps);
+    }
+    // "Remove everything": the vendor asked for the retained data to go with
+    // the removal. Queue the purge now, while the connector is still there to
+    // run it. Best effort: if it cannot be queued the deployment stays
+    // purgeable by hand, exactly as after a normal removal.
+    if (
+      job.type === 'DESTROY' &&
+      state === 'SUCCEEDED' &&
+      (job.payload as { purgeAfter?: unknown } | null)?.purgeAfter === true
+    ) {
+      try {
+        const [removed] = await db
+          .select()
+          .from(schema.deployments)
+          .where(eq(schema.deployments.id, deployment.id))
+          .limit(1);
+        if (removed && removed.state === 'DELETED' && removed.cleanupState !== 'COMPLETE') {
+          await queuePurgeJob(removed, null, null);
+        }
+      } catch (error) {
+        request.log.warn({ err: error }, 'automatic purge after removal could not be queued');
+      }
     }
     // Phase 11 record teardown (see preTxDefaultHttps above): the deployz-zone
     // CNAMEs are the control plane's to remove — the relay never sees them.

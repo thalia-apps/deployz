@@ -501,9 +501,11 @@ export function setBackupRetention(deploymentId: string, days: number): Promise<
 export function destroyDeployment(
   deploymentId: string,
   finalSnapshot?: boolean,
+  purgeAfter?: boolean,
 ): Promise<JobResult> {
   return postJson<JobResult>(`/api/deployments/${encodeURIComponent(deploymentId)}/destroy`, {
     finalSnapshot: finalSnapshot ?? false,
+    ...(purgeAfter ? { purgeAfter: true } : {}),
   });
 }
 

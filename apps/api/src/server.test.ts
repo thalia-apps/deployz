@@ -7795,6 +7795,64 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     expect(fakeEcr.principals()).toContain(`arn:aws:iam::${account}:root`);
   });
 
+  it('queues the purge itself when the removal was requested with purgeAfter', async () => {
+    const application = await insertApplication(db, org.organizationId);
+    const customer = await insertCustomer(db, org.organizationId);
+    const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'HEALTHY',
+      installationId: `inst-remove-all-${crypto.randomUUID()}`,
+      awsAccountId: '210987654303',
+      relayTokenHash: hashRelayToken(RELAY_TOKEN),
+    });
+
+    const destroy = await postJson(
+      app,
+      `/api/deployments/${deployment.id}/destroy`,
+      { purgeAfter: true },
+      { cookie: org.cookie },
+    );
+    expect(destroy.statusCode).toBe(202);
+    const destroyJob = (await claimCommands(deployment.installationId!)).find((c) => c.type === 'DESTROY')!;
+    const result = await postJson(
+      app,
+      `/api/relay/commands/${destroyJob.id}/result`,
+      { success: true },
+      { authorization: `Bearer ${RELAY_TOKEN}` },
+    );
+    expect(result.statusCode).toBe(200);
+
+    const purgeJobs = (
+      await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.deploymentId, deployment.id))
+    ).filter((job) => job.type === 'PURGE');
+    expect(purgeJobs).toHaveLength(1);
+    expect(purgeJobs[0]?.requestedBy).toBeNull();
+  });
+
+  it('does not queue a purge after a removal requested without purgeAfter', async () => {
+    const application = await insertApplication(db, org.organizationId);
+    const customer = await insertCustomer(db, org.organizationId);
+    const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'HEALTHY',
+      installationId: `inst-remove-keep-${crypto.randomUUID()}`,
+      awsAccountId: '210987654304',
+      relayTokenHash: hashRelayToken(RELAY_TOKEN),
+    });
+
+    await postJson(app, `/api/deployments/${deployment.id}/destroy`, {}, { cookie: org.cookie });
+    const destroyJob = (await claimCommands(deployment.installationId!)).find((c) => c.type === 'DESTROY')!;
+    await postJson(
+      app,
+      `/api/relay/commands/${destroyJob.id}/result`,
+      { success: true },
+      { authorization: `Bearer ${RELAY_TOKEN}` },
+    );
+
+    const purgeJobs = (
+      await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.deploymentId, deployment.id))
+    ).filter((job) => job.type === 'PURGE');
+    expect(purgeJobs).toHaveLength(0);
+  });
+
   it('revokes the pull grant when a PURGE succeeds', async () => {
     const application = await insertApplication(db, org.organizationId);
     const customer = await insertCustomer(db, org.organizationId);

@@ -862,6 +862,14 @@ newest 3 revisions of each family as rollback headroom. It needs
 `ecs:ListTaskDefinitions` and `ecs:DeregisterTaskDefinition` on the relay
 role; without them it silently does nothing.
 
+A removal can ask for both halves at once ("Remove everything"): the destroy
+request carries `purgeAfter`, stored on the DESTROY job. When that DESTROY
+succeeds, the control plane queues the PURGE itself (the same job as the manual
+purge, requested by the system), while the connector is still installed. The
+vendor's typed confirmation covers both steps. If the purge cannot be queued,
+the deployment stays purgeable by hand. It does nothing for a force-completed
+destroy, because no connector is left to run it.
+
 PURGE is the second, explicit half. It deletes the retained data — every
 retained RDS instance (PostgreSQL or MySQL; deletion protection off,
 `SkipFinalSnapshot`), **every owned
