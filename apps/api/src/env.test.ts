@@ -251,7 +251,7 @@ describe('Phase 13 — zone id, token and probe provenance guards', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('the zone id appears only in repo-level configuration (.github, root .env.example)', () => {
+  it('the zone id appears only in repo-level configuration (.github, root .env.example, the local .env)', () => {
     const offenders: string[] = [];
     const files: string[] = [];
     filesUnder(repoRoot, files);
@@ -261,8 +261,9 @@ describe('Phase 13 — zone id, token and probe provenance guards', () => {
       if (!readFileSync(file, 'utf8').includes(ZONE_ID_HEX)) continue;
       // docs/ legitimately quotes the production config (the plan's report
       // requirement); the guard's target is app/package/e2e source and tests.
+      // The root `.env` is the developer's own git-ignored copy of `.env.example`.
       const allowed =
-        rel.startsWith('.github') || rel === '.env.example' || rel.startsWith('docs');
+        rel.startsWith('.github') || rel === '.env.example' || rel === '.env' || rel.startsWith('docs');
       if (!allowed) offenders.push(rel);
     }
     expect(offenders).toEqual([]);
