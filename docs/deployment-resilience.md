@@ -885,9 +885,10 @@ ever healthy keeps its data-protection guarantees) runs the relay's
 recovery pass: delete the terminal-failed stack; on DELETE_FAILED, clear
 the known retained blockers (RDS deletion protection off + delete,
 ElastiCache replication-group delete — identified from the failed stack's
-own resource list, never by name); recreate; re-verify. Retained S3 buckets
-are deliberately left (inert, empty, blocked by IAM tag-condition
-semantics). The decision record is `docs/decisions/failed-install-recovery.md`.
+own resource list, never by name); once the stack is gone, remove the failed
+attempt's bucket and credential secrets (installation-tagged, ownership
+verified in code, never blocking the recovery); recreate; re-verify. The
+decision record is `docs/decisions/failed-install-recovery.md`.
 A retry after `DATABASE_CREATE_FAILED` can carry the vendor's backup retention
 (1–35 days) as the `paramBackupRetentionPeriod` template parameter, only for a
 frozen template that declares it (`specSupportsBackupRetention`); the frozen

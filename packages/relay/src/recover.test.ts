@@ -272,6 +272,79 @@ describe('recoverFailedInstallStack', () => {
   });
 });
 
+describe('recoverFailedInstallStack — leftovers of the failed attempt', () => {
+  function sweepClients(opts: { failList?: boolean } = {}) {
+    const calls: string[] = [];
+    return {
+      calls,
+      s3: {
+        listOwnedBuckets: async () => {
+          if (opts.failList) throw new Error('AccessDenied');
+          return ['old-bucket'];
+        },
+        emptyBucket: async (name: string) => void calls.push(`empty:${name}`),
+        deleteBucket: async (name: string) => void calls.push(`delete-bucket:${name}`),
+      },
+      secrets: {
+        listOwnedSecrets: async () => ['PrimaryDbMasterSecret-old'],
+        deleteSecret: async (name: string) => void calls.push(`delete-secret:${name}`),
+      },
+    };
+  }
+
+  it('removes the bucket and credential secrets once the failed stack is gone', async () => {
+    const cfn = scriptedActor({ initial: lookup('ROLLBACK_COMPLETE'), afterDelete: [['DELETE_COMPLETE']] });
+    const clients = sweepClients();
+
+    const report = await recoverFailedInstallStack({ cfn, wait: NO_SLEEP, ...clients }, { stackName: STACK });
+
+    expect(report.phase).toBe('STACK_DELETED');
+    expect(report.leftoversRemoved).toEqual({ buckets: ['old-bucket'], secrets: ['PrimaryDbMasterSecret-old'] });
+    expect(clients.calls).toEqual(['empty:old-bucket', 'delete-bucket:old-bucket', 'delete-secret:PrimaryDbMasterSecret-old']);
+  });
+
+  it('removes nothing while the stack is still deleting', async () => {
+    const cfn = scriptedActor({ initial: lookup('ROLLBACK_COMPLETE'), afterDelete: [['DELETE_IN_PROGRESS']] });
+    const clients = sweepClients();
+
+    const report = await recoverFailedInstallStack({ cfn, wait: NO_SLEEP, ...clients }, { stackName: STACK });
+
+    expect(report.phase).toBe('DELETE_IN_PROGRESS');
+    expect(clients.calls).toEqual([]);
+  });
+
+  it('removes nothing from a healthy stack', async () => {
+    const cfn = scriptedActor({ initial: lookup('CREATE_COMPLETE') });
+    const clients = sweepClients();
+
+    const report = await recoverFailedInstallStack({ cfn, wait: NO_SLEEP, ...clients }, { stackName: STACK });
+
+    expect(report.phase).toBe('REFUSED_LIVE_STACK');
+    expect(clients.calls).toEqual([]);
+  });
+
+  it('cleans leftovers when no stack exists, as on a retry after the stack was deleted', async () => {
+    const cfn = scriptedActor({});
+    const clients = sweepClients();
+
+    const report = await recoverFailedInstallStack({ cfn, wait: NO_SLEEP, ...clients }, { stackName: STACK });
+
+    expect(report.phase).toBe('ALREADY_ABSENT');
+    expect(report.leftoversRemoved?.buckets).toEqual(['old-bucket']);
+  });
+
+  it('never blocks the recovery when the sweep fails', async () => {
+    const cfn = scriptedActor({ initial: lookup('ROLLBACK_COMPLETE'), afterDelete: [['DELETE_COMPLETE']] });
+    const clients = sweepClients({ failList: true });
+
+    const report = await recoverFailedInstallStack({ cfn, wait: NO_SLEEP, ...clients }, { stackName: STACK });
+
+    expect(report.phase).toBe('STACK_DELETED');
+    expect(report.leftoverSweepError).toBe('AccessDenied');
+    expect(report.leftoversRemoved).toBeUndefined();
+  });
+});
+
 describe('clearDeleteBlockersAndRetryDelete', () => {
   it('tolerates an orphan already mid-deletion from a previous pass and still retries the delete', async () => {
     const actor = scriptedActor({

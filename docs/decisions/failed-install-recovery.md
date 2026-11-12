@@ -39,12 +39,17 @@ A failed **first** install used to brick a deployment permanently:
    `deployz:installation` tag that the application stack applies. No new
    permissions, no bootstrap template change. Orphans are identified from
    the failed stack's own resource list, never by name guessing.
-4. **The retained S3 bucket is deliberately left in place.** It blocks
-   nothing, costs nothing when empty, and emptying it would need
-   object-level `s3:DeleteObject*` grants that cannot stay inside the tag
-   boundary (object ARNs do not resolve `aws:ResourceTag` conditions). A
-   fresh install creates a new bucket. Empty retained credential secrets are
-   also left behind; they hold no customer data.
+4. **The failed attempt's bucket and credential secrets are removed.**
+   They hold no data: the control plane proved the deployment never
+   installed. Once recovery confirms the stack is gone, the relay deletes the
+   buckets and secrets that carry this installation's tag, with the purge's
+   own clients (bucket ownership is verified in code, because object ARNs do
+   not resolve `aws:ResourceTag` conditions). The sweep runs only after the
+   stack is confirmed gone and before the fresh install, so it never touches
+   the new attempt. A sweep that fails (for example an older connector
+   without the grants) is logged and never blocks the recovery. Earlier
+   versions left these behind on purpose; that left empty buckets and
+   secrets in the customer's account after removal.
 5. **Bounded, convergent passes.** Every wait is capped inside the relay's
    5-minute invocation and the INSTALL executor's own budget. When the
    budget runs out the relay reports the real CloudFormation status; the

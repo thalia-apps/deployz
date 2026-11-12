@@ -1186,6 +1186,8 @@ async function runRequestedRecovery(
       phase: report.phase,
       lastStackStatus: report.lastStackStatus,
       orphansDeleted: report.orphansDeleted,
+      ...(report.leftoversRemoved ? { leftoversRemoved: report.leftoversRemoved } : {}),
+      ...(report.leftoverSweepError ? { leftoverSweepError: report.leftoverSweepError } : {}),
     }),
   );
   return report;
@@ -1872,15 +1874,19 @@ function createDefaultInstallDeps(
             ),
         }
       : {}),
-    recover: (stackName) =>
-      recoverFailedInstallStack(
+    recover: (stackName) => {
+      const purgeClients = getPurgeClients(installationId);
+      return recoverFailedInstallStack(
         {
           cfn: getRecoveryCloudFormation(),
           rds: getRdsCleanupClient(),
           cache: getCacheCleanupClient(),
+          s3: purgeClients.s3,
+          secrets: purgeClients.secrets,
         },
         { stackName },
-      ),
+      );
+    },
     ...(reportContext
       ? {
           createStackEventCollector: (args: {

@@ -39,6 +39,7 @@
  * state. Each pass makes forward progress; none is ever destructive twice.
  */
 
+import type { S3PurgeClient, SecretsPurgeClient } from './purge.js';
 import {
   CloudFormationClient,
   DeleteStackCommand,
@@ -145,6 +146,10 @@ export interface RecoveryReport {
   readonly phase: RecoveryPhase;
   readonly lastStackStatus: string;
   readonly orphansDeleted: readonly string[];
+  /** Leftovers of the failed attempt removed once its stack was gone. */
+  readonly leftoversRemoved?: { readonly buckets: readonly string[]; readonly secrets: readonly string[] };
+  /** The leftover sweep failed (for example an older connector without the grants). Recovery still proceeds. */
+  readonly leftoverSweepError?: string;
 }
 
 export interface RecoveryInput {
@@ -155,6 +160,9 @@ export interface RecoveryDeps {
   readonly cfn: RecoveryCloudFormation;
   readonly rds?: RdsCleanupClient;
   readonly cache?: CacheCleanupClient;
+  /** Tag-verified bucket and secret clients (the purge's own). When set, the failed attempt's leftovers are removed. */
+  readonly s3?: S3PurgeClient;
+  readonly secrets?: SecretsPurgeClient;
   readonly wait?: WaitOptions;
 }
 
@@ -290,10 +298,50 @@ export async function clearDeleteBlockersAndRetryDelete(
   };
 }
 
+/** Phases after which the failed attempt's stack is confirmed gone. */
+function stackIsGone(report: RecoveryReport): boolean {
+  return (
+    report.phase === 'STACK_DELETED' ||
+    report.phase === 'BLOCKERS_CLEARED_STACK_GONE' ||
+    (report.phase === 'ALREADY_ABSENT' &&
+      (report.lastStackStatus === 'MISSING' || report.lastStackStatus === 'DELETE_COMPLETE'))
+  );
+}
+
+/**
+ * A failed first install is recovered by creating the stack again, so the
+ * bucket and credential secrets of the failed attempt would stay in the
+ * customer's account for good. They never held data: the control plane has
+ * proved the deployment never installed. Once the stack is gone, remove them
+ * with the purge's own ownership-verified clients (installation tag, checked
+ * in code), so removal leaves nothing behind. A sweep that cannot run (an
+ * older connector without the grants) never blocks the recovery.
+ */
 export async function recoverFailedInstallStack(
   deps: RecoveryDeps,
   input: RecoveryInput,
 ): Promise<RecoveryReport> {
+  const report = await recoverStack(deps, input);
+  if (!stackIsGone(report) || (!deps.s3 && !deps.secrets)) return report;
+  try {
+    const buckets: string[] = [];
+    for (const bucket of (await deps.s3?.listOwnedBuckets()) ?? []) {
+      await deps.s3!.emptyBucket(bucket);
+      await deps.s3!.deleteBucket(bucket);
+      buckets.push(bucket);
+    }
+    const secrets: string[] = [];
+    for (const secret of (await deps.secrets?.listOwnedSecrets()) ?? []) {
+      await deps.secrets!.deleteSecret(secret);
+      secrets.push(secret);
+    }
+    return { ...report, leftoversRemoved: { buckets, secrets } };
+  } catch (error) {
+    return { ...report, leftoverSweepError: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+async function recoverStack(deps: RecoveryDeps, input: RecoveryInput): Promise<RecoveryReport> {
   const { cfn } = deps;
   const wait = resolveWait(deps.wait);
 
