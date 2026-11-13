@@ -831,8 +831,12 @@ async function sweepStuckJob(
   if (
     job.type === 'PURGE' &&
     deployment.state === 'DELETED' &&
-    isConnectorSilent(deployment.connectorLastSeenAt, now.getTime(), PURGE_CONNECTOR_SILENT_AFTER_MS) &&
-    now.getTime() - lastSignal.getTime() >= PURGE_CONNECTOR_SILENT_AFTER_MS
+    now.getTime() - lastSignal.getTime() >= PURGE_CONNECTOR_SILENT_AFTER_MS &&
+    // A live connector polls within a minute and stamps its contact, so a
+    // purge this old with no contact at all (a removal made before contact was
+    // recorded, or a connector that never polled) has no connector either.
+    (deployment.connectorLastSeenAt === null ||
+      isConnectorSilent(deployment.connectorLastSeenAt, now.getTime(), PURGE_CONNECTOR_SILENT_AFTER_MS))
   ) {
     await failStuckJob(db, job, deployment, now, 'RELAY_DISCONNECTED', evidence, failureShadow);
     return 1;

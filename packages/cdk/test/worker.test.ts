@@ -1268,12 +1268,19 @@ describe('sweepStuckJobs', () => {
     expect(deployment?.cleanupState).toBe('PURGE_FAILED');
   });
 
-  it('leaves a purge alone while its connector still polls, or has not been seen at all', async () => {
-    const alive = await seedPurge(1, 12);
-    const unknown = await seedPurge(null, 12);
-    const young = await seedPurge(20, 3);
+  it('fails a purge with no contact recorded once it is 10 minutes old', async () => {
+    const { jobId } = await seedPurge(null, 12);
     await sweepStuckJobs(db);
-    for (const { jobId } of [alive, unknown, young]) {
+    const [job] = await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.id, jobId));
+    expect(job?.state).toBe('FAILED');
+  });
+
+  it('leaves a purge alone while its connector still polls, or the purge is young', async () => {
+    const alive = await seedPurge(1, 12);
+    const youngUnknown = await seedPurge(null, 3);
+    const youngSilent = await seedPurge(20, 3);
+    await sweepStuckJobs(db);
+    for (const { jobId } of [alive, youngUnknown, youngSilent]) {
       const [job] = await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.id, jobId));
       expect(job?.state).not.toBe('FAILED');
     }
