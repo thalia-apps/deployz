@@ -258,3 +258,16 @@ customer account. If a test or a manual run needs a console step (a one-off
 task, a security group edit, a resource delete), treat it as a defect: fix it
 in code and add a test for the case, as `destroy.test.ts` does for a stuck
 internet gateway.
+
+## Running the suites on a developer machine
+
+- Web tests (`apps/web`) need Node 22 or later: the browser-test library
+  (`jsdom`, through `undici` 8) does not load on Node 20. The API, relay and
+  package tests run on Node 20.
+- Several packages read each other through `dist/`. After a change in
+  `packages/*` or `apps/api`, build the changed package (`pnpm build` in it)
+  before testing a package that depends on it. The CDK billing test needs
+  `apps/api` built, because it imports `@deployz/api/polar`. A stale `dist/`
+  causes failures that a fresh build removes.
+- The API test that guards the Cloudflare zone id allows the developer's own
+  git-ignored root `.env`, a copy of `.env.example`.
