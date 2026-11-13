@@ -5,6 +5,7 @@ import {
   INFRASTRUCTURE_HTTPS_STATE_LABEL,
   INFRASTRUCTURE_STATUS_LABEL,
   infrastructureComponentStatusLabel,
+  connectorPresence,
   operationalComponentStatus,
   operationalSummaryStatus,
   purgeProgress,
@@ -101,5 +102,16 @@ describe('retainedUntilDeletedSentence', () => {
     expect(retainedUntilDeletedSentence(['Database', 'Cache', 'Storage'])).toBe(
       'Database, Cache, and Storage stay until you delete them',
     );
+  });
+});
+
+describe('connectorPresence', () => {
+  const now = Date.parse('2026-11-13T12:00:00Z');
+  it('reads the connector\'s last contact after a verified purge', () => {
+    expect(connectorPresence(null, now)).toBe('unknown');
+    expect(connectorPresence('not a date', now)).toBe('unknown');
+    expect(connectorPresence('2026-11-13T11:55:00Z', now)).toBe('still-installed');
+    expect(connectorPresence('2026-11-13T11:45:00Z', now)).toBe('silent');
+    expect(connectorPresence('2026-11-10T11:45:00Z', now)).toBe('silent');
   });
 });

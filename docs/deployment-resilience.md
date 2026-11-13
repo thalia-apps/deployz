@@ -576,7 +576,13 @@ still roll, and would hide a crash loop.
   deployment gets `410` on `GET /api/relay/config` and `POST /api/relay/health`
   (no vendor configuration, no health writes). Its command channel stays open
   because a later PURGE needs it. A successful PURGE clears `relayTokenHash`
-  and `relayCredential`, so the token stops working. Registration needs an install
+  and `relayCredential`, so the token stops working. It copies the token hash to
+  `revoked_relay_token_hash`, which authenticates nothing: only the relay auth
+  check compares a presented token with it. A match means the connector stack
+  still polls, so the API answers 401 and records `connector_last_seen_at` (at
+  most every 5 minutes). The deployment page reads it: seen in the last 15
+  minutes, the stack is still installed; silent longer, it is probably deleted;
+  never seen, Deployz cannot tell. Registration needs an install
   link that is neither revoked nor expired. The relay
   reports `awsAccountId` as 12 digits only; the ECR pull grant uses it as the
   principal.

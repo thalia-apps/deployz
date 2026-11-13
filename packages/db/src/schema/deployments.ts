@@ -120,6 +120,12 @@ export const deployments = pgTable(
   // (the credential has been delivered through the Quick Create URL and is
   // consumed). Re-enrollment mints a fresh one.
   relayCredential: text('relay_credential'),
+  // sha256 of the relay token a verified purge revoked. Nothing authenticates
+  // with it: only the relay auth check compares a presented token with it, to
+  // tell that the connector stack still polls (see connectorLastSeenAt).
+  revokedRelayTokenHash: text('revoked_relay_token_hash'),
+  // The last poll of a revoked connector. Throttled; null when none arrived.
+  connectorLastSeenAt: timestamp('connector_last_seen_at', { withTimezone: true }),
   relayBoundAt: timestamp('relay_bound_at', { withTimezone: true }),
   // Relay identity, reported at enrollment and on every heartbeat. Older
   // relays never report these — they stay null, which the UI reads as

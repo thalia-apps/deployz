@@ -21,6 +21,7 @@ export function withoutRelayMaterial(deployment: DeploymentRow) {
     enrollmentCode: _enrollmentCode,
     relayCredential: _relayCredential,
     relayTokenHash: _relayTokenHash,
+    revokedRelayTokenHash: _revokedRelayTokenHash,
     ...rest
   } = deployment;
   return rest;

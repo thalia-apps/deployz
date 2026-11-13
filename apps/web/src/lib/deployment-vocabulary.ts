@@ -855,3 +855,20 @@ export function eventFailureReason(
   const error = payload['error'];
   return typeof error === 'string' && error.trim().length > 0 ? error : null;
 }
+
+/** A connector silent for this long is taken as gone (the relay-liveness window). */
+export const CONNECTOR_SILENT_AFTER_MS = 15 * 60_000;
+
+export type ConnectorPresence = 'still-installed' | 'silent' | 'unknown';
+
+/**
+ * Whether the connector stack of a removed deployment is still installed,
+ * read from the connector's own contact with Deployz: it polls every minute
+ * while its stack exists and stops when the stack is deleted.
+ */
+export function connectorPresence(lastSeenAt: string | null, now: number = Date.now()): ConnectorPresence {
+  if (lastSeenAt === null) return 'unknown';
+  const seen = Date.parse(lastSeenAt);
+  if (Number.isNaN(seen)) return 'unknown';
+  return now - seen < CONNECTOR_SILENT_AFTER_MS ? 'still-installed' : 'silent';
+}

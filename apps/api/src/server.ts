@@ -3,7 +3,7 @@ import rateLimit from '@fastify/rate-limit';
 import { setupFastifyErrorHandler } from '@sentry/node';
 import { createHash, randomBytes } from 'node:crypto';
 import { fromNodeHeaders } from 'better-auth/node';
-import { and, desc, eq, getTableColumns, gt, gte, inArray, isNull, like, ne, notInArray, sql } from 'drizzle-orm';
+import { and, desc, eq, getTableColumns, gt, gte, inArray, isNull, like, lt, ne, notInArray, or, sql } from 'drizzle-orm';
 import Fastify, {
   type FastifyBaseLogger,
   type FastifyInstance,
@@ -8758,6 +8758,9 @@ export async function buildServer({
   // installationId is public (it's in the install URL), so it cannot be the
   // credential.
 
+  /** A revoked connector's contact is written at most this often. */
+  const CONNECTOR_SEEN_WRITE_INTERVAL_MS = 5 * 60_000;
+
   async function requireRelayDeployment(
     installationId: string | undefined,
     token: string,
@@ -8773,6 +8776,22 @@ export async function buildServer({
       .limit(1);
     const deployment = rows[0];
     if (!deployment || !verifyRelayTokenWithRotation(deployment.relayTokenHash, token, oldToken)) {
+      // A connector whose purge was verified still polls while its stack
+      // exists. Note the contact (at most every 5 minutes) and refuse it.
+      if (deployment && verifyRelayToken(deployment.revokedRelayTokenHash, token)) {
+        await db
+          .update(schema.deployments)
+          .set({ connectorLastSeenAt: new Date() })
+          .where(
+            and(
+              eq(schema.deployments.id, deployment.id),
+              or(
+                isNull(schema.deployments.connectorLastSeenAt),
+                lt(schema.deployments.connectorLastSeenAt, new Date(Date.now() - CONNECTOR_SEEN_WRITE_INTERVAL_MS)),
+              ),
+            ),
+          );
+      }
       throw new ApiError(401, 'UNAUTHORIZED', 'Invalid relay credentials');
     }
     return deployment;
@@ -9929,6 +9948,9 @@ export async function buildServer({
             cleanupState: 'COMPLETE',
             relayCredential: null,
             relayTokenHash: null,
+            // Kept apart, so the old token authenticates nothing but can still
+            // tell that the connector stack polls after the removal.
+            ...(deployment.relayTokenHash !== null ? { revokedRelayTokenHash: deployment.relayTokenHash } : {}),
             // The credential is revoked: the connector can no longer reach us.
             relayStatus: 'DISCONNECTED',
           })

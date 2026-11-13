@@ -7886,6 +7886,67 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     expect(fakeEcr.principals()).not.toContain('arn:aws:iam::210987654302:root');
   });
 
+  it('records the contact of a revoked connector after a verified purge, and refuses it', async () => {
+    const application = await insertApplication(db, org.organizationId);
+    const customer = await insertCustomer(db, org.organizationId);
+    const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'DELETED',
+      cleanupState: 'SKIPPED_RELAY_OFFLINE',
+      installationId: `inst-seen-${crypto.randomUUID()}`,
+      awsAccountId: '210987654305',
+      relayTokenHash: hashRelayToken(RELAY_TOKEN),
+    });
+    const purge = await postJson(
+      app,
+      `/api/deployments/${deployment.id}/purge`,
+      { confirmName: application.name },
+      { cookie: org.cookie },
+    );
+    expect(purge.statusCode).toBe(202);
+    const purgeJob = (await claimCommands(deployment.installationId!)).find((c) => c.type === 'PURGE')!;
+    await postJson(
+      app,
+      `/api/relay/commands/${purgeJob.id}/result`,
+      { success: true },
+      { authorization: `Bearer ${RELAY_TOKEN}` },
+    );
+    const load = async () =>
+      (await db.select().from(schema.deployments).where(eq(schema.deployments.id, deployment.id)))[0]!;
+    const purged = await load();
+    expect(purged.relayTokenHash).toBeNull();
+    expect(purged.revokedRelayTokenHash).toBe(hashRelayToken(RELAY_TOKEN));
+    expect(purged.connectorLastSeenAt).toBeNull();
+
+    const poll = (token: string) =>
+      app.inject({
+        method: 'GET',
+        url: `/api/relay/commands?installationId=${deployment.installationId}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+    // A stranger who knows only the installation id records nothing.
+    expect((await poll('not-the-relay-token')).statusCode).toBe(401);
+    expect((await load()).connectorLastSeenAt).toBeNull();
+
+    // The revoked connector is still refused, and the contact is recorded.
+    expect((await poll(RELAY_TOKEN)).statusCode).toBe(401);
+    const firstSeen = (await load()).connectorLastSeenAt;
+    expect(firstSeen).not.toBeNull();
+
+    // A second poll inside the throttle window writes nothing.
+    expect((await poll(RELAY_TOKEN)).statusCode).toBe(401);
+    expect((await load()).connectorLastSeenAt?.getTime()).toBe(firstSeen!.getTime());
+
+    // The detail the vendor reads carries the time but never the hash.
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/api/deployments/${deployment.id}`,
+      headers: { cookie: org.cookie },
+    });
+    expect(detail.json()).toMatchObject({ connectorLastSeenAt: firstSeen!.toISOString() });
+    expect(detail.json()).not.toHaveProperty('revokedRelayTokenHash');
+  });
+
   it('lets the owner mark unfinished cleanup as deleted, and refuses other states', async () => {
     const application = await insertApplication(db, org.organizationId);
     const customer = await insertCustomer(db, org.organizationId);

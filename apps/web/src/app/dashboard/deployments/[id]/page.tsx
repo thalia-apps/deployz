@@ -126,6 +126,7 @@ import {
   actionSupported,
   actionsUnavailableReason,
   purgeProgress,
+  connectorPresence,
   relayWaitingStuck,
   retainedUntilDeletedSentence,
 } from '@/lib/deployment-vocabulary';
@@ -1918,6 +1919,35 @@ function RemovedDeploymentNotes({
           <AcknowledgeCleanup deploymentId={detail.id} onChanged={onChanged} />
         ) : null}
       </div>
+    );
+  }
+
+  if (detail.bootstrapStackName && connectorPresence(detail.connectorLastSeenAt) === 'silent') {
+    return (
+      <Alert>
+        <CheckCircle2 aria-hidden />
+        <AlertTitle>The Deployz connector looks deleted</AlertTitle>
+        <AlertDescription>
+          It has not contacted Deployz since {relativeTime(detail.connectorLastSeenAt)}, so its stack{' '}
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{detail.bootstrapStackName}</code> is
+          probably deleted. Nothing more is needed.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (detail.bootstrapStackName && connectorPresence(detail.connectorLastSeenAt) === 'still-installed') {
+    return (
+      <Alert>
+        <AlertTriangle aria-hidden />
+        <AlertTitle>The Deployz connector is still installed in the customer AWS account</AlertTitle>
+        <AlertDescription>
+          Deployz removed everything it created for this deployment. The connector still contacts Deployz but can do
+          nothing. Your customer must delete its stack{' '}
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{detail.bootstrapStackName}</code> in
+          CloudFormation. Their install link shows the same step.
+        </AlertDescription>
+      </Alert>
     );
   }
 

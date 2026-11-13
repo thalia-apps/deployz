@@ -80,6 +80,8 @@ export interface FleetDeployment {
   billingStoppedAt: string | null;
   lastHealthAt: string | null;
   deletedAt: string | null;
+  /** The last poll of the connector after a verified purge; null when none was seen. */
+  connectorLastSeenAt: string | null;
   /** What the control plane knows about AWS leftovers at disconnect. */
   cleanupState: 'SKIPPED_RELAY_OFFLINE' | 'PURGE_FAILED' | 'COMPLETE' | 'CONFIRMED_BY_OWNER' | null;
   createdAt: string;

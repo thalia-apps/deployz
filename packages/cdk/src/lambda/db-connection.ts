@@ -89,6 +89,7 @@ import migration0059 from '../../../db/drizzle/0059_deployment_backup_retention.
 import migration0060 from '../../../db/drizzle/0060_polar_billing.sql';
 import migration0061 from '../../../db/drizzle/0061_cleanup_confirmed_by_owner.sql';
 import migration0062 from '../../../db/drizzle/0062_move_owner_confirmed_cleanup.sql';
+import migration0063 from '../../../db/drizzle/0063_connector_last_seen.sql';
 import journal from '../../../db/drizzle/meta/_journal.json';
 import { migrationsUpToDate, withMigrationLock } from './migration-check.js';
 
@@ -166,6 +167,7 @@ const MIGRATION_SQL: Record<string, string> = {
   '0060_polar_billing': migration0060,
   '0061_cleanup_confirmed_by_owner': migration0061,
   '0062_move_owner_confirmed_cleanup': migration0062,
+  '0063_connector_last_seen': migration0063,
 };
 
 interface RdsSecret {
