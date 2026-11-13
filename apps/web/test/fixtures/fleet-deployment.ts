@@ -30,6 +30,7 @@ export function fleetDeployment(
     billingStoppedAt: null,
     lastHealthAt: null,
     deletedAt: null,
+    connectorLastSeenAt: null,
     cleanupState: null,
     createdAt: '2026-08-01T00:00:00.000Z',
     updatedAt: '2026-08-01T00:00:00.000Z',
