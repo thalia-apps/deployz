@@ -583,6 +583,10 @@ function splitScopeDeployments(
   const preRelay: ScopeDeployment[] = [];
   const bindable: ScopeDeployment[] = [];
   for (const row of rows) {
+    // A removed deployment receives nothing. Binding a new install's secret to
+    // it (as a "pre-relay" deployment) would leave no staged row for the new
+    // deployment, so the install failed with "no value yet".
+    if (row.state === 'DELETING' || row.state === 'DELETED') continue;
     const deployment = { id: row.id, organizationId: row.organizationId };
     if (PRE_RELAY_STATES.has(row.state)) {
       preRelay.push(deployment);

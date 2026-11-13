@@ -1034,3 +1034,53 @@ describe('config — pre-relay removals and delivery rules against a real store'
     expect(await listProvidedConfigKeys(db, applicationId, customerId)).toContain('API_URL');
   });
 });
+
+describe('config — a removed deployment does not take a new install’s secret', () => {
+  let client: PGlite | undefined;
+  let db: Db;
+
+  beforeAll(async () => {
+    client = new PGlite();
+    await applyMigrations(client);
+    db = createDb(client);
+  }, 60_000);
+
+  afterAll(async () => {
+    await client?.close();
+  });
+
+  it('stages the secret for the next deployment when the customer only has removed ones', async () => {
+    await db.insert(schema.organization).values({ id: 'org-config-removed', name: 'Acme', slug: 'org-config-removed' });
+    const [application] = await db
+      .insert(schema.applications)
+      .values({ organizationId: 'org-config-removed', name: 'shop', repoFullName: 'acme/removed', repoUrl: 'https://github.com/acme/removed' })
+      .returning();
+    const [customer] = await db
+      .insert(schema.customers)
+      .values({ organizationId: 'org-config-removed', name: 'Buyer', email: 'buyer-removed@example.com' })
+      .returning();
+    const [removed] = await db
+      .insert(schema.deployments)
+      .values({
+        organizationId: 'org-config-removed',
+        applicationId: application!.id,
+        customerId: customer!.id,
+        region: 'us-east-1',
+        state: 'DELETED',
+        enrollmentCode: 'enrol-removed',
+      })
+      .returning();
+    const cipher = createCipherStub();
+    const deps = createConfigDeps(db, createDrizzlePendingSecretStore(db, cipher), cipher);
+
+    await setConfig(application!.id, customer!.id, [{ key: 'ADMIN_PASSWORD', value: 'a-test-value', isSecret: true }], deps);
+
+    const rows = await db
+      .select()
+      .from(schema.pendingSecrets)
+      .where(eq(schema.pendingSecrets.applicationId, application!.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ key: 'ADMIN_PASSWORD', customerId: customer!.id, deploymentId: null });
+    expect(rows.some((row) => row.deploymentId === removed!.id)).toBe(false);
+  });
+});
