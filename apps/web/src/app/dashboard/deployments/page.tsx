@@ -172,7 +172,9 @@ export default function DeploymentsPage() {
 
   const filtersActive = hasActiveFilters(query);
   const removed = deployments.filter((deployment) => deployment.state === 'DELETED');
-  const removedCount = removed.filter((deployment) => deployment.cleanupState !== 'COMPLETE').length;
+  const removedCount = removed.filter(
+    (deployment) => deployment.cleanupState !== 'COMPLETE' && deployment.cleanupState !== 'CONFIRMED_BY_OWNER',
+  ).length;
 
   function clearFilters(): void {
     setParams({ q: null, status: null, application: null, region: null });

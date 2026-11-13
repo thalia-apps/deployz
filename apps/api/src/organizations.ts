@@ -537,7 +537,10 @@ export async function deleteOrganization(
   // customer's account until a purge completes. Deleting the record now
   // would leave nobody able to purge them.
   const unpurged = deployments.filter(
-    (deployment) => deployment.state === 'DELETED' && deployment.cleanupState !== 'COMPLETE',
+    (deployment) =>
+      deployment.state === 'DELETED' &&
+      deployment.cleanupState !== 'COMPLETE' &&
+      deployment.cleanupState !== 'CONFIRMED_BY_OWNER',
   );
   if (unpurged.length > 0) {
     throw new ApiError(

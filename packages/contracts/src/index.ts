@@ -414,7 +414,7 @@ export const customDomainStatusSchema = z.enum([
 ]);
 export type CustomDomainStatus = z.infer<typeof customDomainStatusSchema>;
 
-export const cleanupStateSchema = z.enum(['SKIPPED_RELAY_OFFLINE', 'PURGE_FAILED', 'COMPLETE']);
+export const cleanupStateSchema = z.enum(['SKIPPED_RELAY_OFFLINE', 'PURGE_FAILED', 'COMPLETE', 'CONFIRMED_BY_OWNER']);
 export type CleanupState = z.infer<typeof cleanupStateSchema>;
 
 // ---------------------------------------------------------------------------

@@ -478,7 +478,9 @@ const HTTPS_SET_UP_STATES: ReadonlySet<InfrastructureHttpsState> = new Set([
 export function infrastructureComponentStatusLabel(
   component: Pick<InfrastructureComponent, 'status' | 'httpsState'>,
   deploymentState?: string,
+  purge: PurgeProgress = null,
 ): string {
+  if (purge === 'confirmed' && component.status === 'unknown') return 'Not verified';
   if (deploymentState === 'DELETING' && component.httpsState && HTTPS_SET_UP_STATES.has(component.httpsState)) {
     return INFRASTRUCTURE_HTTPS_STATE_LABEL.REMOVING;
   }
@@ -502,7 +504,7 @@ export function visibleResources<T extends { status: string }>(
   return resources.filter((resource) => resource.status !== 'DELETE_COMPLETE');
 }
 
-export type PurgeProgress = 'running' | 'complete' | null;
+export type PurgeProgress = 'running' | 'complete' | 'confirmed' | null;
 
 const ACTIVE_PURGE_JOB_STATES = new Set(['REQUESTED', 'QUEUED', 'WAITING', 'RUNNING']);
 
@@ -519,7 +521,9 @@ export function purgeProgress(
     .filter((job) => job.type === 'PURGE')
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   if (latest && ACTIVE_PURGE_JOB_STATES.has(latest.state)) return 'running';
-  return detail.cleanupState === 'COMPLETE' ? 'complete' : null;
+  if (detail.cleanupState === 'COMPLETE') return 'complete';
+  // The owner says it is gone; Deployz did not verify it.
+  return detail.cleanupState === 'CONFIRMED_BY_OWNER' ? 'confirmed' : null;
 }
 
 /** "Database and Storage stay until you delete them" / "Storage stays until you delete it". */
@@ -547,7 +551,7 @@ export function operationalComponentStatus(
   purge: PurgeProgress = null,
 ): InfrastructureComponentStatus {
   if (purge && component.status === 'retained') {
-    return purge === 'running' ? 'deleting' : 'removed';
+    return purge === 'running' ? 'deleting' : purge === 'confirmed' ? 'unknown' : 'removed';
   }
   if (deploymentState === 'DELETING' && (component.status === 'provisioning' || component.status === 'pending')) {
     return 'deleting';

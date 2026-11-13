@@ -340,6 +340,16 @@ describe('deriveHero', () => {
     expect(done.description).not.toContain('may still exist');
   });
 
+  it('DELETED after the owner confirmed it never claims that Deployz removed anything', () => {
+    const hero = deriveHero(input({ state: 'DELETED', cleanupState: 'CONFIRMED_BY_OWNER' }));
+    expect(hero.kind).toBe('deleted');
+    expect(hero.tone).toBe('neutral');
+    expect(hero.title).toBe('Deployment removed (not verified)');
+    expect(hero.description).toContain('did not answer');
+    expect(hero.description).toContain('owner confirmed');
+    expect(hero.description).not.toContain('removed everything');
+  });
+
   it('DELETED explains what is left behind per cleanup state', () => {
     expect(deriveHero(input({ state: 'DELETED', cleanupState: 'COMPLETE' })).description).toContain(
       'removed everything',

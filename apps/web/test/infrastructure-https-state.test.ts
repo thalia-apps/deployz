@@ -73,6 +73,7 @@ describe('retained data purge progress', () => {
   it('is complete after a verified purge and null otherwise', () => {
     expect(purgeProgress(detail({ cleanupState: 'COMPLETE', jobs: [purgeJob('SUCCEEDED')] }))).toBe('complete');
     expect(purgeProgress(detail({ cleanupState: 'PURGE_FAILED', jobs: [purgeJob('FAILED')] }))).toBeNull();
+    expect(purgeProgress(detail({ cleanupState: 'CONFIRMED_BY_OWNER' }))).toBe('confirmed');
     expect(purgeProgress(detail({ state: 'DELETING', jobs: [purgeJob('RUNNING')] }))).toBeNull();
   });
 

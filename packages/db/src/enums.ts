@@ -259,11 +259,15 @@ export const customDomainStatusEnum = pgEnum('custom_domain_status', [
 //                          deployment stays DELETED, the retained resources
 //                          remain, and the purge is retryable from here.
 //   COMPLETE              — a later PURGE removed every retained resource.
+//   CONFIRMED_BY_OWNER    — the owner says they deleted the resources
+//                          themselves ("I deleted it myself"). Deployz never
+//                          removed or checked them.
 // Null on every normal disconnect: the relay deleted the resources itself.
 export const cleanupStateEnum = pgEnum('cleanup_state', [
   'SKIPPED_RELAY_OFFLINE',
   'PURGE_FAILED',
   'COMPLETE',
+  'CONFIRMED_BY_OWNER',
 ]);
 
 // Infrastructure resource inventory — how the control plane classifies every

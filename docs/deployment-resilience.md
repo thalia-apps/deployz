@@ -30,7 +30,7 @@ known state, and provides a deterministic path forward.
   | `UPDATING` | DEPLOY_RELEASE / ROLLBACK / RESTART running | `HEALTHY` or `UPDATE_AVAILABLE` (success, or a failed day-2 job whose previous release still serves), `FAILED` (a failed first deploy of a configured-first-start install) |
   | `FAILED` | first install or destroy failed; an installed application never verified within its window | `INSTALLING` (retry-install), `UPDATING` (deploy again after a first-start failure or an unverified install), `DELETING` |
   | `DELETING` | DESTROY queued | `DELETED` (success or force-complete), `FAILED` (destroy failed) |
-  | `DELETED` | terminal; `cleanupState` tracks purge (`SKIPPED_RELAY_OFFLINE`, `PURGE_FAILED`, `COMPLETE`) | — |
+  | `DELETED` | terminal; `cleanupState` tracks purge (`SKIPPED_RELAY_OFFLINE`, `PURGE_FAILED`, `COMPLETE`, `CONFIRMED_BY_OWNER`) | — |
 
   `DISCONNECTED` exists in the enum but nothing writes it as a deployment
   state; relay loss is `relayStatus`, not a lifecycle state.
@@ -887,8 +887,10 @@ A failed purge lands on `cleanupState: PURGE_FAILED` and stays retryable.
 
 When the connector is gone, no purge can run. For `SKIPPED_RELAY_OFFLINE` and
 `PURGE_FAILED` the owner can call `POST /api/deployments/:id/acknowledge-cleanup`
-("I deleted it myself"). It sets `cleanupState: COMPLETE` and writes the audit
-event `deployment.cleanup_acknowledged`. Deployz does not verify it.
+("I deleted it myself"). It sets `cleanupState: CONFIRMED_BY_OWNER` (never `COMPLETE`, which only a
+relay-verified purge sets) and writes the audit event
+`deployment.cleanup_acknowledged`. Deployz does not verify it, so every page
+says the owner confirmed it and shows the components as not verified.
 
 ## First-install recovery
 

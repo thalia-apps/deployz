@@ -388,7 +388,7 @@ export interface BuildCustomerLiveProgressInput {
   /** deployments.cleanup_state — COMPLETE means a later verified purge
    *  removed every retained resource, which outranks anything the stack
    *  status implies. Null on an ordinary failed install (no purge ran). */
-  cleanupState?: 'SKIPPED_RELAY_OFFLINE' | 'PURGE_FAILED' | 'COMPLETE' | null;
+  cleanupState?: 'SKIPPED_RELAY_OFFLINE' | 'PURGE_FAILED' | 'COMPLETE' | 'CONFIRMED_BY_OWNER' | null;
 }
 
 function jobReference(jobId: string | null): string {

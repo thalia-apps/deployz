@@ -1842,18 +1842,58 @@ function RemovedDeploymentNotes({
   // The hero already says the retained data is being deleted.
   if (purgeProgress(detail) === 'running') return null;
 
+  if (detail.cleanupState === 'CONFIRMED_BY_OWNER') {
+    return (
+      <Alert>
+        <AlertTriangle aria-hidden />
+        <AlertTitle>Deployz did not remove these resources and cannot check them</AlertTitle>
+        <AlertDescription>
+          The Deployz connector did not answer, so the owner deleted the database, storage bucket and
+          secrets in AWS and confirmed it here.
+          {detail.bootstrapStackName ? (
+            <>
+              {' '}
+              The connector stack{' '}
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{detail.bootstrapStackName}</code>{' '}
+              can still be installed; only your customer can delete it in CloudFormation.
+            </>
+          ) : null}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   if (detail.cleanupState !== 'COMPLETE') {
     return (
       <div className="flex flex-col gap-3">
         <Alert>
           <AlertTriangle aria-hidden />
-          {detail.cleanupState === 'SKIPPED_RELAY_OFFLINE' || detail.cleanupState === 'PURGE_FAILED' ? (
+          {detail.cleanupState === 'SKIPPED_RELAY_OFFLINE' ? (
             <>
-              <AlertTitle>Resources may remain in the customer AWS account</AlertTitle>
+              <AlertTitle>The Deployz connector did not answer, so Deployz could not remove these resources</AlertTitle>
               <AlertDescription>
-                Deployz could not verify or remove resources because the Deployz connector was
-                offline during removal. Everything in the customer AWS account may remain and
-                keep costing money. If the connector stack is already deleted, Deployz cannot
+                <p>
+                  Deployz can no longer remove anything in the customer AWS account. They may keep
+                  costing money until someone deletes them in the AWS console:
+                </p>
+                <ul className="list-disc pl-5">
+                  <li>the database (RDS)</li>
+                  <li>the storage bucket (S3)</li>
+                  <li>the secrets (Secrets Manager)</li>
+                  <li>
+                    the connector stack
+                    {detail.bootstrapStackName ? ` ${detail.bootstrapStackName}` : ''} (CloudFormation)
+                  </li>
+                </ul>
+                <p>After they are deleted, tell Deployz below.</p>
+              </AlertDescription>
+            </>
+          ) : detail.cleanupState === 'PURGE_FAILED' ? (
+            <>
+              <AlertTitle>Deployz could not finish deleting the retained data</AlertTitle>
+              <AlertDescription>
+                The delete failed, so some resources may remain in the customer AWS account and keep
+                costing money. Try again. If the connector stack is already deleted, Deployz cannot
                 remove them: delete the database, storage bucket and secrets in the AWS console.
               </AlertDescription>
             </>

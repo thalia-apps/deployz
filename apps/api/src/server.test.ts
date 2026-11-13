@@ -7904,7 +7904,8 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     const ok = await postJson(app, `/api/deployments/${offline.id}/acknowledge-cleanup`, {}, { cookie: org.cookie });
     expect(ok.statusCode).toBe(200);
     const [row] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, offline.id));
-    expect(row?.cleanupState).toBe('COMPLETE');
+    // Never COMPLETE: only a relay-verified purge sets that.
+    expect(row?.cleanupState).toBe('CONFIRMED_BY_OWNER');
     const again = await postJson(app, `/api/deployments/${offline.id}/acknowledge-cleanup`, {}, { cookie: org.cookie });
     expect(again.statusCode).toBe(409);
   });

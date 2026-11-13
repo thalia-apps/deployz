@@ -213,9 +213,11 @@ export function deriveHero(detail: HeroInput): HeroModel {
     const description =
       detail.cleanupState === 'COMPLETE'
         ? `Deployz removed everything it created for this deployment from ${detail.customerName}'s AWS account.`
-        : detail.cleanupState === 'SKIPPED_RELAY_OFFLINE' || detail.cleanupState === 'PURGE_FAILED'
-          ? 'The deployment was disconnected, but some AWS resources may still exist in the customer account.'
-          : 'The application and its networking were removed. Anything Deployz kept is listed under Infrastructure.';
+        : detail.cleanupState === 'CONFIRMED_BY_OWNER'
+          ? `The Deployz connector did not answer, so Deployz could not remove or check anything in ${detail.customerName}'s AWS account. The owner confirmed that the resources were deleted.`
+          : detail.cleanupState === 'SKIPPED_RELAY_OFFLINE' || detail.cleanupState === 'PURGE_FAILED'
+            ? 'The deployment was disconnected, but some AWS resources may still exist in the customer account.'
+            : 'The application and its networking were removed. Anything Deployz kept is listed under Infrastructure.';
     return {
       kind: 'deleted',
       tone:
@@ -224,7 +226,10 @@ export function deriveHero(detail: HeroInput): HeroModel {
           : detail.cleanupState === 'SKIPPED_RELAY_OFFLINE' || detail.cleanupState === 'PURGE_FAILED'
             ? 'warning'
             : 'neutral',
-      title: REMOVED_PROGRESS.DELETED.title,
+      title:
+        detail.cleanupState === 'CONFIRMED_BY_OWNER'
+          ? `${REMOVED_PROGRESS.DELETED.title} (not verified)`
+          : REMOVED_PROGRESS.DELETED.title,
       description,
       liveReleaseNote: null,
       showSteps: false,

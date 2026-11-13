@@ -81,7 +81,7 @@ export interface FleetDeployment {
   lastHealthAt: string | null;
   deletedAt: string | null;
   /** What the control plane knows about AWS leftovers at disconnect. */
-  cleanupState: 'SKIPPED_RELAY_OFFLINE' | 'PURGE_FAILED' | 'COMPLETE' | null;
+  cleanupState: 'SKIPPED_RELAY_OFFLINE' | 'PURGE_FAILED' | 'COMPLETE' | 'CONFIRMED_BY_OWNER' | null;
   createdAt: string;
   updatedAt: string;
   createdBy: string | null;
@@ -558,8 +558,8 @@ export function purgeDeployment(deploymentId: string, confirmName: string): Prom
 
 /** POST /api/deployments/:id/acknowledge-cleanup — the owner says they deleted
  *  the retained resources themselves. Deployz cannot verify it. */
-export function acknowledgeCleanup(deploymentId: string): Promise<{ cleanupState: 'COMPLETE' }> {
-  return postJson<{ cleanupState: 'COMPLETE' }>(
+export function acknowledgeCleanup(deploymentId: string): Promise<{ cleanupState: 'CONFIRMED_BY_OWNER' }> {
+  return postJson<{ cleanupState: 'CONFIRMED_BY_OWNER' }>(
     `/api/deployments/${encodeURIComponent(deploymentId)}/acknowledge-cleanup`,
     {},
   );

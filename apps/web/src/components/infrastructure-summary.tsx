@@ -179,7 +179,9 @@ export function InfrastructureSummary({
             {stale ? 'Last known: ' : ''}
             {purge === 'complete' && summaryStatus === 'retained'
               ? 'Retained data was deleted.'
-              : SUMMARY_LINE[summaryStatus]}
+              : purge === 'confirmed' && summaryStatus === 'retained'
+                ? 'Deleted by the owner. Deployz did not verify it.'
+                : SUMMARY_LINE[summaryStatus]}
           </p>
         )}
         {infrastructure.connectionState === 'disconnected' ? (
@@ -195,7 +197,7 @@ export function InfrastructureSummary({
           <ul aria-label="Services" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
             {infrastructure.components.map((component) => {
               const status = operationalComponentStatus(component, state, purge);
-              const label = infrastructureComponentStatusLabel({ ...component, status }, state);
+              const label = infrastructureComponentStatusLabel({ ...component, status }, state, purge);
               return (
                 <li key={component.kind} className="inline-flex min-w-0 items-center gap-1.5">
                   {stale && TRANSITIONAL_STATUSES.has(status) ? STATUS_ICON.unknown : STATUS_ICON[status]}

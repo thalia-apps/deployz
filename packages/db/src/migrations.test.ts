@@ -60,6 +60,16 @@ describe('migrations', () => {
     await expect(client!.exec(sql.replaceAll('--> statement-breakpoint', ''))).resolves.toBeDefined();
   });
 
+  it('adds the owner-confirmed cleanup state, and the 0062 data move re-applies without error', async () => {
+    const { rows } = await client!.query<{ enumlabel: string }>(
+      `SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid WHERE t.typname = 'cleanup_state'`,
+    );
+    expect(rows.map((row) => row.enumlabel)).toContain('CONFIRMED_BY_OWNER');
+    const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'drizzle');
+    const sql = readFileSync(join(migrationsDir, '0062_move_owner_confirmed_cleanup.sql'), 'utf8');
+    await expect(client!.exec(sql.replaceAll('--> statement-breakpoint', ''))).resolves.toBeDefined();
+  });
+
   it('creates the hot-path indexes, and 0054 re-applies without error', async () => {
     const { rows } = await client!.query<{ indexname: string }>(
       `SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname IN (

@@ -171,7 +171,7 @@ function ComponentRow({
           </span>
         </div>
         <Badge variant={INFRASTRUCTURE_STATUS_BADGE[status]}>
-          {infrastructureComponentStatusLabel({ ...component, status }, deploymentState)}
+          {infrastructureComponentStatusLabel({ ...component, status }, deploymentState, purge)}
         </Badge>
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">

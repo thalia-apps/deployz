@@ -7395,17 +7395,17 @@ export async function buildServer({
     }
     await db
       .update(schema.deployments)
-      .set({ cleanupState: 'COMPLETE' })
+      .set({ cleanupState: 'CONFIRMED_BY_OWNER' })
       .where(eq(schema.deployments.id, deployment.id));
     await recordAuditEvent(db, {
       organizationId,
       actorId: request.user!.id,
       eventType: 'deployment.cleanup_acknowledged',
       previousState: deployment.cleanupState,
-      requestedState: 'COMPLETE',
+      requestedState: 'CONFIRMED_BY_OWNER',
       payload: { schemaVersion: 1, deploymentId: deployment.id },
     });
-    return { cleanupState: 'COMPLETE' };
+    return { cleanupState: 'CONFIRMED_BY_OWNER' };
   });
 
   app.post('/api/deployments/:id/purge', { preHandler: requireAuth }, async (request, reply) => {
