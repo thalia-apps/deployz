@@ -7339,7 +7339,20 @@ export async function buildServer({
     // The purge runs through the connector. One that stopped polling (its
     // stack was deleted) can never claim it, so refuse now and show the
     // manual steps, instead of letting the job wait for the watchdog.
-    if (isConnectorSilent(deployment.connectorLastSeenAt, Date.now())) {
+    const [lastPurge] = await db
+      .select({ state: schema.deploymentJobs.state, failureCode: schema.deploymentJobs.failureCode, finishedAt: schema.deploymentJobs.finishedAt })
+      .from(schema.deploymentJobs)
+      .where(and(eq(schema.deploymentJobs.deploymentId, deployment.id), eq(schema.deploymentJobs.type, 'PURGE')))
+      .orderBy(desc(schema.deploymentJobs.createdAt))
+      .limit(1);
+    // The last purge failed because no connector answered, and none has
+    // polled since: asking again would only wait for the watchdog once more.
+    const failedForSilence =
+      lastPurge?.state === 'FAILED' &&
+      lastPurge.failureCode === 'RELAY_DISCONNECTED' &&
+      (deployment.connectorLastSeenAt === null ||
+        (lastPurge.finishedAt !== null && deployment.connectorLastSeenAt <= lastPurge.finishedAt));
+    if (failedForSilence || isConnectorSilent(deployment.connectorLastSeenAt, Date.now())) {
       if (deployment.cleanupState === null) {
         await db
           .update(schema.deployments)

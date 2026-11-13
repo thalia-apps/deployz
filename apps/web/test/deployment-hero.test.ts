@@ -328,7 +328,7 @@ describe('deriveHero', () => {
 
   it('DELETED with an active PURGE job reads as deleting retained data, then as removed', () => {
     const running = deriveHero(
-      input({ state: 'DELETED', cleanupState: 'SKIPPED_RELAY_OFFLINE', jobs: [job({ type: 'PURGE', state: 'RUNNING' })] }),
+      input({ state: 'DELETED', cleanupState: 'SKIPPED_RELAY_OFFLINE', jobs: [job({ type: 'PURGE', state: 'RUNNING', createdAt: new Date().toISOString() })] }),
     );
     expect(running.kind).toBe('deleting');
     expect(running.tone).toBe('progress');
@@ -341,7 +341,7 @@ describe('deriveHero', () => {
   });
 
   it('a purge whose connector went silent does not read as deleting', () => {
-    const running = [job({ type: 'PURGE', state: 'REQUESTED' })];
+    const running = [job({ type: 'PURGE', state: 'REQUESTED', createdAt: new Date().toISOString() })];
     const silent = deriveHero(
       input({ state: 'DELETED', jobs: running, connectorLastSeenAt: new Date(Date.now() - 30 * 60_000).toISOString() } as never),
     );
@@ -353,6 +353,13 @@ describe('deriveHero', () => {
     );
     expect(alive.title).toBe('Deleting retained data');
     expect(deriveHero(input({ state: 'DELETED', jobs: running })).title).toBe('Deleting retained data');
+  });
+
+  it('a purge 10 minutes old with no connector contact at all does not read as deleting', () => {
+    const old = [job({ type: 'PURGE', state: 'REQUESTED', createdAt: new Date(Date.now() - 12 * 60_000).toISOString() })];
+    const young = [job({ type: 'PURGE', state: 'REQUESTED', createdAt: new Date(Date.now() - 2 * 60_000).toISOString() })];
+    expect(deriveHero(input({ state: 'DELETED', jobs: old })).title).toBe('The connector stopped answering');
+    expect(deriveHero(input({ state: 'DELETED', jobs: young })).title).toBe('Deleting retained data');
   });
 
   it('DELETED after the owner confirmed it never claims that Deployz removed anything', () => {

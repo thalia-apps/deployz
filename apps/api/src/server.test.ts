@@ -7944,6 +7944,45 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     expect((await purge(unknown.id)).statusCode).toBe(202);
   });
 
+  it('refuses a second purge right away when the last one failed for want of a connector', async () => {
+    const application = await insertApplication(db, org.organizationId);
+    const customer = await insertCustomer(db, org.organizationId);
+    const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'DELETED',
+      cleanupState: 'PURGE_FAILED',
+    });
+    await db.insert(schema.deploymentJobs).values({
+      deploymentId: deployment.id,
+      type: 'PURGE',
+      state: 'FAILED',
+      failureCode: 'RELAY_DISCONNECTED',
+      finishedAt: new Date(Date.now() - 60_000),
+      idempotencyKey: `purge-failed:${crypto.randomUUID()}`,
+      payload: {},
+    });
+    const retry = await postJson(
+      app,
+      `/api/deployments/${deployment.id}/purge`,
+      { confirmName: application.name },
+      { cookie: org.cookie },
+    );
+    expect(retry.statusCode).toBe(409);
+    expect(retry.json()).toMatchObject({ error: { code: 'CONNECTOR_NOT_ANSWERING' } });
+
+    // A connector that polled after the failure is alive: the retry is accepted.
+    await db
+      .update(schema.deployments)
+      .set({ connectorLastSeenAt: new Date() })
+      .where(eq(schema.deployments.id, deployment.id));
+    const accepted = await postJson(
+      app,
+      `/api/deployments/${deployment.id}/purge`,
+      { confirmName: application.name },
+      { cookie: org.cookie },
+    );
+    expect(accepted.statusCode).toBe(202);
+  });
+
   it('records the poll of a removed deployment as the connector contact, once a minute', async () => {
     const application = await insertApplication(db, org.organizationId);
     const customer = await insertCustomer(db, org.organizationId);

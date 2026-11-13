@@ -204,7 +204,16 @@ export function deriveHero(detail: HeroInput): HeroModel {
   if (state === 'DELETED' && purgeProgress(detail) === 'running') {
     // A purge needs the connector's poll. One that stopped polling (its stack
     // was deleted) cannot claim it, so do not say it is deleting.
-    if (connectorPresence(detail.connectorLastSeenAt ?? null) === 'silent') {
+    const presence = connectorPresence(detail.connectorLastSeenAt ?? null);
+    const purgeRequestedAt = detail.jobs
+      .filter((job) => job.type === 'PURGE')
+      .map((job) => Date.parse(job.createdAt))
+      .sort((a, b) => b - a)[0];
+    // A live connector stamps its contact within a minute, so a purge that is
+    // 10 minutes old with no contact at all has no connector either.
+    const neverAnswered =
+      presence === 'unknown' && purgeRequestedAt !== undefined && Date.now() - purgeRequestedAt >= 10 * 60_000;
+    if (presence === 'silent' || neverAnswered) {
       return {
         kind: 'deleting',
         tone: 'warning',

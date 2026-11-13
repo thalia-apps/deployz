@@ -567,16 +567,6 @@ export function acknowledgeCleanup(deploymentId: string): Promise<{ cleanupState
   );
 }
 
-/** POST /api/deployments/:id/undo-cleanup-acknowledgement — takes back "I deleted it myself". */
-export function undoCleanupAcknowledgement(
-  deploymentId: string,
-): Promise<{ cleanupState: 'SKIPPED_RELAY_OFFLINE' | 'PURGE_FAILED' }> {
-  return postJson<{ cleanupState: 'SKIPPED_RELAY_OFFLINE' | 'PURGE_FAILED' }>(
-    `/api/deployments/${encodeURIComponent(deploymentId)}/undo-cleanup-acknowledgement`,
-    {},
-  );
-}
-
 /**
  * §14 clear the relay binding and mint a fresh enrollment code.
  *
