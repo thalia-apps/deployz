@@ -7886,6 +7886,34 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     expect(fakeEcr.principals()).not.toContain('arn:aws:iam::210987654302:root');
   });
 
+  it('undoes the owner confirmation back to the state it had, and refuses any other state', async () => {
+    const application = await insertApplication(db, org.organizationId);
+    const customer = await insertCustomer(db, org.organizationId);
+    const failed = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'DELETED',
+      cleanupState: 'PURGE_FAILED',
+    });
+    const normal = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'DELETED',
+      cleanupState: null,
+    });
+    const undo = (id: string) =>
+      postJson(app, `/api/deployments/${id}/undo-cleanup-acknowledgement`, {}, { cookie: org.cookie });
+    const stateOf = async (id: string) =>
+      (await db.select().from(schema.deployments).where(eq(schema.deployments.id, id)))[0]!.cleanupState;
+
+    expect((await undo(failed.id)).statusCode).toBe(409);
+    expect((await undo(normal.id)).statusCode).toBe(409);
+
+    await postJson(app, `/api/deployments/${failed.id}/acknowledge-cleanup`, {}, { cookie: org.cookie });
+    expect(await stateOf(failed.id)).toBe('CONFIRMED_BY_OWNER');
+    const undone = await undo(failed.id);
+    expect(undone.statusCode).toBe(200);
+    expect(undone.json()).toEqual({ cleanupState: 'PURGE_FAILED' });
+    expect(await stateOf(failed.id)).toBe('PURGE_FAILED');
+    expect((await undo(failed.id)).statusCode).toBe(409);
+  });
+
   it('refuses a purge when the connector went silent, and accepts it when it polls or is unknown', async () => {
     const application = await insertApplication(db, org.organizationId);
     const customer = await insertCustomer(db, org.organizationId);

@@ -7425,6 +7425,50 @@ export async function buildServer({
     return { cleanupState: 'CONFIRMED_BY_OWNER' };
   });
 
+  // Undoes "I deleted it myself" (it can be pressed by mistake): the cleanup
+  // state returns to what it was before the confirmation, which the audit event
+  // recorded. Only a removal the owner confirmed can be undone.
+  app.post('/api/deployments/:id/undo-cleanup-acknowledgement', { preHandler: requireAuth }, async (request) => {
+    requireOwnerOrAdmin(request);
+    const { id } = request.params as { id: string };
+    requireUuidId(id);
+    const organizationId = requireSessionOrganizationId(request);
+    const deployment = await loadOwnedDeployment(db, id, organizationId);
+    if (deployment.state !== 'DELETED' || deployment.cleanupState !== 'CONFIRMED_BY_OWNER') {
+      throw new ApiError(
+        409,
+        'NOT_UNDOABLE',
+        'Only a removal that the owner marked as deleted can be undone.',
+      );
+    }
+    const [acknowledged] = await db
+      .select({ previousState: schema.eventLogs.previousState })
+      .from(schema.eventLogs)
+      .where(
+        and(
+          eq(schema.eventLogs.eventType, 'deployment.cleanup_acknowledged'),
+          sql`${schema.eventLogs.payload}->>'deploymentId' = ${deployment.id}`,
+        ),
+      )
+      .orderBy(desc(schema.eventLogs.occurredAt))
+      .limit(1);
+    const restored =
+      acknowledged?.previousState === 'PURGE_FAILED' ? 'PURGE_FAILED' : 'SKIPPED_RELAY_OFFLINE';
+    await db
+      .update(schema.deployments)
+      .set({ cleanupState: restored })
+      .where(eq(schema.deployments.id, deployment.id));
+    await recordAuditEvent(db, {
+      organizationId,
+      actorId: request.user!.id,
+      eventType: 'deployment.cleanup_acknowledgement_undone',
+      previousState: 'CONFIRMED_BY_OWNER',
+      requestedState: restored,
+      payload: { schemaVersion: 1, deploymentId: deployment.id },
+    });
+    return { cleanupState: restored };
+  });
+
   app.post('/api/deployments/:id/purge', { preHandler: requireAuth }, async (request, reply) => {
     requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };

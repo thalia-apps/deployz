@@ -105,6 +105,7 @@ import {
   isDeploymentNotFound,
   purgeDeployment,
   acknowledgeCleanup,
+  undoCleanupAcknowledgement,
   resetRelay,
   restartDeployment,
   retryInstall,
@@ -1845,22 +1846,25 @@ function RemovedDeploymentNotes({
 
   if (detail.cleanupState === 'CONFIRMED_BY_OWNER') {
     return (
-      <Alert>
-        <AlertTriangle aria-hidden />
-        <AlertTitle>Deployz did not remove these resources and cannot check them</AlertTitle>
-        <AlertDescription>
-          The Deployz connector did not answer, so the owner deleted the database, storage bucket and
-          secrets in AWS and confirmed it here.
-          {detail.bootstrapStackName ? (
-            <>
-              {' '}
-              The connector stack{' '}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{detail.bootstrapStackName}</code>{' '}
-              can still be installed; only your customer can delete it in CloudFormation.
-            </>
-          ) : null}
-        </AlertDescription>
-      </Alert>
+      <div className="flex flex-col gap-3">
+        <Alert>
+          <AlertTriangle aria-hidden />
+          <AlertTitle>Deployz did not remove these resources and cannot check them</AlertTitle>
+          <AlertDescription>
+            The Deployz connector did not answer, so the owner deleted the database, storage bucket and
+            secrets in AWS and confirmed it here.
+            {detail.bootstrapStackName ? (
+              <>
+                {' '}
+                The connector stack{' '}
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{detail.bootstrapStackName}</code>{' '}
+                can still be installed; only your customer can delete it in CloudFormation.
+              </>
+            ) : null}
+          </AlertDescription>
+        </Alert>
+        <UndoCleanupAcknowledgement deploymentId={detail.id} onChanged={onChanged} />
+      </div>
     );
   }
 
@@ -1971,6 +1975,36 @@ function RemovedDeploymentNotes({
   }
 
   return null;
+}
+
+// "I deleted it myself" can be pressed by mistake: this takes it back, so the
+// removal shows what is left to delete again.
+function UndoCleanupAcknowledgement({ deploymentId, onChanged }: { deploymentId: string; onChanged: () => void }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onConfirm(): Promise<void> {
+    setPending(true);
+    setError(null);
+    try {
+      await undoCleanupAcknowledgement(deploymentId);
+      toast.success('Confirmation undone');
+      onChanged();
+    } catch (caught) {
+      setError(actionErrorMessage(caught, "Couldn't undo this. Try again."));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Button size="sm" variant="outline" className="self-start" disabled={pending} onClick={() => void onConfirm()}>
+        I have not deleted it yet
+      </Button>
+      <OperationError error={error} />
+    </div>
+  );
 }
 
 // The owner deleted the retained resources in the AWS console. Deployz cannot

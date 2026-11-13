@@ -897,6 +897,11 @@ When the connector is gone, no purge can run. For `SKIPPED_RELAY_OFFLINE` and
 relay-verified purge sets) and writes the audit event
 `deployment.cleanup_acknowledged`. Deployz does not verify it, so every page
 says the owner confirmed it and shows the components as not verified.
+The owner can take it back with
+`POST /api/deployments/:id/undo-cleanup-acknowledgement` (only from
+`CONFIRMED_BY_OWNER`): the state returns to what the audit event recorded
+(`SKIPPED_RELAY_OFFLINE` or `PURGE_FAILED`) and
+`deployment.cleanup_acknowledgement_undone` is written.
 
 ## First-install recovery
 
