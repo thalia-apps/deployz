@@ -87,6 +87,8 @@ import migration0057 from '../../../db/drizzle/0057_two_factor.sql';
 import migration0058 from '../../../db/drizzle/0058_auth_rate_limit.sql';
 import migration0059 from '../../../db/drizzle/0059_deployment_backup_retention.sql';
 import migration0060 from '../../../db/drizzle/0060_polar_billing.sql';
+import migration0061 from '../../../db/drizzle/0061_cleanup_confirmed_by_owner.sql';
+import migration0062 from '../../../db/drizzle/0062_move_owner_confirmed_cleanup.sql';
 import journal from '../../../db/drizzle/meta/_journal.json';
 import { migrationsUpToDate, withMigrationLock } from './migration-check.js';
 
@@ -162,6 +164,8 @@ const MIGRATION_SQL: Record<string, string> = {
   '0058_auth_rate_limit': migration0058,
   '0059_deployment_backup_retention': migration0059,
   '0060_polar_billing': migration0060,
+  '0061_cleanup_confirmed_by_owner': migration0061,
+  '0062_move_owner_confirmed_cleanup': migration0062,
 };
 
 interface RdsSecret {
