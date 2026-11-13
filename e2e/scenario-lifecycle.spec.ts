@@ -713,13 +713,22 @@ test.describe('two-apps-1.0.0', () => {
           .toBe('HEALTHY');
 
         // Deploy 1.0.0.
-        const deployResp = await request.post(`${API_URL}/api/deployments/${deploymentId}/deploy`, {
-          data: { releaseId },
-        });
         // 202 = new job created; 200 = replayed (same idempotency key already
         // exists, e.g. when the relay picked up the deploy between two poll
-        // cycles). Either is a successful acceptance.
-        expect([200, 202]).toContain(deployResp.status());
+        // cycles). Either is a successful acceptance. 409 means the install job
+        // is still settling: operation exclusivity refuses a second operation
+        // until it ends, so ask again.
+        await expect
+          .poll(
+            async () => {
+              const deployResp = await request.post(`${API_URL}/api/deployments/${deploymentId}/deploy`, {
+                data: { releaseId },
+              });
+              return [200, 202].includes(deployResp.status()) ? 'accepted' : deployResp.status();
+            },
+            { timeout: 20_000, message: `waiting for ${label} to accept the deploy` },
+          )
+          .toBe('accepted');
 
         // Assert the release pointer advances (deploy accepted).
         await expect

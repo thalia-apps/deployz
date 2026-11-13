@@ -92,8 +92,17 @@ test.describe('happy-path', () => {
       const ready = (await api.getDeployment(deploymentId)) as unknown as DeploymentResponse;
       expect(ready.deploymentStatus.url).toMatch(/^https:\/\/d-.+\.deployz-fixture\.test$/);
     } else {
-      expect(deployment.deploymentStatus.stage).toBe('VERIFYING');
-      expect(deployment.deploymentStatus.step).toBe('TLS');
+      // The health state can reach HEALTHY a moment before the derived step
+      // moves on from APPLICATION, so wait for it.
+      await expect
+        .poll(
+          async () => {
+            const status = ((await api.getDeployment(deploymentId)) as unknown as DeploymentResponse).deploymentStatus;
+            return `${status.stage}/${status.step}`;
+          },
+          { timeout: 20_000, message: 'waiting for the deployment to hold at VERIFYING/TLS' },
+        )
+        .toBe('VERIFYING/TLS');
     }
 
     // Stack events came from the ingest route (persisted rows), not
