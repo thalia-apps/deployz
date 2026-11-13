@@ -1223,6 +1223,62 @@ describe('sweepStuckJobs', () => {
     return { jobId: job!.id, deploymentId: deployment!.id };
   }
 
+  async function seedPurge(
+    connectorSeenMinutesAgo: number | null,
+    jobAgeMinutes: number,
+  ): Promise<{ jobId: string; deploymentId: string }> {
+    const [deployment] = await db
+      .insert(schema.deployments)
+      .values({
+        organizationId,
+        applicationId,
+        customerId,
+        region: 'us-east-1',
+        state: 'DELETED',
+        relayStatus: 'DISCONNECTED',
+        installationId: `inst-${randomUUID()}`,
+        enrollmentCode: randomUUID(),
+        ...(connectorSeenMinutesAgo !== null
+          ? { connectorLastSeenAt: new Date(Date.now() - connectorSeenMinutesAgo * 60 * 1000) }
+          : {}),
+      })
+      .returning();
+    const [job] = await db
+      .insert(schema.deploymentJobs)
+      .values({
+        deploymentId: deployment!.id,
+        type: 'PURGE',
+        state: 'REQUESTED',
+        idempotencyKey: `watchdog:${randomUUID()}`,
+        payload: {},
+        createdAt: new Date(Date.now() - jobAgeMinutes * 60 * 1000),
+      })
+      .returning();
+    return { jobId: job!.id, deploymentId: deployment!.id };
+  }
+
+  it('fails a purge after 10 minutes when its connector went silent, and keeps the deployment removed', async () => {
+    const { jobId, deploymentId } = await seedPurge(20, 12);
+    await sweepStuckJobs(db);
+    const [job] = await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.id, jobId));
+    expect(job?.state).toBe('FAILED');
+    expect(job?.failureCode).toBe('RELAY_DISCONNECTED');
+    const [deployment] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deploymentId));
+    expect(deployment?.state).toBe('DELETED');
+    expect(deployment?.cleanupState).toBe('PURGE_FAILED');
+  });
+
+  it('leaves a purge alone while its connector still polls, or has not been seen at all', async () => {
+    const alive = await seedPurge(1, 12);
+    const unknown = await seedPurge(null, 12);
+    const young = await seedPurge(20, 3);
+    await sweepStuckJobs(db);
+    for (const { jobId } of [alive, unknown, young]) {
+      const [job] = await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.id, jobId));
+      expect(job?.state).not.toBe('FAILED');
+    }
+  });
+
   it('parks a stale job WAITING when the relay is quiet — never a false FAILED', async () => {
     const { jobId, deploymentId } = await seedJobAndDeployment('DEPLOY_RELEASE', 'RUNNING', 30, 25);
     const settled = await sweepStuckJobs(db);

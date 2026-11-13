@@ -827,6 +827,29 @@ export type VendorDeploymentStatus = z.infer<typeof vendorDeploymentStatusSchema
  */
 export const RELAY_STALE_AFTER_MS = 15 * 60 * 1000;
 
+/**
+ * How long the connector of a removed deployment may stay silent while a
+ * purge waits for it before the watchdog fails the purge. A purge needs the
+ * connector's poll, and a connector whose stack the customer deleted never
+ * polls again; the 90-minute job timeout alone made the vendor wait.
+ */
+export const PURGE_CONNECTOR_SILENT_AFTER_MS = 10 * 60 * 1000;
+
+/**
+ * Whether a removed deployment's connector has stopped polling: true when its
+ * last recorded contact is `afterMs` old or more. No recorded contact is
+ * unknown (a removal made before contact was recorded), never silent.
+ */
+export function isConnectorSilent(
+  lastSeenAt: Date | string | null,
+  now: number,
+  afterMs: number = RELAY_STALE_AFTER_MS,
+): boolean {
+  if (lastSeenAt === null) return false;
+  const seen = typeof lastSeenAt === 'string' ? Date.parse(lastSeenAt) : lastSeenAt.getTime();
+  return !Number.isNaN(seen) && now - seen >= afterMs;
+}
+
 // ---------------------------------------------------------------------------
 // STUCK jobs — shared by the worker's stuck-job watchdog
 // (packages/cdk/src/lambda/worker.ts's sweepStuckJobs) and Team Admin's

@@ -36,7 +36,13 @@ import {
   isRepoRelativePath,
   releaseImageTag,
 } from '@deployz/contracts';
-import { JOB_TIMEOUTS_MS, RELAY_STALE_AFTER_MS, deploymentStateAfterFailedJob } from '@deployz/contracts';
+import {
+  JOB_TIMEOUTS_MS,
+  PURGE_CONNECTOR_SILENT_AFTER_MS,
+  RELAY_STALE_AFTER_MS,
+  deploymentStateAfterFailedJob,
+  isConnectorSilent,
+} from '@deployz/contracts';
 import type { JevFailureShadowRunner } from '@deployz/api/jev-shadow';
 import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
@@ -817,6 +823,20 @@ async function sweepStuckJob(
     relayStatus: deployment.relayStatus,
     reconcileCount: job.reconcileCount,
   };
+
+  // A purge runs through the connector. One whose stack the customer deleted
+  // never polls again, so waiting out the job timeout only leaves the vendor
+  // with a page that says it is deleting. A silent connector and a purge that
+  // made no progress for as long fail it now (retryable from PURGE_FAILED).
+  if (
+    job.type === 'PURGE' &&
+    deployment.state === 'DELETED' &&
+    isConnectorSilent(deployment.connectorLastSeenAt, now.getTime(), PURGE_CONNECTOR_SILENT_AFTER_MS) &&
+    now.getTime() - lastSignal.getTime() >= PURGE_CONNECTOR_SILENT_AFTER_MS
+  ) {
+    await failStuckJob(db, job, deployment, now, 'RELAY_DISCONNECTED', evidence, failureShadow);
+    return 1;
+  }
 
   if (deployment.relayStatus === 'CONNECTED') {
     if (!stale && !overRuntime) return 0;

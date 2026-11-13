@@ -340,6 +340,21 @@ describe('deriveHero', () => {
     expect(done.description).not.toContain('may still exist');
   });
 
+  it('a purge whose connector went silent does not read as deleting', () => {
+    const running = [job({ type: 'PURGE', state: 'REQUESTED' })];
+    const silent = deriveHero(
+      input({ state: 'DELETED', jobs: running, connectorLastSeenAt: new Date(Date.now() - 30 * 60_000).toISOString() } as never),
+    );
+    expect(silent.tone).toBe('warning');
+    expect(silent.title).toBe('The connector stopped answering');
+    expect(silent.description).toContain('has not contacted Deployz');
+    const alive = deriveHero(
+      input({ state: 'DELETED', jobs: running, connectorLastSeenAt: new Date().toISOString() } as never),
+    );
+    expect(alive.title).toBe('Deleting retained data');
+    expect(deriveHero(input({ state: 'DELETED', jobs: running })).title).toBe('Deleting retained data');
+  });
+
   it('DELETED after the owner confirmed it never claims that Deployz removed anything', () => {
     const hero = deriveHero(input({ state: 'DELETED', cleanupState: 'CONFIRMED_BY_OWNER' }));
     expect(hero.kind).toBe('deleted');

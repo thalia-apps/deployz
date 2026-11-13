@@ -2,7 +2,7 @@ import type { VendorDeploymentStatus } from '@deployz/contracts';
 
 import { isTerminalStage, REMOVED_PROGRESS } from './deployment-progress';
 import type { DeploymentState } from './deployment-vocabulary';
-import { everInstalled, purgeProgress } from './deployment-vocabulary';
+import { connectorPresence, everInstalled, purgeProgress } from './deployment-vocabulary';
 import { isAppOwnedStartupFailure, STARTUP_FAILURE_TITLE } from './diagnostic-vocabulary';
 import type { DeploymentJob, FleetDeploymentDetail } from './deployments';
 import type { RetryEligibility } from './diagnostics';
@@ -56,7 +56,10 @@ export type HeroInput = Pick<
   | 'relayStatus'
   | 'jobs'
   | 'deploymentStatus'
->;
+> & {
+  /** The connector's last poll; absent in older payloads. */
+  connectorLastSeenAt?: string | null;
+};
 
 const ACTIVE_JOB_STATES = new Set(['REQUESTED', 'QUEUED', 'WAITING', 'RUNNING']);
 const DAY_TWO_JOB_TYPES = new Set(['DEPLOY_RELEASE', 'ROLLBACK', 'RESTART', 'CONFIG_UPDATE']);
@@ -199,6 +202,18 @@ export function deriveHero(detail: HeroInput): HeroModel {
   const installed = everInstalled(state, detail.currentReleaseId);
 
   if (state === 'DELETED' && purgeProgress(detail) === 'running') {
+    // A purge needs the connector's poll. One that stopped polling (its stack
+    // was deleted) cannot claim it, so do not say it is deleting.
+    if (connectorPresence(detail.connectorLastSeenAt ?? null) === 'silent') {
+      return {
+        kind: 'deleting',
+        tone: 'warning',
+        title: 'The connector stopped answering',
+        description: `Deployz cannot delete the retained data in ${detail.customerName}'s AWS account: the connector has not contacted Deployz for a while. Deployz will stop waiting soon and then list what to delete in AWS yourself.`,
+        liveReleaseNote: null,
+        showSteps: false,
+      };
+    }
     return {
       kind: 'deleting',
       tone: 'progress',

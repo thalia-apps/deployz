@@ -34,6 +34,7 @@ import {
   DEPLOYMENT_MANIFEST_SCHEMA_VERSION,
   REGION_LABELS,
   RELAY_STALE_AFTER_MS,
+  isConnectorSilent,
   SUPPORTED_AWS_REGIONS,
   aggregateInfrastructureComponents,
   billingSubscriptionStatusSchema,
@@ -7335,6 +7336,22 @@ export async function buildServer({
     userId: string | null,
     clientKey: string | null | undefined,
   ): Promise<{ job: { id: string; state: string }; created: boolean }> {
+    // The purge runs through the connector. One that stopped polling (its
+    // stack was deleted) can never claim it, so refuse now and show the
+    // manual steps, instead of letting the job wait for the watchdog.
+    if (isConnectorSilent(deployment.connectorLastSeenAt, Date.now())) {
+      if (deployment.cleanupState === null) {
+        await db
+          .update(schema.deployments)
+          .set({ cleanupState: 'SKIPPED_RELAY_OFFLINE' })
+          .where(eq(schema.deployments.id, deployment.id));
+      }
+      throw new ApiError(
+        409,
+        'CONNECTOR_NOT_ANSWERING',
+        'The Deployz connector has not contacted Deployz for a while, so Deployz cannot delete the retained data. Delete the database, storage bucket and secrets in the customer AWS account, then use "I deleted it myself".',
+      );
+    }
     const idempotencyKey =
       clientKey ?? (await retryAwareIdempotencyKey(db, deployment.id, 'PURGE', `${deployment.id}:PURGE`));
     await requireDeploymentIdle(db, deployment.id, idempotencyKey);
@@ -8758,8 +8775,24 @@ export async function buildServer({
   // installationId is public (it's in the install URL), so it cannot be the
   // credential.
 
-  /** A revoked connector's contact is written at most this often. */
-  const CONNECTOR_SEEN_WRITE_INTERVAL_MS = 5 * 60_000;
+  /** The connector's contact is written at most this often (its poll interval). */
+  const CONNECTOR_SEEN_WRITE_INTERVAL_MS = 60_000;
+
+  /** Notes that the connector of a removed deployment is still polling. */
+  async function noteConnectorContact(deploymentId: string): Promise<void> {
+    await db
+      .update(schema.deployments)
+      .set({ connectorLastSeenAt: new Date() })
+      .where(
+        and(
+          eq(schema.deployments.id, deploymentId),
+          or(
+            isNull(schema.deployments.connectorLastSeenAt),
+            lt(schema.deployments.connectorLastSeenAt, new Date(Date.now() - CONNECTOR_SEEN_WRITE_INTERVAL_MS)),
+          ),
+        ),
+      );
+  }
 
   async function requireRelayDeployment(
     installationId: string | undefined,
@@ -8777,23 +8810,15 @@ export async function buildServer({
     const deployment = rows[0];
     if (!deployment || !verifyRelayTokenWithRotation(deployment.relayTokenHash, token, oldToken)) {
       // A connector whose purge was verified still polls while its stack
-      // exists. Note the contact (at most every 5 minutes) and refuse it.
+      // exists. Note the contact and refuse it.
       if (deployment && verifyRelayToken(deployment.revokedRelayTokenHash, token)) {
-        await db
-          .update(schema.deployments)
-          .set({ connectorLastSeenAt: new Date() })
-          .where(
-            and(
-              eq(schema.deployments.id, deployment.id),
-              or(
-                isNull(schema.deployments.connectorLastSeenAt),
-                lt(schema.deployments.connectorLastSeenAt, new Date(Date.now() - CONNECTOR_SEEN_WRITE_INTERVAL_MS)),
-              ),
-            ),
-          );
+        await noteConnectorContact(deployment.id);
       }
       throw new ApiError(401, 'UNAUTHORIZED', 'Invalid relay credentials');
     }
+    // A removed deployment records no health, so the poll itself is the proof
+    // that its connector is alive (a purge needs it).
+    if (deployment.state === 'DELETED') await noteConnectorContact(deployment.id);
     return deployment;
   }
 

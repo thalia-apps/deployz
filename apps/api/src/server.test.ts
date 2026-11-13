@@ -7886,6 +7886,56 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     expect(fakeEcr.principals()).not.toContain('arn:aws:iam::210987654302:root');
   });
 
+  it('refuses a purge when the connector went silent, and accepts it when it polls or is unknown', async () => {
+    const application = await insertApplication(db, org.organizationId);
+    const customer = await insertCustomer(db, org.organizationId);
+    const removed = (connectorLastSeenAt: Date | null) =>
+      insertDeployment(db, org.organizationId, application.id, customer.id, {
+        state: 'DELETED',
+        cleanupState: null,
+        installationId: `inst-silent-${crypto.randomUUID()}`,
+        awsAccountId: '210987654307',
+        relayTokenHash: hashRelayToken(RELAY_TOKEN),
+        connectorLastSeenAt,
+      });
+    const silent = await removed(new Date(Date.now() - 20 * 60_000));
+    const fresh = await removed(new Date(Date.now() - 60_000));
+    const unknown = await removed(null);
+    const purge = (id: string) =>
+      postJson(app, `/api/deployments/${id}/purge`, { confirmName: application.name }, { cookie: org.cookie });
+
+    const refused = await purge(silent.id);
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toMatchObject({ error: { code: 'CONNECTOR_NOT_ANSWERING' } });
+    const [row] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, silent.id));
+    expect(row?.cleanupState).toBe('SKIPPED_RELAY_OFFLINE');
+    const jobs = await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.deploymentId, silent.id));
+    expect(jobs.filter((job) => job.type === 'PURGE')).toHaveLength(0);
+
+    expect((await purge(fresh.id)).statusCode).toBe(202);
+    expect((await purge(unknown.id)).statusCode).toBe(202);
+  });
+
+  it('records the poll of a removed deployment as the connector contact, once a minute', async () => {
+    const application = await insertApplication(db, org.organizationId);
+    const customer = await insertCustomer(db, org.organizationId);
+    const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'DELETED',
+      cleanupState: 'SKIPPED_RELAY_OFFLINE',
+      installationId: `inst-contact-${crypto.randomUUID()}`,
+      awsAccountId: '210987654306',
+      relayTokenHash: hashRelayToken(RELAY_TOKEN),
+    });
+    const load = async () =>
+      (await db.select().from(schema.deployments).where(eq(schema.deployments.id, deployment.id)))[0]!;
+    expect((await load()).connectorLastSeenAt).toBeNull();
+    await claimCommands(deployment.installationId!);
+    const first = (await load()).connectorLastSeenAt;
+    expect(first).not.toBeNull();
+    await claimCommands(deployment.installationId!);
+    expect((await load()).connectorLastSeenAt?.getTime()).toBe(first!.getTime());
+  });
+
   it('records the contact of a revoked connector after a verified purge, and refuses it', async () => {
     const application = await insertApplication(db, org.organizationId);
     const customer = await insertCustomer(db, org.organizationId);
@@ -7915,7 +7965,8 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     const purged = await load();
     expect(purged.relayTokenHash).toBeNull();
     expect(purged.revokedRelayTokenHash).toBe(hashRelayToken(RELAY_TOKEN));
-    expect(purged.connectorLastSeenAt).toBeNull();
+    // The poll that claimed the purge counted as contact; start the revoked case clean.
+    await db.update(schema.deployments).set({ connectorLastSeenAt: null }).where(eq(schema.deployments.id, deployment.id));
 
     const poll = (token: string) =>
       app.inject({
